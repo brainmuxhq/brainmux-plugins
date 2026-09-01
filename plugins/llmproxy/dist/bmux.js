@@ -11816,7 +11816,7 @@ function buildClaudeArgs(opts) {
   return args;
 }
 function initProgress() {
-  return { steps: 0, todoDone: null, todoTotal: null, current: "", done: false, error: false, finalText: "", ms: null };
+  return { steps: 0, todoDone: null, todoTotal: null, current: "", touched: [], edits: 0, done: false, error: false, finalText: "", ms: null };
 }
 function clip(s, n) {
   const t = s.replace(/\s+/g, " ").trim();
@@ -11844,6 +11844,12 @@ function foldEvent(p, ev) {
         if (ip) p.current = clip(String(ip.activeForm ?? ip.content ?? ""), 50);
       } else {
         p.current = actionLabel(b);
+        const f = b.input?.file_path ?? b.input?.path;
+        if (f != null) {
+          const base = path3.basename(String(f));
+          if (!p.touched.includes(base)) p.touched.push(base);
+        }
+        if (b.name === "Edit" || b.name === "Write" || b.name === "MultiEdit") p.edits++;
       }
     }
   } else if (e.type === "result") {
@@ -11873,6 +11879,13 @@ function doneLine(brain, p) {
   const prog = p.todoTotal != null ? `${p.todoDone}/${p.todoTotal}` : `${p.steps} steps`;
   const secs = p.ms != null ? ` \xB7 ${(p.ms / 1e3).toFixed(1)}s` : "";
   return `${p.error ? "\u26A0 failed" : "\u2705 done"} ${brain} \xB7 ${prog}${secs}`;
+}
+function summaryLine(p) {
+  if (!p.touched.length && !p.edits) return null;
+  const shown = p.touched.slice(0, 8).join(", ");
+  const more = p.touched.length > 8 ? `, +${p.touched.length - 8}` : "";
+  const ed = p.edits ? ` \xB7 ${p.edits} edit${p.edits === 1 ? "" : "s"}` : "";
+  return `   \u21B3 ${p.touched.length} file${p.touched.length === 1 ? "" : "s"}: ${shown}${more}${ed}`;
 }
 function runStreamed(brain, opts, childEnv) {
   const tty = !!process.stderr.isTTY;
@@ -11908,6 +11921,9 @@ function runStreamed(brain, opts, childEnv) {
       }
       if (tty) process.stderr.write("\r\x1B[K");
       process.stderr.write(`${doneLine(brain, p)}
+`);
+      const sum = summaryLine(p);
+      if (sum) process.stderr.write(`${sum}
 `);
       if (p.finalText) process.stdout.write(p.finalText + "\n");
       resolve(code ?? 1);

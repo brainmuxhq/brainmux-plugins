@@ -67,11 +67,14 @@ Add `--stream` (aka `-v`) for a single, self-rewriting progress line while the w
 ```
 ⏳ coder · 5/34 · Wiring the parser      ← updates in place
 ✅ done coder · 34/34 · 41.2s            ← replaces it when finished
+   ↳ 6 files: a.ts, b.ts, c.ts · 3 edits ← what it actually touched
 ```
 
 `X/Y` is real completed/total when the worker keeps a todo list (TodoWrite, i.e. `--write`
-tasks); read-only sweeps show a `step N` counter instead. It costs **no extra tokens** (just
-a serialization change) and writes **no files**; stdout still carries only the clean final
+tasks); read-only sweeps show a `step N` counter instead. The closing `↳` line summarizes
+**what it touched** (files read/edited + edit count) — a compact "what did it do" without the
+full transcript. It costs **no extra tokens** (parsed from the event stream, just a
+serialization change) and writes **no files**; stdout still carries only the clean final
 answer. **The live line renders only on a real TTY** — it is suppressed for a piped/tool
 consumer by design (a `\r` line is meaningless to a machine). So `--stream` is for a human
 watching their own terminal; an orchestrator gets nothing live from it (see below).

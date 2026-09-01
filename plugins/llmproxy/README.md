@@ -76,8 +76,9 @@ bmux delegate coder --mcp "read the react docs via context7 and summarize hooks"
 ```
 Delegated brains run headless on the pay-as-you-go meter. Opus stays the orchestrator and
 **verifies** their output — see the `delegate` skill. `--stream` (or `-v`) shows a single
-live progress line (`⏳ coder · 5/34 · <current step>`) while it runs — no extra tokens,
-just a serialization change; the clean final answer still goes to stdout. Every call echoes
+live progress line (`⏳ coder · 5/34 · <current step>`) while it runs, then a closing summary
+of what it touched (`↳ 6 files: a.ts, b.ts · 3 edits`) — no extra tokens, just a
+serialization change; the clean final answer still goes to stdout. Every call echoes
 its config (`delegate: coder · analyze · mcp off`). Workers get **no host MCP servers by
 default** (saves ~35k+ tokens/call for grunt work); pass `--mcp` for the rare task that
 needs one. Real per-brain spend is `bmux spend`.

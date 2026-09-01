@@ -67,6 +67,8 @@ export interface Progress {
   todoDone: number | null; // completed todos, if the worker keeps a todo list
   todoTotal: number | null;
   current: string; // short label of the latest action / in-progress todo
+  touched: string[]; // unique basenames of files the worker read/edited (what it actually did)
+  edits: number; // count of Edit/Write/MultiEdit calls
   done: boolean;
   error: boolean;
   finalText: string; // the worker's final answer (from the result event)
@@ -74,7 +76,7 @@ export interface Progress {
 }
 
 export function initProgress(): Progress {
-  return { steps: 0, todoDone: null, todoTotal: null, current: "", done: false, error: false, finalText: "", ms: null };
+  return { steps: 0, todoDone: null, todoTotal: null, current: "", touched: [], edits: 0, done: false, error: false, finalText: "", ms: null };
 }
 
 function clip(s: string, n: number): string {
@@ -106,6 +108,10 @@ export function foldEvent(p: Progress, ev: unknown): Progress {
         if (ip) p.current = clip(String(ip.activeForm ?? ip.content ?? ""), 50);
       } else {
         p.current = actionLabel(b);
+        // Record what the worker actually touched, so we can summarize it at the end.
+        const f = b.input?.file_path ?? b.input?.path;
+        if (f != null) { const base = path.basename(String(f)); if (!p.touched.includes(base)) p.touched.push(base); }
+        if (b.name === "Edit" || b.name === "Write" || b.name === "MultiEdit") p.edits++;
       }
     }
   } else if (e.type === "result") {
@@ -143,6 +149,15 @@ export function doneLine(brain: string, p: Progress): string {
   return `${p.error ? "⚠ failed" : "✅ done"} ${brain} · ${prog}${secs}`;
 }
 
+/** "What it actually did" line — the files touched (+ edit count), or null if none. */
+export function summaryLine(p: Progress): string | null {
+  if (!p.touched.length && !p.edits) return null;
+  const shown = p.touched.slice(0, 8).join(", ");
+  const more = p.touched.length > 8 ? `, +${p.touched.length - 8}` : "";
+  const ed = p.edits ? ` · ${p.edits} edit${p.edits === 1 ? "" : "s"}` : "";
+  return `   ↳ ${p.touched.length} file${p.touched.length === 1 ? "" : "s"}: ${shown}${more}${ed}`;
+}
+
 // --- run -------------------------------------------------------------------
 
 function runStreamed(brain: string, opts: DelegateOpts, childEnv: NodeJS.ProcessEnv): Promise<number> {
@@ -173,6 +188,8 @@ function runStreamed(brain: string, opts: DelegateOpts, childEnv: NodeJS.Process
       if (buf.trim()) { const ev = parseStreamLine(buf); if (ev) foldEvent(p, ev); }
       if (tty) process.stderr.write("\r\x1b[K"); // wipe the live line
       process.stderr.write(`${doneLine(brain, p)}\n`);
+      const sum = summaryLine(p);
+      if (sum) process.stderr.write(`${sum}\n`); // what it touched — the compact "what it did" line
       if (p.finalText) process.stdout.write(p.finalText + "\n"); // clean final answer → stdout (orchestrator-safe)
       resolve(code ?? 1);
     });

@@ -91,7 +91,8 @@
 - `bmux spend` (0.1.1): beyin başına istek/token/spend (LiteLLM'den).
 - `bmux delegate --stream|-v` (0.1.2→0.1.3): **insan-terminali** için tek satır canlı gösterge
   (`⏳ brain · 5/34 · <adım>` → `✅ done`; X/Y worker TodoWrite tutarsa, yoksa `step N`). TTY-only,
-  dosya yok, ekstra token yok; stdout = temiz cevap.
+  dosya yok, ekstra token yok; stdout = temiz cevap. (0.1.7) Kapanışta "ne yaptı" özeti:
+  `↳ N files: a.ts, b.ts · M edits` (event stream'den parse, ekstra token yok).
 - `bmux delegate --mcp` (0.1.4): worker default'ta host MCP **almaz** (`--strict-mcp-config`) —
   ölçüm 147→30 tool, ~69k→~33k input token, sıfır fayda kaybı; `--mcp` (alias `--with-mcp`) ile
   opt-in. Her çağrı config'i stderr'e basar: `brain · mode · mcp on/off`.
@@ -101,10 +102,10 @@
   context%·cost·OpenRouter bakiye·±satır·süre). Brain adı **launcher env'inden** (`BRAINMUX_BRAIN`,
   launch.ts set eder) → port hardcode YOK, drift YOK. Script embedded const (bundle-safe), settings.json'ı
   **ezmez** (--force gerekir). Plugin `statusLine` otomatik veremez (sadece agent/subagentStatusLine) → opt-in.
-- Test: 66 unit/golden. Commit'ler: `5ccca9c` (stream) · `6296daf` (mcp) · `3df3502` (skill) · statusline (0.1.6).
+- Test: 68 unit/golden. Commit'ler: `5ccca9c` (stream) · `6296daf` (mcp) · `3df3502` (skill) · `9069cb1` (statusline 0.1.6) · summary (0.1.7).
 
 **Yayın/sertleştirme:**
 - ✅ Multi-arch mirror: `ghcr.io/brainmuxhq/brainmux-litellm` (amd64+arm64), IMAGE_REF = manifest-list `sha256:693d839d…`.
-- ✅ Version **0.1.5** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.5).
+- ✅ Version **0.1.7** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.7).
 - ⏳ **GHCR paketini public yap** (org UI: brainmuxhq/packages → brainmux-litellm → settings → Change visibility → Public). Dış kullanıcıların `bmux up`'ta image çekmesi için ŞART; şu an private.
 - (opsiyonel) `?category=` doğrula + `bmux models --category`; direkt-provider (`deepseek`/`openai`) /models listeleri.

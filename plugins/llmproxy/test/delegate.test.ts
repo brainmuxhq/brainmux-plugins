@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseDelegateArgs, buildClaudeArgs, initProgress, foldEvent, parseStreamLine, statusLine, doneLine } from "../src/commands/delegate.js";
+import { parseDelegateArgs, buildClaudeArgs, initProgress, foldEvent, parseStreamLine, statusLine, doneLine, summaryLine } from "../src/commands/delegate.js";
 
 test("default mode = analyze, read-only tools", () => {
   const { brain, opts } = parseDelegateArgs(["coder", "find the bug"]);
@@ -99,6 +99,25 @@ test("foldEvent: TodoWrite drives real X/Y progress + the in-progress label", ()
   assert.equal(p.todoTotal, 5);
   assert.equal(p.current, "Wiring the parser");
   assert.equal(statusLine("coder", p), "⏳ coder · 2/5 · Wiring the parser");
+});
+
+test("foldEvent: tracks touched files (unique, basename) and counts edits", () => {
+  const p = initProgress();
+  foldEvent(p, { type: "assistant", message: { content: [{ type: "tool_use", name: "Read", input: { file_path: "/a/b/foo.ts" } }] } });
+  foldEvent(p, { type: "assistant", message: { content: [{ type: "tool_use", name: "Grep", input: { pattern: "x" } }] } }); // no path → not a file
+  foldEvent(p, { type: "assistant", message: { content: [{ type: "tool_use", name: "Edit", input: { file_path: "/a/b/foo.ts" } }] } }); // same file, dup
+  foldEvent(p, { type: "assistant", message: { content: [{ type: "tool_use", name: "Write", input: { file_path: "/c/bar.ts" } }] } });
+  assert.deepEqual(p.touched, ["foo.ts", "bar.ts"]);
+  assert.equal(p.edits, 2); // Edit + Write
+});
+
+test("summaryLine: lists touched files + edit count, null when nothing touched", () => {
+  const p = initProgress();
+  assert.equal(summaryLine(p), null);
+  p.touched = ["a.ts", "b.ts"]; p.edits = 1;
+  assert.equal(summaryLine(p), "   ↳ 2 files: a.ts, b.ts · 1 edit");
+  p.touched = Array.from({ length: 10 }, (_, i) => `f${i}.ts`); p.edits = 0;
+  assert.equal(summaryLine(p), "   ↳ 10 files: f0.ts, f1.ts, f2.ts, f3.ts, f4.ts, f5.ts, f6.ts, f7.ts, +2");
 });
 
 test("foldEvent: result captures the final answer + duration and flags errors", () => {
