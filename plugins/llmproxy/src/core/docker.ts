@@ -3,7 +3,10 @@ import http from "node:http";
 import type { Paths } from "./paths.js";
 
 export function composeArgs(paths: Paths): string[] {
-  return ["compose", "-f", paths.composeYaml];
+  // --env-file: secrets live in <BRAINMUX_HOME>/.env, one level above the generated
+  // compose file, so docker compose won't auto-load it — point at it explicitly, or
+  // ${VAR} interpolation (OPENROUTER_API_KEY, master keys, POSTGRES_PASSWORD) resolves empty.
+  return ["compose", "-f", paths.composeYaml, "--env-file", paths.envFile];
 }
 
 export function ensureDocker(): void {
