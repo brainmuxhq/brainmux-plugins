@@ -4,7 +4,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { runInit } from "../src/commands/init.js";
-import { setKey } from "../src/core/env.js";
 import { planLaunch } from "../src/commands/launch.js";
 
 test("planLaunch resolves base url + master key for a brain", () => {

@@ -1,14 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { resolvePaths, type Paths } from "../core/paths.js";
 import { parseBrains, type BrainsConfig } from "../core/manifest.js";
 import { generate, masterKeyVar } from "../core/generate.js";
 import { readEnv, writeEnv, genSecret } from "../core/env.js";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-// dist/src/commands -> package root -> templates/
-const templatesDir = path.resolve(here, "../../../templates");
+// The default brains.yaml written on first `bmux init`. Embedded as a constant (not read
+// from a file) so it resolves identically whether the CLI runs from the tsc output or the
+// shipped esbuild bundle — no import.meta.url/path-depth fragility. Mirrors the templating
+// approach in core/generate.ts.
+const DEFAULT_BRAINS_YAML = `version: 1
+brains:
+  chat:  { port: 4567, model: openrouter/qwen/qwen3.7-flash,    providerKey: OPENROUTER_API_KEY }
+  deep:  { port: 4568, model: openrouter/z-ai/glm-5.2,          providerKey: OPENROUTER_API_KEY }
+  coder: { port: 4569, model: openrouter/qwen/qwen3-coder-next, providerKey: OPENROUTER_API_KEY }
+`;
 
 export function writeGenerated(paths: Paths, cfg: BrainsConfig): void {
   const g = generate(cfg);
@@ -39,7 +45,7 @@ export function runInit(env: NodeJS.ProcessEnv = process.env): number {
   fs.mkdirSync(paths.dataDir, { recursive: true });
 
   if (!fs.existsSync(paths.brainsYaml)) {
-    fs.copyFileSync(path.join(templatesDir, "brains.default.yaml"), paths.brainsYaml);
+    fs.writeFileSync(paths.brainsYaml, DEFAULT_BRAINS_YAML);
   }
   const cfg = parseBrains(fs.readFileSync(paths.brainsYaml, "utf8"));
   ensureSecrets(paths, cfg);

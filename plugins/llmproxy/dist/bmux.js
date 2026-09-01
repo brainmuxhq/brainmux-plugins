@@ -7364,12 +7364,11 @@ var require_dist = __commonJS({
 });
 
 // src/cli.ts
-import { fileURLToPath as fileURLToPath2 } from "node:url";
+import { fileURLToPath } from "node:url";
 
 // src/commands/init.ts
 import fs3 from "node:fs";
 import path2 from "node:path";
-import { fileURLToPath } from "node:url";
 
 // src/core/paths.ts
 import os from "node:os";
@@ -11618,8 +11617,12 @@ function genSecret(bytes = 16) {
 }
 
 // src/commands/init.ts
-var here = path2.dirname(fileURLToPath(import.meta.url));
-var templatesDir = path2.resolve(here, "../../../templates");
+var DEFAULT_BRAINS_YAML = `version: 1
+brains:
+  chat:  { port: 4567, model: openrouter/qwen/qwen3.7-flash,    providerKey: OPENROUTER_API_KEY }
+  deep:  { port: 4568, model: openrouter/z-ai/glm-5.2,          providerKey: OPENROUTER_API_KEY }
+  coder: { port: 4569, model: openrouter/qwen/qwen3-coder-next, providerKey: OPENROUTER_API_KEY }
+`;
 function writeGenerated(paths, cfg) {
   const g = generate(cfg);
   fs3.mkdirSync(paths.initDir, { recursive: true });
@@ -11647,7 +11650,7 @@ function runInit(env = process.env) {
   fs3.mkdirSync(paths.home, { recursive: true });
   fs3.mkdirSync(paths.dataDir, { recursive: true });
   if (!fs3.existsSync(paths.brainsYaml)) {
-    fs3.copyFileSync(path2.join(templatesDir, "brains.default.yaml"), paths.brainsYaml);
+    fs3.writeFileSync(paths.brainsYaml, DEFAULT_BRAINS_YAML);
   }
   const cfg = parseBrains(fs3.readFileSync(paths.brainsYaml, "utf8"));
   ensureSecrets(paths, cfg);
@@ -11990,7 +11993,7 @@ ${HELP}`);
     return 1;
   }
 }
-if (process.argv[1] && fileURLToPath2(import.meta.url) === process.argv[1]) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   main(process.argv.slice(2)).then((code) => process.exit(code));
 }
 export {
