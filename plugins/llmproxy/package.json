@@ -10,7 +10,7 @@
   "files": ["dist", "bin", "templates", "skills", "commands", ".claude-plugin", ".env.example", "README.md"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "bundle": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/bmux.js",
+    "bundle": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/bmux.js --banner:js=\"import{createRequire as __cr}from'module';const require=__cr(import.meta.url);\"",
     "prepare": "npm run build && npm run bundle",
     "dist-check": "npm run bundle && git diff --exit-code -- dist/bmux.js",
     "test": "npm run build && node --test \"dist/test/**/*.test.js\""
