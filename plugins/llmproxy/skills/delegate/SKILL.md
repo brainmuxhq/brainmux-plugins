@@ -61,9 +61,8 @@ with. Keep the default for bulk/detection/refactor work. Add `--mcp` only when t
 genuinely needs one (e.g. `context7` for live docs, `brave` for web search) — then it pays
 the token cost just for that call.
 
-## Progress indicator (`--stream`)
-By default a delegate call is silent until it prints the final answer. Add `--stream` for
-a single, self-rewriting progress line on stderr while it runs — no full transcript:
+## Progress indicator (`--stream`) — for a human at a terminal
+Add `--stream` (aka `-v`) for a single, self-rewriting progress line while the worker runs:
 
 ```
 ⏳ coder · 5/34 · Wiring the parser      ← updates in place
@@ -71,10 +70,27 @@ a single, self-rewriting progress line on stderr while it runs — no full trans
 ```
 
 `X/Y` is real completed/total when the worker keeps a todo list (TodoWrite, i.e. `--write`
-tasks); read-only sweeps show a `step N` counter instead. stdout still carries only the
-clean final answer, so `--stream` is safe to pipe/consume. `--stream` costs **no extra
-tokens** — it only changes how the worker's output is serialized, not the work it does.
-Real per-brain spend is `bmux spend`.
+tasks); read-only sweeps show a `step N` counter instead. It costs **no extra tokens** (just
+a serialization change) and writes **no files**; stdout still carries only the clean final
+answer. **The live line renders only on a real TTY** — it is suppressed for a piped/tool
+consumer by design (a `\r` line is meaningless to a machine). So `--stream` is for a human
+watching their own terminal; an orchestrator gets nothing live from it (see below).
+
+## Reporting to the user (orchestrator discipline)
+When you (an orchestrating agent) run a delegate via Bash, the worker's output is buffered
+and returned to *you* at completion — the user's terminal is not your subprocess's TTY, so
+`--stream` can't reach them live. This matches idiomatic Claude Code delegation: a subagent
+**returns a summary at the end**, it does not stream progress to the parent. So:
+
+- **After every delegate, report a one-line status to the user unprompted** — which brain,
+  the task, and the result/outcome (e.g. "coder scanned src/ → 3 TODOs, listed below").
+  Don't make them ask what happened.
+- **Don't** try to give live progress by writing a log file or polling — that burns tokens
+  and/or leaves artifacts for no real gain. Final-summary-at-completion is the norm.
+- If you need the worker's cost/session metadata, use `--json` and read `result` +
+  `total_cost_usd`. Real per-brain spend is `bmux spend`.
+- If the **user** wants to watch a long run live, they run `bmux delegate … --stream` in
+  their **own** terminal.
 
 ## Consolidation discipline (required)
 Cheap brains are less reliable than Opus. After a delegate call, Opus **verifies** the
