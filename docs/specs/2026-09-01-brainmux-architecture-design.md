@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-01
 **Status:** Approved (design), pending spec review → implementation plan
-**Product:** `brainmux` — first plugin under the **WeCodeApps** brand.
+**Product:** `brainmux` — the first plugin in the **brainmux** monorepo.
 
 ## 1. Purpose
 
@@ -25,11 +25,11 @@ first-class, low-friction workflow.
 
 ## 3. Distribution
 
-- **Marketplace monorepo:** `azorlu80/wecodeapps-plugins` (marketplace name `wecodeapps`),
-  npm workspaces, home to a family of `@wecodeapps/*` plugins. brainmux is the first.
-- **Plugin:** installed via `/plugin marketplace add azorlu80/wecodeapps-plugins` →
+- **Marketplace monorepo:** `brainmuxhq/brainmux` (marketplace name `brainmux`),
+  npm workspaces, home to a family of `@brainmux/*` plugins. brainmux is the first.
+- **Plugin:** installed via `/plugin marketplace add brainmuxhq/brainmux` →
   `/plugin install brainmux`. Bundles the CLI + skills + slash commands.
-- **npm (optional):** `@wecodeapps/brainmux` for users who want `bmux` outside Claude Code.
+- **npm (optional):** `@brainmux/llmproxy` for users who want `bmux` outside Claude Code.
 - The Node CLI lives inside the plugin (`${CLAUDE_PLUGIN_ROOT}/bin/bmux`); Node is present
   because Claude Code requires it — no extra runtime dependency.
 
@@ -51,13 +51,13 @@ Updating code (`npm update` / plugin update) never disturbs user state.
 ## 5. Repo structure (source)
 
 ```
-wecodeapps-plugins/
+brainmux/
 ├─ .claude-plugin/marketplace.json   # lists plugins: brainmux, (future…)
 ├─ package.json                       # npm workspaces
 ├─ plugins/
-│   └─ brainmux/
+│   └─ llmproxy/
 │       ├─ .claude-plugin/plugin.json # declares skills + commands
-│       ├─ package.json               # @wecodeapps/brainmux
+│       ├─ package.json               # @brainmux/llmproxy
 │       ├─ bin/bmux                    # CLI entry (node dist/cli.js)
 │       ├─ src/
 │       │   ├─ cli.ts                  # arg parse → dispatch (thin)
@@ -112,7 +112,7 @@ brains.yaml ──generate──► N LiteLLM containers (one per brain) + 1 Pos
 - **One Postgres** instance, one database per brain (LiteLLM instances each own their tables).
   `STORE_MODEL_IN_DB=True`. Retained for spend history, request logs, virtual keys, admin UI,
   and future growth (teams, budgets, usage analytics).
-- **Image:** pinned by digest and mirrored to a WeCodeApps-owned registry (see §12).
+- **Image:** pinned by digest and mirrored to a brainmux-owned registry (GHCR: ghcr.io/brainmuxhq) (see §12).
 - Single-instance-via-virtual-keys (fewer containers, scales to many brains) is a **v2**
   optimization — deferred because key→model routing with opaque model ids is unverified, and
   we do not run two parallel routing schemes.
@@ -170,21 +170,20 @@ bmux ui [brain]                    print/open the LiteLLM UI URL for a brain
 
 ## 12. Image mirroring
 
-Pin the LiteLLM image by digest and mirror it to a WeCodeApps-owned registry so the product
+Pin the LiteLLM image by digest and mirror it to a brainmux-owned registry (GHCR: ghcr.io/brainmuxhq) so the product
 does not depend on upstream staying alive:
 
 ```
 upstream (pinned): ghcr.io/berriai/litellm-database@sha256:5ead13edd4efd89f32dab349c1f19447d395affca53f3aeae00f5e6e01b8c08d
-mirror:            <wecodeapps registry>/brainmux-litellm@<digest>
+mirror:            ghcr.io/brainmuxhq/brainmux-litellm@<digest>
 ```
 
 Generated compose references the mirror digest. MIT permits this; exclude `enterprise/`.
-Also keep an offline `docker save` tarball as a disaster backup. (Registry target — Docker
-Hub `wecodeapps` vs GHCR — TBD at implementation.)
+Also keep an offline `docker save` tarball as a disaster backup. (GHCR ghcr.io/brainmuxhq — chosen)
 
 ## 13. Migration (claude-proxy → brainmux)
 
-1. Restructure the current `claude-proxy` repo into `wecodeapps-plugins/plugins/brainmux/`.
+1. Restructure the current `claude-proxy` repo into `brainmux/plugins/llmproxy/`.
 2. Author `brains.yaml` capturing the current three brains.
 3. Build the generator; prove golden-parity against the current working compose/config/init.
 4. Move state to `~/.brainmux/` (optionally migrate `data/postgres` to keep spend history).
@@ -209,6 +208,6 @@ Hub `wecodeapps` vs GHCR — TBD at implementation.)
 
 ## 16. Open items for implementation
 
-- Registry choice for the mirror (Docker Hub `wecodeapps` vs GHCR).
+- Registry: GHCR (ghcr.io/brainmuxhq) — resolved.
 - Exact plugin manifest schema (`plugin.json`) fields for skills + commands.
 - Whether `data/postgres` is migrated or reset on first `bmux init`.

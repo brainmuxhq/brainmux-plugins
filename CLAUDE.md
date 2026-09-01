@@ -20,7 +20,7 @@
 - Domain: **brainmux.com** (Cloudflare'de register, 2026-09-01).
 - GitHub org: **`brainmuxhq`** (bare `brainmux` handle dolu — 2012 ölü kullanıcı). Marketplace repo bunun altında.
 - npm scope: **`@brainmux/*`**.
-- Sahiplik: Ali'nin şahıs firması (yazılım) altında. (WeCodeApps = ayrı/eski portfolio markası, karıştırma.)
+- Sahiplik: Ali'nin şahıs firması (yazılım) altında.
 - Claude Code = **kullanıcının kendi kurulumu** (proprietary, biz bundle/dağıtım YAPMAYIZ; sadece env set ederiz).
 
 ## Mimari kararlar (onaylı — 2026-09-01)
