@@ -70,12 +70,13 @@ memory) for your use-case, then wire it with `bmux config set-model <brain> <id>
 ```sh
 bmux delegate coder "find and list every TODO in src/, file:line only"    # read-only
 bmux delegate coder --write -C ./scratch "implement the spec in SPEC.md"   # edits, tight scope
-bmux delegate coder --stream "find and list every TODO in src/"           # watch its steps live
+bmux delegate coder --stream "find and list every TODO in src/"           # live progress line
 ```
 Delegated brains run headless on the pay-as-you-go meter. Opus stays the orchestrator and
-**verifies** their output — see the `delegate` skill. `--stream` (or `-v`) prints the
-worker's tool calls + notes as they happen and mirrors the raw event stream to
-`~/.brainmux/logs/` (tail it to watch a long run); real per-brain spend is `bmux spend`.
+**verifies** their output — see the `delegate` skill. `--stream` (or `-v`) shows a single
+live progress line (`⏳ coder · 5/34 · <current step>`) while it runs — no extra tokens,
+just a serialization change; the clean final answer still goes to stdout. Real per-brain
+spend is `bmux spend`.
 
 ## How it works
 

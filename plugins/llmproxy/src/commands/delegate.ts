@@ -2,7 +2,6 @@ import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { planLaunch } from "./launch.js";
-import { resolvePaths } from "../core/paths.js";
 
 const GUARD =
   "You are a DELEGATED worker brain invoked by an orchestrator. Do EXACTLY the task, " +
@@ -41,8 +40,8 @@ export function parseDelegateArgs(argv: string[], stdin?: string): { brain: stri
 }
 
 export function buildClaudeArgs(opts: DelegateOpts): string[] {
-  // --stream shows the worker's steps (tool calls, notes, cost) live via the NDJSON
-  // event stream; otherwise we only print the final result the orchestrator consumes.
+  // --stream asks the worker for the NDJSON event stream so we can render a live
+  // progress line; otherwise we take the plain final result the orchestrator consumes.
   const fmt = opts.stream ? ["--output-format", "stream-json", "--verbose"] : ["--output-format", opts.outfmt];
   const args = ["-p", opts.task, ...fmt, "--append-system-prompt", GUARD];
   if (opts.mode === "analyze") args.push("--permission-mode", "default", "--allowedTools", "Read", "Grep", "Glob");
@@ -51,98 +50,124 @@ export function buildClaudeArgs(opts: DelegateOpts): string[] {
   return args;
 }
 
-// --- stream trace formatting (pure, unit-tested) ---------------------------
+// --- stream progress tracking (pure, unit-tested) --------------------------
+//
+// We don't dump the worker's full transcript — just a light "is it alive / how
+// far / what now" indicator. When the worker uses TodoWrite we can show real
+// completed/total (e.g. 5/34); otherwise we count tool calls (step N).
 
-function toolHint(block: { input?: Record<string, unknown> }): string {
-  const i = block.input ?? {};
-  const raw = i.file_path ?? i.path ?? i.pattern ?? i.command ?? i.query ?? i.url;
-  if (raw == null) return "";
-  const s = String(raw).replace(/\s+/g, " ").trim();
-  return " " + (s.length > 80 ? s.slice(0, 79) + "…" : s);
+export interface Progress {
+  steps: number; // tool calls seen so far
+  todoDone: number | null; // completed todos, if the worker keeps a todo list
+  todoTotal: number | null;
+  current: string; // short label of the latest action / in-progress todo
+  done: boolean;
+  error: boolean;
+  finalText: string; // the worker's final answer (from the result event)
+  ms: number | null; // wall-clock duration reported by the result event
 }
 
-/**
- * Turn one parsed NDJSON stream event into a human-readable trace line, or null
- * to drop it. We surface the worker's actions (tool calls), its notes (text),
- * tool errors, and a final tokens/turns/duration summary — and drop the noise
- * (hook dumps, system init, rate-limit pings) the worker inherits from the host.
- *
- * NB: we deliberately do NOT print the stream's `total_cost_usd`. The worker's
- * Claude Code prices tokens off its own model catalog, but a brain answers to an
- * opaque model id, so that figure is wrong for delegated calls. Token counts are
- * real (relayed from the provider); authoritative spend is `bmux spend`.
- */
-export function formatStreamEvent(ev: unknown): string | null {
+export function initProgress(): Progress {
+  return { steps: 0, todoDone: null, todoTotal: null, current: "", done: false, error: false, finalText: "", ms: null };
+}
+
+function clip(s: string, n: number): string {
+  const t = s.replace(/\s+/g, " ").trim();
+  return t.length > n ? t.slice(0, n - 1) + "…" : t;
+}
+
+function actionLabel(b: { name?: string; input?: Record<string, unknown> }): string {
+  const i = b.input ?? {};
+  const file = i.file_path ?? i.path;
+  if (file != null) return `${b.name}: ${path.basename(String(file))}`;
+  const other = i.pattern ?? i.query ?? i.command ?? i.url;
+  return other != null ? `${b.name}: ${clip(String(other), 40)}` : String(b.name ?? "");
+}
+
+/** Fold one parsed NDJSON stream event into the running progress state. */
+export function foldEvent(p: Progress, ev: unknown): Progress {
   const e = ev as { type?: string; message?: { content?: any[] }; [k: string]: any };
-  if (!e || typeof e !== "object") return null;
-  switch (e.type) {
-    case "assistant": {
-      const out: string[] = [];
-      for (const b of e.message?.content ?? []) {
-        if (b?.type === "tool_use") out.push(`🔧 ${b.name}${toolHint(b)}`);
-        else if (b?.type === "text" && String(b.text ?? "").trim()) out.push(`💬 ${String(b.text).trim()}`);
+  if (!e || typeof e !== "object") return p;
+  if (e.type === "assistant") {
+    for (const b of e.message?.content ?? []) {
+      if (b?.type !== "tool_use") continue;
+      p.steps++;
+      if (b.name === "TodoWrite" && Array.isArray(b.input?.todos)) {
+        const todos = b.input.todos as Array<{ status?: string; content?: string; activeForm?: string }>;
+        p.todoTotal = todos.length;
+        p.todoDone = todos.filter((t) => t?.status === "completed").length;
+        const ip = todos.find((t) => t?.status === "in_progress");
+        if (ip) p.current = clip(String(ip.activeForm ?? ip.content ?? ""), 50);
+      } else {
+        p.current = actionLabel(b);
       }
-      return out.length ? out.join("\n") : null;
     }
-    case "user": {
-      const tr = (e.message?.content ?? []).find((b: any) => b?.type === "tool_result");
-      return tr?.is_error ? "  ↳ ⚠ tool error" : null; // normal results stay quiet — keep the trace terse
-    }
-    case "result": {
-      const inTok = e.usage?.input_tokens;
-      const outTok = e.usage?.output_tokens;
-      const tok = inTok != null && outTok != null ? `${inTok}→${outTok} tok, ` : "";
-      const turns = e.num_turns ?? "?";
-      const ms = e.duration_ms ?? "?";
-      return `${e.is_error ? "⚠ error" : "✅ done"} — ${tok}${turns} turns, ${ms}ms  (spend: bmux spend)`;
-    }
-    default:
-      return null; // system / rate_limit_event / anything else
+  } else if (e.type === "result") {
+    p.done = true;
+    p.error = !!e.is_error;
+    p.finalText = String(e.result ?? "");
+    p.ms = typeof e.duration_ms === "number" ? e.duration_ms : null;
   }
+  return p;
 }
 
-export function formatStreamLine(line: string): string | null {
+export function parseStreamLine(line: string): unknown | null {
   const s = line.trim();
   if (!s) return null;
   try {
-    return formatStreamEvent(JSON.parse(s));
+    return JSON.parse(s);
   } catch {
-    return null; // partial/garbled line — the raw .jsonl log keeps the truth
+    return null; // partial line at a chunk boundary — the next chunk completes it
   }
+}
+
+function progressWord(p: Progress): string {
+  return p.todoTotal != null ? `${p.todoDone}/${p.todoTotal}` : `step ${p.steps}`;
+}
+
+/** One-line live indicator while the worker runs. */
+export function statusLine(brain: string, p: Progress): string {
+  return `⏳ ${brain} · ${progressWord(p)}${p.current ? ` · ${p.current}` : ""}`;
+}
+
+/** One-line summary once the worker finishes. */
+export function doneLine(brain: string, p: Progress): string {
+  const prog = p.todoTotal != null ? `${p.todoDone}/${p.todoTotal}` : `${p.steps} steps`;
+  const secs = p.ms != null ? ` · ${(p.ms / 1000).toFixed(1)}s` : "";
+  return `${p.error ? "⚠ failed" : "✅ done"} ${brain} · ${prog}${secs}`;
 }
 
 // --- run -------------------------------------------------------------------
 
-function stamp(): string {
-  return new Date().toISOString().replace(/[:.]/g, "-");
-}
-
-function runStreamed(brain: string, opts: DelegateOpts, childEnv: NodeJS.ProcessEnv, env: NodeJS.ProcessEnv): Promise<number> {
-  const logsDir = resolvePaths(env).logsDir;
-  fs.mkdirSync(logsDir, { recursive: true });
-  const logFile = path.join(logsDir, `delegate-${brain}-${stamp()}.jsonl`);
-  const log = fs.createWriteStream(logFile, { flags: "a" });
-  process.stderr.write(`delegate: streaming '${brain}' — raw log ${logFile}\n`);
-
+function runStreamed(brain: string, opts: DelegateOpts, childEnv: NodeJS.ProcessEnv): Promise<number> {
+  const tty = !!process.stderr.isTTY;
   const child = spawn("claude", buildClaudeArgs(opts), { cwd: opts.workdir, stdio: ["ignore", "pipe", "inherit"], env: childEnv });
+  const p = initProgress();
   let buf = "";
+  // One rewriting status line on stderr (TTY only — a buffered consumer gets no per-step spam).
+  const render = () => { if (tty) process.stderr.write("\r\x1b[K" + statusLine(brain, p)); };
+  const snap = () => `${p.steps}|${p.todoDone}/${p.todoTotal}|${p.current}`;
+
   child.stdout.setEncoding("utf8");
   child.stdout.on("data", (chunk: string) => {
-    log.write(chunk); // raw NDJSON, written incrementally so `tail -f` shows it live
     buf += chunk;
+    const before = snap();
     for (let nl = buf.indexOf("\n"); nl >= 0; nl = buf.indexOf("\n")) {
       const line = buf.slice(0, nl);
       buf = buf.slice(nl + 1);
-      const pretty = formatStreamLine(line);
-      if (pretty) process.stdout.write(pretty + "\n");
+      const ev = parseStreamLine(line);
+      if (ev) foldEvent(p, ev);
     }
+    if (!p.done && snap() !== before) render();
   });
 
   return new Promise((resolve) => {
-    child.on("error", (e) => { process.stderr.write(`delegate: ${e.message}\n`); log.end(); resolve(1); });
+    child.on("error", (e) => { process.stderr.write(`delegate: ${e.message}\n`); resolve(1); });
     child.on("close", (code) => {
-      if (buf.trim()) { const pretty = formatStreamLine(buf); if (pretty) process.stdout.write(pretty + "\n"); }
-      log.end();
+      if (buf.trim()) { const ev = parseStreamLine(buf); if (ev) foldEvent(p, ev); }
+      if (tty) process.stderr.write("\r\x1b[K"); // wipe the live line
+      process.stderr.write(`${doneLine(brain, p)}\n`);
+      if (p.finalText) process.stdout.write(p.finalText + "\n"); // clean final answer → stdout (orchestrator-safe)
       resolve(code ?? 1);
     });
   });
@@ -161,7 +186,7 @@ export async function runDelegate(argv: string[], env: NodeJS.ProcessEnv = proce
   if (opts.mode === "yolo") process.stderr.write(`delegate: ⚠ --yolo — '${brain}' runs with NO permission checks in '${opts.workdir}'.\n`);
   const childEnv = { ...env, DELEGATE_DEPTH: "1", ANTHROPIC_BASE_URL: plan.base, ANTHROPIC_API_KEY: plan.apiKey };
 
-  if (opts.stream) return runStreamed(brain, opts, childEnv, env);
+  if (opts.stream) return runStreamed(brain, opts, childEnv);
 
   const r = spawnSync("claude", buildClaudeArgs(opts), {
     cwd: opts.workdir,

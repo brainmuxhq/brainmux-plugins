@@ -18,7 +18,7 @@ const HELP = `bmux — brainmux/llmproxy CLI
   bmux ps | logs [svc] | health   inspect the stack
   bmux <brain> [claude args...]   launch Claude Code on a brain (e.g. bmux chat)
   bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] "<task>"
-                                  (--stream shows the worker's steps + cost live, logs to ~/.brainmux/logs/)
+                                  (--stream shows a live progress line: ⏳ brain · 5/34 · <step>)
   bmux config add-brain <name> <port> <model> [providerKey]
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list

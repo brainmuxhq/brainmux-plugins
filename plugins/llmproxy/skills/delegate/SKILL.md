@@ -47,17 +47,22 @@ detection sweeps) · `--write` (lets it EDIT files, shell still blocked) · `--y
 (no permission checks — risky, only in a throwaway dir/worktree).
 
 Options: `-C <dir>` run in a subdir/worktree · `--json` machine-readable output ·
-`--stream` (aka `-v`) show the worker's steps live.
+`--stream` (aka `-v`) show a live progress indicator.
 
-## Watching what a delegate does (`--stream`)
-By default you only get the worker's final answer. Add `--stream` to see its steps as
-they happen — each tool call (`🔧 Grep …`, `🔧 Read …`, `🔧 Edit …`), its inline notes
-(`💬 …`), tool errors, and a closing `✅ done — <in>→<out> tok, N turns, Nms` line. The
-raw event stream is also saved to `~/.brainmux/logs/delegate-<brain>-<ts>.jsonl`, so you
-can `tail -f` it from another terminal to watch a long run live, or read it afterward to
-audit exactly what the brain touched. Note: the done line shows **token counts, not
-dollars** — the worker's Claude Code can't price a brain's opaque model id, so real spend
-is `bmux spend`, not that stream.
+## Progress indicator (`--stream`)
+By default a delegate call is silent until it prints the final answer. Add `--stream` for
+a single, self-rewriting progress line on stderr while it runs — no full transcript:
+
+```
+⏳ coder · 5/34 · Wiring the parser      ← updates in place
+✅ done coder · 34/34 · 41.2s            ← replaces it when finished
+```
+
+`X/Y` is real completed/total when the worker keeps a todo list (TodoWrite, i.e. `--write`
+tasks); read-only sweeps show a `step N` counter instead. stdout still carries only the
+clean final answer, so `--stream` is safe to pipe/consume. `--stream` costs **no extra
+tokens** — it only changes how the worker's output is serialized, not the work it does.
+Real per-brain spend is `bmux spend`.
 
 ## Consolidation discipline (required)
 Cheap brains are less reliable than Opus. After a delegate call, Opus **verifies** the

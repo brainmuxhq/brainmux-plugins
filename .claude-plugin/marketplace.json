@@ -12,7 +12,7 @@
       "name": "llmproxy",
       "source": "./plugins/llmproxy",
       "description": "Run Claude Code on cheap/alternate LLM brains and delegate grunt work to save your Opus quota.",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "license": "MIT",
       "homepage": "https://brainmux.com",
       "keywords": ["llm", "proxy", "litellm", "claude-code", "delegate", "openrouter"]

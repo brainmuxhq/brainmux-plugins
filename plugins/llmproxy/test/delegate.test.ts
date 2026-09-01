@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseDelegateArgs, buildClaudeArgs, formatStreamEvent, formatStreamLine } from "../src/commands/delegate.js";
+import { parseDelegateArgs, buildClaudeArgs, initProgress, foldEvent, parseStreamLine, statusLine, doneLine } from "../src/commands/delegate.js";
 
 test("default mode = analyze, read-only tools", () => {
   const { brain, opts } = parseDelegateArgs(["coder", "find the bug"]);
@@ -62,42 +62,61 @@ test("--stream builds stream-json + --verbose (not the plain output-format)", ()
   assert.deepEqual(plain.slice(plain.indexOf("--output-format"), plain.indexOf("--output-format") + 2), ["--output-format", "text"]);
 });
 
-test("formatStreamEvent: tool_use → 🔧 with a compact hint", () => {
-  const ev = { type: "assistant", message: { content: [{ type: "tool_use", name: "Bash", input: { command: "ls -la" } }] } };
-  assert.equal(formatStreamEvent(ev), "🔧 Bash ls -la");
-  const grep = { type: "assistant", message: { content: [{ type: "tool_use", name: "Grep", input: { pattern: "TODO" } }] } };
-  assert.equal(formatStreamEvent(grep), "🔧 Grep TODO");
+test("foldEvent: tool calls advance the step counter and set the current action", () => {
+  const p = initProgress();
+  foldEvent(p, { type: "assistant", message: { content: [{ type: "tool_use", name: "Grep", input: { pattern: "TODO" } }] } });
+  assert.equal(p.steps, 1);
+  assert.equal(p.current, "Grep: TODO");
+  foldEvent(p, { type: "assistant", message: { content: [{ type: "tool_use", name: "Read", input: { file_path: "/a/b/delegate.ts" } }] } });
+  assert.equal(p.steps, 2);
+  assert.equal(p.current, "Read: delegate.ts"); // file args show the basename, not the full path
 });
 
-test("formatStreamEvent: assistant text → 💬, empty text dropped", () => {
-  assert.equal(formatStreamEvent({ type: "assistant", message: { content: [{ type: "text", text: "found 3 hits" }] } }), "💬 found 3 hits");
-  assert.equal(formatStreamEvent({ type: "assistant", message: { content: [{ type: "text", text: "  " }] } }), null);
-  assert.equal(formatStreamEvent({ type: "assistant", message: { content: [{ type: "thinking", thinking: "" }] } }), null);
+test("foldEvent: TodoWrite drives real X/Y progress + the in-progress label", () => {
+  const p = initProgress();
+  foldEvent(p, { type: "assistant", message: { content: [{ type: "tool_use", name: "TodoWrite", input: { todos: [
+    { status: "completed", content: "a" },
+    { status: "completed", content: "b" },
+    { status: "in_progress", content: "wire the parser", activeForm: "Wiring the parser" },
+    { status: "pending", content: "d" },
+    { status: "pending", content: "e" },
+  ] } }] } });
+  assert.equal(p.todoDone, 2);
+  assert.equal(p.todoTotal, 5);
+  assert.equal(p.current, "Wiring the parser");
+  assert.equal(statusLine("coder", p), "⏳ coder · 2/5 · Wiring the parser");
 });
 
-test("formatStreamEvent: tool errors surface, normal results stay quiet", () => {
-  assert.equal(formatStreamEvent({ type: "user", message: { content: [{ type: "tool_result", is_error: true }] } }), "  ↳ ⚠ tool error");
-  assert.equal(formatStreamEvent({ type: "user", message: { content: [{ type: "tool_result", content: "ok", is_error: false }] } }), null);
+test("foldEvent: result captures the final answer + duration and flags errors", () => {
+  const p = initProgress();
+  foldEvent(p, { type: "result", is_error: false, duration_ms: 8485, usage: { input_tokens: 90000, output_tokens: 117 }, result: "delegate.ts" });
+  assert.equal(p.done, true);
+  assert.equal(p.finalText, "delegate.ts");
+  assert.equal(p.ms, 8485);
+  assert.equal(doneLine("chat", p), "✅ done chat · 0 steps · 8.5s");
 });
 
-test("formatStreamEvent: result → done line with real tokens/turns/duration (no misleading $)", () => {
-  const ev = { type: "result", subtype: "success", is_error: false, total_cost_usd: 0.6371, num_turns: 2, duration_ms: 6477, usage: { input_tokens: 8876, output_tokens: 118 }, result: "final" };
-  const out = formatStreamEvent(ev);
-  assert.equal(out, "✅ done — 8876→118 tok, 2 turns, 6477ms  (spend: bmux spend)");
-  assert.ok(!out!.includes("$"), "must not print Claude Code's bogus per-brain dollar figure");
-  // usage absent → drop the token clause, keep turns/duration
-  assert.equal(formatStreamEvent({ type: "result", is_error: true, num_turns: 1, duration_ms: 10 }), "⚠ error — 1 turns, 10ms  (spend: bmux spend)");
+test("statusLine / doneLine: fall back to a step count when there are no todos", () => {
+  const p = initProgress();
+  p.steps = 7;
+  p.current = "Grep: foo";
+  assert.equal(statusLine("chat", p), "⏳ chat · step 7 · Grep: foo");
+  p.done = true; p.error = true; p.ms = 1200;
+  assert.equal(doneLine("chat", p), "⚠ failed chat · 7 steps · 1.2s");
 });
 
-test("formatStreamEvent: host noise is dropped", () => {
-  assert.equal(formatStreamEvent({ type: "system", subtype: "hook_response", output: "…huge skill dump…" }), null);
-  assert.equal(formatStreamEvent({ type: "system", subtype: "init" }), null);
-  assert.equal(formatStreamEvent({ type: "rate_limit_event" }), null);
+test("foldEvent: host noise (hooks, init, rate-limit) never touches progress", () => {
+  const p = initProgress();
+  const before = JSON.stringify(p);
+  foldEvent(p, { type: "system", subtype: "hook_response", output: "…huge skill dump…" });
+  foldEvent(p, { type: "system", subtype: "init" });
+  foldEvent(p, { type: "rate_limit_event" });
+  assert.equal(JSON.stringify(p), before);
 });
 
-test("formatStreamLine: blank / non-JSON lines drop to null", () => {
-  assert.equal(formatStreamLine(""), null);
-  assert.equal(formatStreamLine("   "), null);
-  assert.equal(formatStreamLine("not json {"), null);
-  assert.equal(formatStreamLine('{"type":"assistant","message":{"content":[{"type":"text","text":"hi"}]}}'), "💬 hi");
+test("parseStreamLine: blank / non-JSON lines drop to null; valid JSON parses", () => {
+  assert.equal(parseStreamLine(""), null);
+  assert.equal(parseStreamLine("   "), null);
+  assert.equal(parseStreamLine("not json {"), null);
+  assert.deepEqual(parseStreamLine('{"type":"result","result":"ok"}'), { type: "result", result: "ok" });
 });

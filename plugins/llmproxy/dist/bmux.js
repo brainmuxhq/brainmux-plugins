@@ -7384,7 +7384,6 @@ function resolvePaths(env = process.env) {
     composeYaml: path.join(generatedDir, "compose.yaml"),
     initDir: path.join(generatedDir, "init"),
     dataDir: path.join(home, "data", "postgres"),
-    logsDir: path.join(home, "logs"),
     brainConfig: (name) => path.join(generatedDir, `${name}.yaml`)
   };
 }
@@ -11806,86 +11805,101 @@ function buildClaudeArgs(opts) {
   else args.push("--dangerously-skip-permissions");
   return args;
 }
-function toolHint(block) {
-  const i = block.input ?? {};
-  const raw = i.file_path ?? i.path ?? i.pattern ?? i.command ?? i.query ?? i.url;
-  if (raw == null) return "";
-  const s = String(raw).replace(/\s+/g, " ").trim();
-  return " " + (s.length > 80 ? s.slice(0, 79) + "\u2026" : s);
+function initProgress() {
+  return { steps: 0, todoDone: null, todoTotal: null, current: "", done: false, error: false, finalText: "", ms: null };
 }
-function formatStreamEvent(ev) {
+function clip(s, n) {
+  const t = s.replace(/\s+/g, " ").trim();
+  return t.length > n ? t.slice(0, n - 1) + "\u2026" : t;
+}
+function actionLabel(b) {
+  const i = b.input ?? {};
+  const file = i.file_path ?? i.path;
+  if (file != null) return `${b.name}: ${path3.basename(String(file))}`;
+  const other = i.pattern ?? i.query ?? i.command ?? i.url;
+  return other != null ? `${b.name}: ${clip(String(other), 40)}` : String(b.name ?? "");
+}
+function foldEvent(p, ev) {
   const e = ev;
-  if (!e || typeof e !== "object") return null;
-  switch (e.type) {
-    case "assistant": {
-      const out = [];
-      for (const b of e.message?.content ?? []) {
-        if (b?.type === "tool_use") out.push(`\u{1F527} ${b.name}${toolHint(b)}`);
-        else if (b?.type === "text" && String(b.text ?? "").trim()) out.push(`\u{1F4AC} ${String(b.text).trim()}`);
+  if (!e || typeof e !== "object") return p;
+  if (e.type === "assistant") {
+    for (const b of e.message?.content ?? []) {
+      if (b?.type !== "tool_use") continue;
+      p.steps++;
+      if (b.name === "TodoWrite" && Array.isArray(b.input?.todos)) {
+        const todos = b.input.todos;
+        p.todoTotal = todos.length;
+        p.todoDone = todos.filter((t) => t?.status === "completed").length;
+        const ip = todos.find((t) => t?.status === "in_progress");
+        if (ip) p.current = clip(String(ip.activeForm ?? ip.content ?? ""), 50);
+      } else {
+        p.current = actionLabel(b);
       }
-      return out.length ? out.join("\n") : null;
     }
-    case "user": {
-      const tr = (e.message?.content ?? []).find((b) => b?.type === "tool_result");
-      return tr?.is_error ? "  \u21B3 \u26A0 tool error" : null;
-    }
-    case "result": {
-      const inTok = e.usage?.input_tokens;
-      const outTok = e.usage?.output_tokens;
-      const tok = inTok != null && outTok != null ? `${inTok}\u2192${outTok} tok, ` : "";
-      const turns = e.num_turns ?? "?";
-      const ms = e.duration_ms ?? "?";
-      return `${e.is_error ? "\u26A0 error" : "\u2705 done"} \u2014 ${tok}${turns} turns, ${ms}ms  (spend: bmux spend)`;
-    }
-    default:
-      return null;
+  } else if (e.type === "result") {
+    p.done = true;
+    p.error = !!e.is_error;
+    p.finalText = String(e.result ?? "");
+    p.ms = typeof e.duration_ms === "number" ? e.duration_ms : null;
   }
+  return p;
 }
-function formatStreamLine(line) {
+function parseStreamLine(line) {
   const s = line.trim();
   if (!s) return null;
   try {
-    return formatStreamEvent(JSON.parse(s));
+    return JSON.parse(s);
   } catch {
     return null;
   }
 }
-function stamp() {
-  return (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+function progressWord(p) {
+  return p.todoTotal != null ? `${p.todoDone}/${p.todoTotal}` : `step ${p.steps}`;
 }
-function runStreamed(brain, opts, childEnv, env) {
-  const logsDir = resolvePaths(env).logsDir;
-  fs4.mkdirSync(logsDir, { recursive: true });
-  const logFile = path3.join(logsDir, `delegate-${brain}-${stamp()}.jsonl`);
-  const log = fs4.createWriteStream(logFile, { flags: "a" });
-  process.stderr.write(`delegate: streaming '${brain}' \u2014 raw log ${logFile}
-`);
+function statusLine(brain, p) {
+  return `\u23F3 ${brain} \xB7 ${progressWord(p)}${p.current ? ` \xB7 ${p.current}` : ""}`;
+}
+function doneLine(brain, p) {
+  const prog = p.todoTotal != null ? `${p.todoDone}/${p.todoTotal}` : `${p.steps} steps`;
+  const secs = p.ms != null ? ` \xB7 ${(p.ms / 1e3).toFixed(1)}s` : "";
+  return `${p.error ? "\u26A0 failed" : "\u2705 done"} ${brain} \xB7 ${prog}${secs}`;
+}
+function runStreamed(brain, opts, childEnv) {
+  const tty = !!process.stderr.isTTY;
   const child = spawn("claude", buildClaudeArgs(opts), { cwd: opts.workdir, stdio: ["ignore", "pipe", "inherit"], env: childEnv });
+  const p = initProgress();
   let buf = "";
+  const render = () => {
+    if (tty) process.stderr.write("\r\x1B[K" + statusLine(brain, p));
+  };
+  const snap = () => `${p.steps}|${p.todoDone}/${p.todoTotal}|${p.current}`;
   child.stdout.setEncoding("utf8");
   child.stdout.on("data", (chunk) => {
-    log.write(chunk);
     buf += chunk;
+    const before = snap();
     for (let nl = buf.indexOf("\n"); nl >= 0; nl = buf.indexOf("\n")) {
       const line = buf.slice(0, nl);
       buf = buf.slice(nl + 1);
-      const pretty = formatStreamLine(line);
-      if (pretty) process.stdout.write(pretty + "\n");
+      const ev = parseStreamLine(line);
+      if (ev) foldEvent(p, ev);
     }
+    if (!p.done && snap() !== before) render();
   });
   return new Promise((resolve) => {
     child.on("error", (e) => {
       process.stderr.write(`delegate: ${e.message}
 `);
-      log.end();
       resolve(1);
     });
     child.on("close", (code) => {
       if (buf.trim()) {
-        const pretty = formatStreamLine(buf);
-        if (pretty) process.stdout.write(pretty + "\n");
+        const ev = parseStreamLine(buf);
+        if (ev) foldEvent(p, ev);
       }
-      log.end();
+      if (tty) process.stderr.write("\r\x1B[K");
+      process.stderr.write(`${doneLine(brain, p)}
+`);
+      if (p.finalText) process.stdout.write(p.finalText + "\n");
       resolve(code ?? 1);
     });
   });
@@ -11907,7 +11921,7 @@ async function runDelegate(argv, env = process.env) {
   if (opts.mode === "yolo") process.stderr.write(`delegate: \u26A0 --yolo \u2014 '${brain}' runs with NO permission checks in '${opts.workdir}'.
 `);
   const childEnv = { ...env, DELEGATE_DEPTH: "1", ANTHROPIC_BASE_URL: plan.base, ANTHROPIC_API_KEY: plan.apiKey };
-  if (opts.stream) return runStreamed(brain, opts, childEnv, env);
+  if (opts.stream) return runStreamed(brain, opts, childEnv);
   const r = spawnSync3("claude", buildClaudeArgs(opts), {
     cwd: opts.workdir,
     stdio: wantsStdin ? ["inherit", "inherit", "inherit"] : ["ignore", "inherit", "inherit"],
@@ -12313,7 +12327,7 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
   bmux ps | logs [svc] | health   inspect the stack
   bmux <brain> [claude args...]   launch Claude Code on a brain (e.g. bmux chat)
   bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] "<task>"
-                                  (--stream shows the worker's steps + cost live, logs to ~/.brainmux/logs/)
+                                  (--stream shows a live progress line: \u23F3 brain \xB7 5/34 \xB7 <step>)
   bmux config add-brain <name> <port> <model> [providerKey]
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list
