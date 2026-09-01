@@ -2379,9 +2379,9 @@ var require_stringifyNumber = __commonJS({
     function stringifyNumber({ format, minFractionDigits, tag, value }) {
       if (typeof value === "bigint")
         return String(value);
-      const num = typeof value === "number" ? value : Number(value);
-      if (!isFinite(num))
-        return isNaN(num) ? ".nan" : num < 0 ? "-.inf" : ".inf";
+      const num2 = typeof value === "number" ? value : Number(value);
+      if (!isFinite(num2))
+        return isNaN(num2) ? ".nan" : num2 < 0 ? "-.inf" : ".inf";
       let n = Object.is(value, -0) ? "-0" : JSON.stringify(value);
       if (!format && minFractionDigits && (!tag || tag === "tag:yaml.org,2002:float") && /^-?\d/.test(n) && !n.includes("e")) {
         let i = n.indexOf(".");
@@ -2421,8 +2421,8 @@ var require_float = __commonJS({
       test: /^[-+]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)[eE][-+]?[0-9]+$/,
       resolve: (str) => parseFloat(str),
       stringify(node) {
-        const num = Number(node.value);
-        return isFinite(num) ? num.toExponential() : stringifyNumber.stringifyNumber(node);
+        const num2 = Number(node.value);
+        return isFinite(num2) ? num2.toExponential() : stringifyNumber.stringifyNumber(node);
       }
     };
     var float = {
@@ -2861,8 +2861,8 @@ var require_float2 = __commonJS({
       test: /^[-+]?(?:[0-9][0-9_]*)?(?:\.[0-9_]*)?[eE][-+]?[0-9]+$/,
       resolve: (str) => parseFloat(str.replace(/_/g, "")),
       stringify(node) {
-        const num = Number(node.value);
-        return isFinite(num) ? num.toExponential() : stringifyNumber.stringifyNumber(node);
+        const num2 = Number(node.value);
+        return isFinite(num2) ? num2.toExponential() : stringifyNumber.stringifyNumber(node);
       }
     };
     var float = {
@@ -3064,23 +3064,23 @@ var require_timestamp = __commonJS({
     function parseSexagesimal(str, asBigInt) {
       const sign = str[0];
       const parts = sign === "-" || sign === "+" ? str.substring(1) : str;
-      const num = (n) => asBigInt ? BigInt(n) : Number(n);
-      const res = parts.replace(/_/g, "").split(":").reduce((res2, p) => res2 * num(60) + num(p), num(0));
-      return sign === "-" ? num(-1) * res : res;
+      const num2 = (n) => asBigInt ? BigInt(n) : Number(n);
+      const res = parts.replace(/_/g, "").split(":").reduce((res2, p) => res2 * num2(60) + num2(p), num2(0));
+      return sign === "-" ? num2(-1) * res : res;
     }
     function stringifySexagesimal(node) {
       let { value } = node;
-      let num = (n) => n;
+      let num2 = (n) => n;
       if (typeof value === "bigint")
-        num = (n) => BigInt(n);
+        num2 = (n) => BigInt(n);
       else if (isNaN(value) || !isFinite(value))
         return stringifyNumber.stringifyNumber(node);
       let sign = "";
       if (value < 0) {
         sign = "-";
-        value *= num(-1);
+        value *= num2(-1);
       }
-      const _60 = num(60);
+      const _60 = num2(60);
       const parts = [value % _60];
       if (value < 60) {
         parts.unshift(0);
@@ -11931,6 +11931,116 @@ async function runConfig(sub, rest, env = process.env) {
   }
 }
 
+// src/core/openrouter.ts
+import https from "node:https";
+var OPENROUTER = {
+  api: { models: "https://openrouter.ai/api/v1/models" },
+  // public, no key
+  useCases: [
+    { id: "chat", label: "Chat / summary", guidance: "cheap, fast, wide context; grunt & summarize" },
+    { id: "coding", label: "Coding", guidance: "high SWE-bench, 128k+ context, good price/perf" },
+    { id: "deep", label: "Deep reasoning", guidance: "strongest reasoning; price secondary" },
+    { id: "cheap", label: "Cheapest", guidance: "lowest $/token; quality secondary" },
+    { id: "long", label: "Long context", guidance: "largest context window (1M+)" }
+  ]
+};
+var ConfigSchema = external_exports.object({
+  api: external_exports.object({ models: external_exports.string().url() }),
+  useCases: external_exports.array(external_exports.object({ id: external_exports.string().min(1), label: external_exports.string().min(1), guidance: external_exports.string().min(1) })).min(1)
+});
+ConfigSchema.parse(OPENROUTER);
+function getUseCases() {
+  return OPENROUTER.useCases;
+}
+function num(v) {
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v))) return Number(v);
+  return null;
+}
+function parseModelsPayload(json) {
+  const data = json.data;
+  if (!Array.isArray(data)) throw new Error("unexpected OpenRouter /models response: no data[] array");
+  return data.map((m) => {
+    const o = m ?? {};
+    return {
+      id: String(o.id ?? ""),
+      contextLength: num(o.context_length),
+      promptPrice: num(o.pricing?.prompt),
+      completionPrice: num(o.pricing?.completion),
+      modality: typeof o.architecture?.modality === "string" ? o.architecture.modality : "text->text",
+      name: String(o.name ?? o.id ?? ""),
+      raw: m
+    };
+  });
+}
+function fetchModels() {
+  return new Promise((resolve, reject) => {
+    const req = https.get(OPENROUTER.api.models, { timeout: 2e4 }, (res) => {
+      const status = res.statusCode ?? 0;
+      if (status >= 400) {
+        res.resume();
+        reject(new Error(`could not fetch OpenRouter catalog: HTTP ${status}`));
+        return;
+      }
+      let body = "";
+      res.setEncoding("utf8");
+      res.on("data", (c) => body += c);
+      res.on("end", () => {
+        try {
+          resolve(parseModelsPayload(JSON.parse(body)));
+        } catch (e) {
+          reject(new Error(`could not parse OpenRouter catalog: ${e.message}`));
+        }
+      });
+    });
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("could not fetch OpenRouter catalog: timed out"));
+    });
+    req.on("error", (e) => reject(new Error(`could not fetch OpenRouter catalog: ${e.message}`)));
+  });
+}
+function per1M(price) {
+  return price == null ? "?" : `$${(price * 1e6).toFixed(2)}`;
+}
+function formatModels(rows, opts = {}) {
+  const q = opts.query?.toLowerCase();
+  const filtered = (q ? rows.filter((r) => r.id.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)) : rows).slice().sort((a, b) => (a.promptPrice ?? Infinity) - (b.promptPrice ?? Infinity));
+  const header = `${"model".padEnd(44)} ${"ctx".padStart(10)}  ${"$in/1M".padStart(9)} ${"$out/1M".padStart(9)}  modality`;
+  const lines = filtered.map((r) => {
+    const ctx = r.contextLength != null ? r.contextLength.toLocaleString("en-US") : "?";
+    return `${r.id.padEnd(44)} ${ctx.padStart(10)}  ${per1M(r.promptPrice).padStart(9)} ${per1M(r.completionPrice).padStart(9)}  ${r.modality}`;
+  });
+  return [header, ...lines].join("\n");
+}
+
+// src/commands/models.ts
+async function runModels(rest, _env = process.env) {
+  if (rest.includes("--use-cases")) {
+    console.log("Use-cases (guidance for picking a model from `bmux models`):");
+    for (const uc of getUseCases()) console.log(`  ${uc.id.padEnd(8)} ${uc.label.padEnd(16)} ${uc.guidance}`);
+    return 0;
+  }
+  const wantJson = rest.includes("--json");
+  const query = rest.find((a) => !a.startsWith("-"));
+  try {
+    const rows = await fetchModels();
+    if (wantJson) {
+      const q = query?.toLowerCase();
+      const out = q ? rows.filter((r) => r.id.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)) : rows;
+      console.log(JSON.stringify(out.map((r) => r.raw), null, 2));
+    } else {
+      console.log("Live from OpenRouter \xB7 prices per 1M tokens \xB7 sorted by input price\n");
+      console.log(formatModels(rows, { query }));
+    }
+    return 0;
+  } catch (e) {
+    process.stderr.write(`bmux models: ${e.message}
+`);
+    return 1;
+  }
+}
+
 // src/commands/test.ts
 import http2 from "node:http";
 function isAlive(responseJson) {
@@ -12009,6 +12119,7 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list
   bmux test                       smoke every brain via /v1/messages
+  bmux models [query] | --use-cases | --json   list OpenRouter models (live) / use-cases
 `;
 var STACK = /* @__PURE__ */ new Set(["up", "down", "restart", "ps", "logs", "health"]);
 async function main(argv, env = process.env) {
@@ -12023,6 +12134,7 @@ async function main(argv, env = process.env) {
     if (cmd === "test") return await runTest(env);
     if (cmd === "delegate") return runDelegate(rest, env);
     if (cmd === "config") return await runConfig(rest[0] ?? "", rest.slice(1), env);
+    if (cmd === "models") return await runModels(rest, env);
     if (STACK.has(cmd)) return await runStack(cmd, rest, env);
     const cfg = loadBrains(resolvePaths(env).brainsYaml);
     if (cfg.brains[cmd]) return runLaunch(cmd, rest, env);
