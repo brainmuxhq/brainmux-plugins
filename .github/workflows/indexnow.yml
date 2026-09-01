@@ -1,0 +1,19 @@
+name: IndexNow
+
+# Ping IndexNow (Bing/Yandex/Seznam/Naver) whenever the site changes, so those
+# engines re-crawl brainmux.com without waiting. Fires on pushes that touch web/.
+on:
+  push:
+    branches: [main]
+    paths: ["web/**"]
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Notify IndexNow
+        run: node web/scripts/indexnow.mjs
