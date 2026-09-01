@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-// bmux — @brainmux/llmproxy CLI entry. Loads the built CLI and runs main().
-// cli.js only self-runs when invoked directly (its entry guard is false when
-// loaded through this dynamic import), so we call main() explicitly here.
-// During development run `npm run build` first.
-import("../dist/src/cli.js").then(
+// bmux — @brainmux/llmproxy CLI entry. Loads the self-contained bundle and runs main().
+// dist/bmux.js is an esbuild bundle (zod + yaml inlined) so it runs with no node_modules
+// present — the plugin works from a fresh marketplace checkout. The bundle only self-runs
+// when invoked directly (its entry guard is false through this dynamic import), so we call
+// main() explicitly here. During development run `npm run bundle` first.
+import("../dist/bmux.js").then(
   (mod) => mod.main(process.argv.slice(2)).then((code) => process.exit(code)),
   (err) => {
-    console.error("bmux: build missing? run `npm run build` in plugins/llmproxy. ", err?.message ?? err);
+    console.error("bmux: bundle missing? run `npm run bundle` in plugins/llmproxy. ", err?.message ?? err);
     process.exit(1);
   },
 );
