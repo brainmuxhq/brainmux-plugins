@@ -53,6 +53,7 @@ bmux config add-key <ENV_VAR> [value] | list
 bmux test                                   smoke every brain via /v1/messages
 bmux spend                                  per-brain requests / tokens / spend
 bmux models [query] | --use-cases | --json  browse the live OpenRouter catalog
+bmux statusline install [--force]           enable the Claude Code status line
 ```
 
 ## Pick a model (live)
@@ -80,6 +81,18 @@ just a serialization change; the clean final answer still goes to stdout. Every 
 its config (`delegate: coder · analyze · mcp off`). Workers get **no host MCP servers by
 default** (saves ~35k+ tokens/call for grunt work); pass `--mcp` for the rare task that
 needs one. Real per-brain spend is `bmux spend`.
+
+## Status line (optional)
+
+```sh
+bmux statusline install          # enable it (needs jq); --force to replace an existing one
+```
+Adds a Claude Code status line showing `📁 dir · 🌿 git · 🧠 brain (proxy) / 🤖 model · ⚡ effort ·
+🧠 context% · 💰 cost · 💳 OpenRouter balance · ±lines · ⏱️ time`. The active brain name comes
+from the launcher (`$BRAINMUX_BRAIN`), so it never drifts when `brains.yaml` changes. It is
+**opt-in** (Claude Code plugins can't auto-set a status line) and **non-destructive** — if you
+already have a `statusLine`, it is left alone unless you pass `--force`. Restart Claude Code (or
+start a new session) after installing.
 
 ## How it works
 

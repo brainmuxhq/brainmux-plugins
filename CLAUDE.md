@@ -93,7 +93,11 @@
   opt-in. Her çağrı config'i stderr'e basar: `brain · mode · mcp on/off`.
 - Delege skill (0.1.5): orchestrator flag dayatmaz; **her delegeden sonra kullanıcıya tek satır
   özet raporlar** (Claude Code best-practice: sonuç tarif et; canlı stream parent'a gitmez, cost için `--json`).
-- Test: 60 unit/golden. Commit'ler: `5ccca9c` (stream) · `6296daf` (mcp) · `3df3502` (skill).
+- `bmux statusline install` (0.1.6): opt-in Claude Code status line (dir·git·brain/model·effort·
+  context%·cost·OpenRouter bakiye·±satır·süre). Brain adı **launcher env'inden** (`BRAINMUX_BRAIN`,
+  launch.ts set eder) → port hardcode YOK, drift YOK. Script embedded const (bundle-safe), settings.json'ı
+  **ezmez** (--force gerekir). Plugin `statusLine` otomatik veremez (sadece agent/subagentStatusLine) → opt-in.
+- Test: 66 unit/golden. Commit'ler: `5ccca9c` (stream) · `6296daf` (mcp) · `3df3502` (skill) · statusline (0.1.6).
 
 **Yayın/sertleştirme:**
 - ✅ Multi-arch mirror: `ghcr.io/brainmuxhq/brainmux-litellm` (amd64+arm64), IMAGE_REF = manifest-list `sha256:693d839d…`.

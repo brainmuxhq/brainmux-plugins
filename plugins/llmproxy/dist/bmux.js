@@ -113,17 +113,17 @@ var require_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    function visit_(key, node, visitor, path4) {
-      const ctrl = callVisitor(key, node, visitor, path4);
+    function visit_(key, node, visitor, path5) {
+      const ctrl = callVisitor(key, node, visitor, path5);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path4, ctrl);
-        return visit_(key, ctrl, visitor, path4);
+        replaceNode(key, path5, ctrl);
+        return visit_(key, ctrl, visitor, path5);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path4 = Object.freeze(path4.concat(node));
+          path5 = Object.freeze(path5.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = visit_(i, node.items[i], visitor, path4);
+            const ci = visit_(i, node.items[i], visitor, path5);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -134,13 +134,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path4 = Object.freeze(path4.concat(node));
-          const ck = visit_("key", node.key, visitor, path4);
+          path5 = Object.freeze(path5.concat(node));
+          const ck = visit_("key", node.key, visitor, path5);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = visit_("value", node.value, visitor, path4);
+          const cv = visit_("value", node.value, visitor, path5);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -161,17 +161,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node, visitor, path4) {
-      const ctrl = await callVisitor(key, node, visitor, path4);
+    async function visitAsync_(key, node, visitor, path5) {
+      const ctrl = await callVisitor(key, node, visitor, path5);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path4, ctrl);
-        return visitAsync_(key, ctrl, visitor, path4);
+        replaceNode(key, path5, ctrl);
+        return visitAsync_(key, ctrl, visitor, path5);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path4 = Object.freeze(path4.concat(node));
+          path5 = Object.freeze(path5.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = await visitAsync_(i, node.items[i], visitor, path4);
+            const ci = await visitAsync_(i, node.items[i], visitor, path5);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -182,13 +182,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path4 = Object.freeze(path4.concat(node));
-          const ck = await visitAsync_("key", node.key, visitor, path4);
+          path5 = Object.freeze(path5.concat(node));
+          const ck = await visitAsync_("key", node.key, visitor, path5);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = await visitAsync_("value", node.value, visitor, path4);
+          const cv = await visitAsync_("value", node.value, visitor, path5);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -215,23 +215,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node, visitor, path4) {
+    function callVisitor(key, node, visitor, path5) {
       if (typeof visitor === "function")
-        return visitor(key, node, path4);
+        return visitor(key, node, path5);
       if (identity.isMap(node))
-        return visitor.Map?.(key, node, path4);
+        return visitor.Map?.(key, node, path5);
       if (identity.isSeq(node))
-        return visitor.Seq?.(key, node, path4);
+        return visitor.Seq?.(key, node, path5);
       if (identity.isPair(node))
-        return visitor.Pair?.(key, node, path4);
+        return visitor.Pair?.(key, node, path5);
       if (identity.isScalar(node))
-        return visitor.Scalar?.(key, node, path4);
+        return visitor.Scalar?.(key, node, path5);
       if (identity.isAlias(node))
-        return visitor.Alias?.(key, node, path4);
+        return visitor.Alias?.(key, node, path5);
       return void 0;
     }
-    function replaceNode(key, path4, node) {
-      const parent = path4[path4.length - 1];
+    function replaceNode(key, path5, node) {
+      const parent = path5[path5.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node;
       } else if (identity.isPair(parent)) {
@@ -841,10 +841,10 @@ var require_Collection = __commonJS({
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path4, value) {
+    function collectionFromPath(schema, path5, value) {
       let v = value;
-      for (let i = path4.length - 1; i >= 0; --i) {
-        const k = path4[i];
+      for (let i = path5.length - 1; i >= 0; --i) {
+        const k = path5[i];
         if (typeof k === "number" && Number.isInteger(k) && k >= 0) {
           const a = [];
           a[k] = v;
@@ -863,7 +863,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path4) => path4 == null || typeof path4 === "object" && !!path4[Symbol.iterator]().next().done;
+    var isEmptyPath = (path5) => path5 == null || typeof path5 === "object" && !!path5[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -893,11 +893,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path4, value) {
-        if (isEmptyPath(path4))
+      addIn(path5, value) {
+        if (isEmptyPath(path5))
           this.add(value);
         else {
-          const [key, ...rest] = path4;
+          const [key, ...rest] = path5;
           const node = this.get(key, true);
           if (identity.isCollection(node))
             node.addIn(rest, value);
@@ -911,8 +911,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path4) {
-        const [key, ...rest] = path4;
+      deleteIn(path5) {
+        const [key, ...rest] = path5;
         if (rest.length === 0)
           return this.delete(key);
         const node = this.get(key, true);
@@ -926,8 +926,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path4, keepScalar) {
-        const [key, ...rest] = path4;
+      getIn(path5, keepScalar) {
+        const [key, ...rest] = path5;
         const node = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node) ? node.value : node;
@@ -945,8 +945,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path4) {
-        const [key, ...rest] = path4;
+      hasIn(path5) {
+        const [key, ...rest] = path5;
         if (rest.length === 0)
           return this.has(key);
         const node = this.get(key, true);
@@ -956,8 +956,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path4, value) {
-        const [key, ...rest] = path4;
+      setIn(path5, value) {
+        const [key, ...rest] = path5;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -3472,9 +3472,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path4, value) {
+      addIn(path5, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path4, value);
+          this.contents.addIn(path5, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -3549,14 +3549,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path4) {
-        if (Collection.isEmptyPath(path4)) {
+      deleteIn(path5) {
+        if (Collection.isEmptyPath(path5)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path4) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path5) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -3571,10 +3571,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path4, keepScalar) {
-        if (Collection.isEmptyPath(path4))
+      getIn(path5, keepScalar) {
+        if (Collection.isEmptyPath(path5))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path4, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path5, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -3585,10 +3585,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path4) {
-        if (Collection.isEmptyPath(path4))
+      hasIn(path5) {
+        if (Collection.isEmptyPath(path5))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path4) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path5) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -3605,13 +3605,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path4, value) {
-        if (Collection.isEmptyPath(path4)) {
+      setIn(path5, value) {
+        if (Collection.isEmptyPath(path5)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path4), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path5), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path4, value);
+          this.contents.setIn(path5, value);
         }
       }
       /**
@@ -5571,9 +5571,9 @@ var require_cst_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    visit.itemAtPath = (cst, path4) => {
+    visit.itemAtPath = (cst, path5) => {
       let item = cst;
-      for (const [field, index] of path4) {
+      for (const [field, index] of path5) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -5582,23 +5582,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit.parentCollection = (cst, path4) => {
-      const parent = visit.itemAtPath(cst, path4.slice(0, -1));
-      const field = path4[path4.length - 1][0];
+    visit.parentCollection = (cst, path5) => {
+      const parent = visit.itemAtPath(cst, path5.slice(0, -1));
+      const field = path5[path5.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path4, item, visitor) {
-      let ctrl = visitor(item, path4);
+    function _visit(path5, item, visitor) {
+      let ctrl = visitor(item, path5);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path4.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path5.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -5609,10 +5609,10 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path4);
+            ctrl = ctrl(item, path5);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path4) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path5) : ctrl;
     }
     exports.visit = visit;
   }
@@ -6914,14 +6914,14 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs6 = this.flowScalar(this.type);
+              const fs7 = this.flowScalar(this.type);
               if (atNextItem || it.value) {
-                map.items.push({ start, key: fs6, sep: [] });
+                map.items.push({ start, key: fs7, sep: [] });
                 this.onKeyLine = true;
               } else if (it.sep) {
-                this.stack.push(fs6);
+                this.stack.push(fs7);
               } else {
-                Object.assign(it, { key: fs6, sep: [] });
+                Object.assign(it, { key: fs7, sep: [] });
                 this.onKeyLine = true;
               }
               return;
@@ -7049,13 +7049,13 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs6 = this.flowScalar(this.type);
+              const fs7 = this.flowScalar(this.type);
               if (!it || it.value)
-                fc.items.push({ start: [], key: fs6, sep: [] });
+                fc.items.push({ start: [], key: fs7, sep: [] });
               else if (it.sep)
-                this.stack.push(fs6);
+                this.stack.push(fs7);
               else
-                Object.assign(it, { key: fs6, sep: [] });
+                Object.assign(it, { key: fs7, sep: [] });
               return;
             }
             case "flow-map-end":
@@ -7870,8 +7870,8 @@ function getErrorMap() {
 
 // ../../node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path4, errorMaps, issueData } = params;
-  const fullPath = [...path4, ...issueData.path || []];
+  const { data, path: path5, errorMaps, issueData } = params;
+  const fullPath = [...path5, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7987,11 +7987,11 @@ var errorUtil;
 
 // ../../node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path4, key) {
+  constructor(parent, value, path5, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path4;
+    this._path = path5;
     this._key = key;
   }
   get path() {
@@ -11757,13 +11757,21 @@ function planLaunch(brain, env = process.env) {
   if (!b) throw new Error(`unknown brain '${brain}' (have: ${Object.keys(cfg.brains).join(", ")})`);
   const apiKey = getKey(paths.envFile, masterKeyVar(brain));
   if (!apiKey) throw new Error(`${masterKeyVar(brain)} missing in ${paths.envFile} \u2014 run \`bmux init\`.`);
-  return { base: `http://127.0.0.1:${b.port}`, apiKey };
+  return { base: `http://127.0.0.1:${b.port}`, apiKey, brain, model: b.model };
 }
 function runLaunch(brain, claudeArgs, env = process.env) {
   const plan = planLaunch(brain, env);
   const r = spawnSync2("claude", claudeArgs, {
     stdio: "inherit",
-    env: { ...env, ANTHROPIC_BASE_URL: plan.base, ANTHROPIC_API_KEY: plan.apiKey }
+    // BRAINMUX_BRAIN/MODEL let the status line name the active brain from the SSOT the router
+    // used — no hardcoded port→name map to drift when brains.yaml changes.
+    env: {
+      ...env,
+      ANTHROPIC_BASE_URL: plan.base,
+      ANTHROPIC_API_KEY: plan.apiKey,
+      BRAINMUX_BRAIN: plan.brain,
+      BRAINMUX_MODEL: plan.model
+    }
   });
   return r.status ?? 1;
 }
@@ -12257,6 +12265,144 @@ async function runSpend(_rest = [], env = process.env) {
   return 0;
 }
 
+// src/commands/statusline.ts
+import fs6 from "node:fs";
+import os2 from "node:os";
+import path4 from "node:path";
+var STATUSLINE_SCRIPT = `#!/usr/bin/env bash
+# brainmux status line \u2014 installed by \`bmux statusline install\`. Safe to edit.
+#   \u{1F4C1} dir \xB7 \u{1F33F} git \xB7 \u{1F9E0} brain|\u{1F916} model \xB7 \u26A1 effort \xB7 \u{1F9E0} context% \xB7 \u{1F4B0} cost \xB7 \u{1F4B3} balance \xB7 \xB1lines \xB7 \u23F1\uFE0F time
+input=$(cat)
+j() { printf '%s' "$input" | jq -r "$1" 2>/dev/null; }
+
+model=$(j '.model.display_name // "Claude"')
+cdir=$(j '.workspace.current_dir // .cwd // empty'); [ -z "$cdir" ] && cdir="$PWD"
+dir=$(basename "$cdir")
+cost=$(j '.cost.total_cost_usd // empty')
+ctx=$(j '.context_window.used_percentage // empty')
+eff=$(j '(.effort.level // .effort) | strings')
+add=$(j '.cost.total_lines_added // 0'); del=$(j '.cost.total_lines_removed // 0')
+dur=$(j '.cost.total_duration_ms // empty')
+
+brain="\${BRAINMUX_BRAIN:-}"
+home="\${BRAINMUX_HOME:-$HOME/.brainmux}"
+
+R=$'\\033[0m'; B=$'\\033[1m'
+CY=$'\\033[38;5;44m'; GR=$'\\033[38;5;42m'; MA=$'\\033[38;5;177m'
+GY=$'\\033[38;5;245m'; RE=$'\\033[38;5;203m'; OR=$'\\033[38;5;215m'; BL=$'\\033[38;5;75m'
+S=" \${GY}\xB7\${R} "
+
+out="\${CY}\${B}\u{1F4C1} \${dir}\${R}"
+
+if git -C "$cdir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  br=$(git -C "$cdir" branch --show-current 2>/dev/null); [ -z "$br" ] && br=$(git -C "$cdir" rev-parse --short HEAD 2>/dev/null)
+  d=""; [ -n "$(git -C "$cdir" status --porcelain 2>/dev/null)" ] && d=" \u25CF"
+  [ -n "$br" ] && out="\${out}\${S}\${GR}\u{1F33F} \${br}\${d}\${R}"
+fi
+
+if [ -n "$brain" ]; then
+  out="\${out}\${S}\${OR}\u{1F9E0} \${brain} \${GY}(proxy)\${R}"
+else
+  out="\${out}\${S}\${MA}\u{1F916} \${model}\${R}"
+fi
+
+if [ -n "$eff" ] && [ "$eff" != "null" ]; then out="\${out}\${S}\${BL}\u26A1 \${eff}\${R}"; fi
+
+if [ -n "$ctx" ] && [ "$ctx" != "null" ]; then
+  p=\${ctx%.*}; c=$GR
+  if [ "\${p:-0}" -ge 80 ] 2>/dev/null; then c=$RE; elif [ "\${p:-0}" -ge 50 ] 2>/dev/null; then c=$OR; fi
+  out="\${out}\${S}\${c}\u{1F9E0} \${p}%\${R}"
+fi
+
+if [ -n "$cost" ] && [ "$cost" != "null" ]; then
+  cf=$(LC_NUMERIC=C printf '%.2f' "$cost" 2>/dev/null)
+  # On a proxy brain Claude Code prices tokens with its own model catalog \u2192 estimate only.
+  if [ -n "$brain" ]; then out="\${out}\${S}\${GY}\u{1F4B0} \u2248\\$\${cf}\${R}"; else out="\${out}\${S}\u{1F4B0} \\$\${cf}\${R}"; fi
+fi
+
+# OpenRouter balance \u2014 only on a proxy brain; 5-min cache, refreshed in the background so it never blocks a render.
+if [ -n "$brain" ] && [ -f "$home/.env" ]; then
+  cache="$HOME/.cache/brainmux/or-balance"; mkdir -p "$(dirname "$cache")" 2>/dev/null
+  age=99999; [ -f "$cache" ] && age=$(( $(date +%s) - $(stat -c %Y "$cache" 2>/dev/null || echo 0) ))
+  if [ "$age" -gt 300 ]; then
+    ( key=$(grep -E '^OPENROUTER_API_KEY=' "$home/.env" | cut -d= -f2-)
+      [ -n "$key" ] && bal=$(curl -s -m 8 https://openrouter.ai/api/v1/credits -H "Authorization: Bearer $key" \\
+        | python3 -c "import sys,json;d=json.load(sys.stdin).get('data',{});print(f'{d.get(\\"total_credits\\",0)-d.get(\\"total_usage\\",0):.2f}')" 2>/dev/null)
+      [ -n "$bal" ] && printf '%s' "$bal" > "$cache" ) >/dev/null 2>&1 &
+  fi
+  [ -f "$cache" ] && bal=$(cat "$cache" 2>/dev/null)
+  if [ -n "$bal" ]; then bc=$GR; awk "BEGIN{exit !($bal < 2)}" 2>/dev/null && bc=$RE; out="\${out}\${S}\${bc}\u{1F4B3} \\$\${bal}\${R}"; fi
+fi
+
+if [ "\${add:-0}" -gt 0 ] 2>/dev/null || [ "\${del:-0}" -gt 0 ] 2>/dev/null; then
+  out="\${out}\${S}\${GR}+\${add}\${R}\${GY}/\${R}\${RE}-\${del}\${R}"
+fi
+
+if [ -n "$dur" ] && [ "$dur" != "null" ]; then
+  s=$(( dur/1000 )); if [ "$s" -ge 60 ]; then t="$(( s/60 ))m"; else t="\${s}s"; fi
+  out="\${out}\${S}\${GY}\u23F1\uFE0F \${t}\${R}"
+fi
+
+printf '%s' "$out"
+`;
+function planStatuslineSettings(existing, command, force) {
+  const s = existing && typeof existing === "object" ? { ...existing } : {};
+  const cur = s.statusLine;
+  if (cur && typeof cur === "object" && cur.command === command) return { settings: s, action: "already-ours" };
+  if (cur && !force) return { settings: s, action: "kept-existing" };
+  s.statusLine = { type: "command", command, padding: 0 };
+  return { settings: s, action: cur ? "replaced" : "set" };
+}
+function runStatusline(argv, env = process.env) {
+  const home = env.HOME || os2.homedir();
+  const claudeDir = path4.join(home, ".claude");
+  const dest = path4.join(claudeDir, "brainmux-statusline.sh");
+  if (argv[0] !== "install") {
+    process.stdout.write(
+      `bmux statusline install [--force]   enable the brainmux status line
+  Shows: dir \xB7 git \xB7 brain (proxy) / model \xB7 context% \xB7 cost \xB7 OpenRouter balance.
+  Writes ${dest} and points Claude Code's statusLine at it (needs jq).
+`
+    );
+    return 0;
+  }
+  const force = argv.includes("--force");
+  fs6.mkdirSync(claudeDir, { recursive: true });
+  fs6.writeFileSync(dest, STATUSLINE_SCRIPT);
+  fs6.chmodSync(dest, 493);
+  const settingsFile = path4.join(claudeDir, "settings.json");
+  let existing = {};
+  if (fs6.existsSync(settingsFile)) {
+    try {
+      existing = JSON.parse(fs6.readFileSync(settingsFile, "utf8"));
+    } catch {
+      process.stderr.write(`statusline: ${settingsFile} is not valid JSON \u2014 fix it, then re-run.
+`);
+      return 1;
+    }
+  }
+  const { settings, action } = planStatuslineSettings(existing, dest, force);
+  if (action === "kept-existing") {
+    process.stderr.write(
+      `statusline: you already have a statusLine configured \u2014 left it untouched.
+  The brainmux script is ready at ${dest}.
+  Re-run \`bmux statusline install --force\` to replace it, or point ${settingsFile} at the script yourself.
+`
+    );
+    return 0;
+  }
+  fs6.writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + "\n");
+  const what = action === "replaced" ? "replaced your previous statusLine" : "enabled the status line";
+  process.stdout.write(
+    `\u2713 brainmux status line installed \u2014 ${what}.
+  script:   ${dest}
+  settings: ${settingsFile}
+  Start a new Claude Code session to see it (launch a brain with \`bmux <brain>\` for the proxy view).
+`
+  );
+  return 0;
+}
+
 // src/commands/test.ts
 import http3 from "node:http";
 function isAlive(responseJson) {
@@ -12339,6 +12485,7 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
   bmux test                       smoke every brain via /v1/messages
   bmux spend                      per-brain requests/tokens/spend (from LiteLLM)
   bmux models [query] | --use-cases | --json   list OpenRouter models (live) / use-cases
+  bmux statusline install [--force]   enable the brainmux Claude Code status line
 `;
 var STACK = /* @__PURE__ */ new Set(["up", "down", "restart", "ps", "logs", "health"]);
 async function main(argv, env = process.env) {
@@ -12355,6 +12502,7 @@ async function main(argv, env = process.env) {
     if (cmd === "config") return await runConfig(rest[0] ?? "", rest.slice(1), env);
     if (cmd === "models") return await runModels(rest, env);
     if (cmd === "spend") return await runSpend(rest, env);
+    if (cmd === "statusline") return runStatusline(rest, env);
     if (STACK.has(cmd)) return await runStack(cmd, rest, env);
     const cfg = loadBrains(resolvePaths(env).brainsYaml);
     if (cfg.brains[cmd]) return runLaunch(cmd, rest, env);

@@ -24,7 +24,12 @@ bmux ps | logs [brain]       # inspect
 bmux health                  # liveliness per brain (UP/DOWN)
 bmux test                    # POST /v1/messages to each brain (text or thinking = alive)
 bmux spend                   # per-brain requests/tokens/spend roll-up (LiteLLM /spend/logs)
+bmux statusline install      # opt-in Claude Code status line (dir·git·brain·context%·cost·OR balance)
 ```
+When the user asks to "enable/turn on the status line", run `bmux statusline install` (add `--force`
+only if they confirm replacing an existing one). It needs `jq`, writes
+`~/.claude/brainmux-statusline.sh` + settings.json (non-destructive without `--force`), and takes
+effect after they restart Claude Code — tell them to restart.
 
 ## Config (edits brains.yaml → regenerates)
 ```sh
