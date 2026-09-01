@@ -12,6 +12,12 @@ data/
 # node
 node_modules/
 dist/
+# ...except the llmproxy plugin's compiled CLI — it ships with the plugin so a
+# marketplace-from-git install runs with no build step (see Plan 2 spec §2).
+# Only the runtime CLI (dist/src) ships; compiled tests (dist/test) stay ignored.
+!plugins/llmproxy/dist/
+!plugins/llmproxy/dist/**
+plugins/llmproxy/dist/test/
 build/
 *.tsbuildinfo
 .npm/
