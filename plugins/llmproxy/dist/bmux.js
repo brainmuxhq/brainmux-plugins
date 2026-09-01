@@ -11485,7 +11485,7 @@ function loadBrains(file) {
 }
 
 // src/core/generate.ts
-var IMAGE_REF = "ghcr.io/brainmuxhq/brainmux-litellm@sha256:e53c8f4f012fe1286fcfd78b6a108cdf0865af21f735dd10cff47df93bf9f23f";
+var IMAGE_REF = "ghcr.io/brainmuxhq/brainmux-litellm@sha256:693d839d50828a094b82d1c897fc0dafc526df6b27baee81eb3c2711af3d161e";
 function dbName(brain) {
   return `litellm_${brain}`;
 }

@@ -72,7 +72,7 @@
   State `~/.brainmux/` (BRAINMUX_HOME): brains.yaml · .env (chmod 600) · generated/ · data/postgres.
 - Routing = PORT; her beyin `model_name:"*"` + `drop_params:true`. 1 LiteLLM/brain + 1 Postgres.
 - Skills: `delegate` + `brainmux` (plugin içinde; eski `~/.claude/skills/delegate` silindi). Slash: `/brainmux <alt-komut>`.
-- LiteLLM image mirror: `ghcr.io/brainmuxhq/brainmux-litellm@sha256:e53c8f4f012fe1286fcfd78b6a108cdf0865af21f735dd10cff47df93bf9f23f` (generated compose ona bakar).
+- LiteLLM image mirror: `ghcr.io/brainmuxhq/brainmux-litellm@sha256:693d839d50828a094b82d1c897fc0dafc526df6b27baee81eb3c2711af3d161e` (generated compose ona bakar).
 - Doğrulama: 39 unit/golden test + canlı smoke (3 beyin gerçek `/v1/messages`) + fresh-clone install. CI: `.github/workflows/ci.yml` (dist-check + test).
 - Prototip `claude-proxy` + fish/settings kalıntısı silindi.
 - Referans: `docs/specs/2026-09-01-brainmux-architecture-design.md`, `docs/specs/2026-09-02-llmproxy-control-plane-design.md`, `docs/plans/2026-09-0{1,2}-*.md`.
