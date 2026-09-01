@@ -47,8 +47,8 @@ detection sweeps) · `--write` (lets it EDIT files, shell still blocked) · `--y
 (no permission checks — risky, only in a throwaway dir/worktree).
 
 Options: `-C <dir>` run in a subdir/worktree · `--json` machine-readable output ·
-`--stream` (aka `-v`) show a live progress indicator · `--mcp` give the worker the
-host's MCP servers (off by default).
+`--stream` (aka `-v`) show a live progress indicator · `--mcp` (alias `--with-mcp`) give the
+worker the host's MCP servers (off by default).
 
 Every call echoes its config to stderr so you know what went out:
 `delegate: coder · analyze · mcp off`.

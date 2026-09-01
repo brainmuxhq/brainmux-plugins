@@ -46,7 +46,7 @@ bmux init                                   scaffold ~/.brainmux
 bmux up | down | restart                    manage the stack (regenerates from brains.yaml)
 bmux ps | logs [brain] | health             inspect
 bmux chat | deep | coder [claude args...]   launch Claude Code on a brain (interactive)
-bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] "<task>"  headless one-shot
+bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] "<task>"  headless one-shot
 bmux config add-brain <name> <port> <model> [providerKey]
 bmux config remove-brain <name> | set-model <name> <model>
 bmux config add-key <ENV_VAR> [value] | list

@@ -11,7 +11,11 @@ export async function runSpend(_rest: string[] = [], env: NodeJS.ProcessEnv = pr
   const ports: Record<string, number> = {};
   for (const [name, b] of Object.entries(cfg.brains)) {
     ports[name] = b.port;
-    const key = getKey(paths.envFile, masterKeyVar(name)) ?? "";
+    const key = getKey(paths.envFile, masterKeyVar(name));
+    if (!key) {
+      results.push({ brain: name, ok: false, requests: 0, tokens: 0, spend: 0, note: `${masterKeyVar(name)} missing in .env — run \`bmux init\`` });
+      continue;
+    }
     try {
       results.push(aggregateSpend(name, await fetchSpendLogs(b.port, key)));
     } catch (e) {

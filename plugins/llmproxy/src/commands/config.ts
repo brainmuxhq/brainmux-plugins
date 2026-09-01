@@ -72,7 +72,9 @@ export async function runConfig(sub: string, rest: string[], env: NodeJS.Process
       case "add-brain": {
         const [name, portStr, model, providerKey = "OPENROUTER_API_KEY"] = rest;
         if (!name || !portStr || !model) throw new Error("usage: bmux config add-brain <name> <port> <model> [providerKey]");
-        addBrain(paths, name, Number(portStr), model, providerKey);
+        const port = Number(portStr);
+        if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error(`port must be an integer 1-65535, got '${portStr}'`);
+        addBrain(paths, name, port, model, providerKey);
         console.log(`added brain '${name}' on :${portStr}`);
         return 0;
       }

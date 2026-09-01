@@ -53,17 +53,22 @@ function messagesProbe(port: number, apiKey: string): Promise<string> {
 export async function runTest(env: NodeJS.ProcessEnv = process.env): Promise<number> {
   const paths = resolvePaths(env);
   const cfg = loadBrains(paths.brainsYaml);
-  let fail = 0;
-  for (const [name, b] of Object.entries(cfg.brains)) {
-    const key = getKey(paths.envFile, masterKeyVar(name)) ?? "";
-    const out = await messagesProbe(b.port, key);
-    if (isAlive(out)) {
-      const m = out.match(/"text":"([^"]*)"/);
-      process.stdout.write(`${(name + ":").padEnd(10)} OK  ${m ? m[1].slice(0, 40) : "(alive)"}\n`);
-    } else {
-      process.stdout.write(`${(name + ":").padEnd(10)} FAIL -> ${out.slice(0, 120)}\n`);
-      fail = 1;
-    }
-  }
-  return fail;
+  const entries = Object.entries(cfg.brains);
+  // Probe every brain concurrently — a hung/slow brain (up to its own 60s timeout) no longer
+  // stalls the others. Output stays in manifest order.
+  const results = await Promise.all(
+    entries.map(async ([name, b]) => {
+      const tag = (name + ":").padEnd(10);
+      const key = getKey(paths.envFile, masterKeyVar(name));
+      if (!key) return { ok: false, line: `${tag} FAIL -> ${masterKeyVar(name)} missing in .env — run \`bmux init\`` };
+      const out = await messagesProbe(b.port, key);
+      if (isAlive(out)) {
+        const m = out.match(/"text":"([^"]*)"/);
+        return { ok: true, line: `${tag} OK  ${m ? m[1].slice(0, 40) : "(alive)"}` };
+      }
+      return { ok: false, line: `${tag} FAIL -> ${out.slice(0, 120)}` };
+    }),
+  );
+  for (const r of results) process.stdout.write(r.line + "\n");
+  return results.some((r) => !r.ok) ? 1 : 0;
 }

@@ -11786,6 +11786,7 @@ function parseDelegateArgs(argv, stdin) {
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
   const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, task: "" };
   const rest = argv.slice(1);
+  const parts = [];
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     if (a === "--write") opts.mode = "write";
@@ -11801,8 +11802,9 @@ function parseDelegateArgs(argv, stdin) {
       opts.task = rest.slice(i + 1).join(" ");
       break;
     } else if (a.startsWith("-")) throw new Error(`delegate: unknown option '${a}'`);
-    else opts.task = a;
+    else parts.push(a);
   }
+  if (!opts.task) opts.task = parts.join(" ");
   if (!opts.task) throw new Error("delegate: no task given");
   return { brain, opts };
 }
@@ -12027,7 +12029,9 @@ async function runConfig(sub, rest, env = process.env) {
       case "add-brain": {
         const [name, portStr, model, providerKey = "OPENROUTER_API_KEY"] = rest;
         if (!name || !portStr || !model) throw new Error("usage: bmux config add-brain <name> <port> <model> [providerKey]");
-        addBrain(paths, name, Number(portStr), model, providerKey);
+        const port = Number(portStr);
+        if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error(`port must be an integer 1-65535, got '${portStr}'`);
+        addBrain(paths, name, port, model, providerKey);
         console.log(`added brain '${name}' on :${portStr}`);
         return 0;
       }
@@ -12270,7 +12274,11 @@ async function runSpend(_rest = [], env = process.env) {
   const ports = {};
   for (const [name, b] of Object.entries(cfg.brains)) {
     ports[name] = b.port;
-    const key = getKey(paths.envFile, masterKeyVar(name)) ?? "";
+    const key = getKey(paths.envFile, masterKeyVar(name));
+    if (!key) {
+      results.push({ brain: name, ok: false, requests: 0, tokens: 0, spend: 0, note: `${masterKeyVar(name)} missing in .env \u2014 run \`bmux init\`` });
+      continue;
+    }
     try {
       results.push(aggregateSpend(name, await fetchSpendLogs(b.port, key)));
     } catch (e) {
@@ -12342,7 +12350,9 @@ if [ -n "$brain" ] && [ -f "$home/.env" ]; then
   age=99999; [ -f "$cache" ] && age=$(( $(date +%s) - $(stat -c %Y "$cache" 2>/dev/null || echo 0) ))
   if [ "$age" -gt 300 ]; then
     ( key=$(grep -E '^OPENROUTER_API_KEY=' "$home/.env" | cut -d= -f2-)
-      [ -n "$key" ] && bal=$(curl -s -m 8 https://openrouter.ai/api/v1/credits -H "Authorization: Bearer $key" \\
+      # Pass the key via stdin (-H @-), not argv, so it never lands in /proc/PID/cmdline. printf is a
+      # bash builtin (no separate process), so the key isn't exposed there either.
+      [ -n "$key" ] && bal=$(printf 'Authorization: Bearer %s' "$key" | curl -s -m 8 https://openrouter.ai/api/v1/credits -H @- \\
         | python3 -c "import sys,json;d=json.load(sys.stdin).get('data',{});print(f'{d.get(\\"total_credits\\",0)-d.get(\\"total_usage\\",0):.2f}')" 2>/dev/null)
       [ -n "$bal" ] && printf '%s' "$bal" > "$cache" ) >/dev/null 2>&1 &
   fi
@@ -12468,21 +12478,22 @@ function messagesProbe(port, apiKey) {
 async function runTest(env = process.env) {
   const paths = resolvePaths(env);
   const cfg = loadBrains(paths.brainsYaml);
-  let fail = 0;
-  for (const [name, b] of Object.entries(cfg.brains)) {
-    const key = getKey(paths.envFile, masterKeyVar(name)) ?? "";
-    const out = await messagesProbe(b.port, key);
-    if (isAlive(out)) {
-      const m = out.match(/"text":"([^"]*)"/);
-      process.stdout.write(`${(name + ":").padEnd(10)} OK  ${m ? m[1].slice(0, 40) : "(alive)"}
-`);
-    } else {
-      process.stdout.write(`${(name + ":").padEnd(10)} FAIL -> ${out.slice(0, 120)}
-`);
-      fail = 1;
-    }
-  }
-  return fail;
+  const entries = Object.entries(cfg.brains);
+  const results = await Promise.all(
+    entries.map(async ([name, b]) => {
+      const tag = (name + ":").padEnd(10);
+      const key = getKey(paths.envFile, masterKeyVar(name));
+      if (!key) return { ok: false, line: `${tag} FAIL -> ${masterKeyVar(name)} missing in .env \u2014 run \`bmux init\`` };
+      const out = await messagesProbe(b.port, key);
+      if (isAlive(out)) {
+        const m = out.match(/"text":"([^"]*)"/);
+        return { ok: true, line: `${tag} OK  ${m ? m[1].slice(0, 40) : "(alive)"}` };
+      }
+      return { ok: false, line: `${tag} FAIL -> ${out.slice(0, 120)}` };
+    })
+  );
+  for (const r of results) process.stdout.write(r.line + "\n");
+  return results.some((r) => !r.ok) ? 1 : 0;
 }
 
 // src/cli.ts

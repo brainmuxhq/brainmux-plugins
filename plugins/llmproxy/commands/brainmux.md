@@ -14,4 +14,5 @@ Do this:
    management verb, do NOT run it here — it execs an interactive Claude Code session.
    Instead tell the user to run `bmux <brain>` directly in their terminal.
 3. If it fails with "brains.yaml not found", suggest `bmux init`. If a provider key is
-   missing, suggest `bmux config add-key OPENROUTER_API_KEY <value>`.
+   missing, run `bmux config add-key OPENROUTER_API_KEY` **without a value** — it prompts
+   for the key hidden (never put the secret in argv/shell history/transcript).

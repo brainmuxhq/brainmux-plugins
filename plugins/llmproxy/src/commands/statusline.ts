@@ -66,7 +66,9 @@ if [ -n "$brain" ] && [ -f "$home/.env" ]; then
   age=99999; [ -f "$cache" ] && age=$(( $(date +%s) - $(stat -c %Y "$cache" 2>/dev/null || echo 0) ))
   if [ "$age" -gt 300 ]; then
     ( key=$(grep -E '^OPENROUTER_API_KEY=' "$home/.env" | cut -d= -f2-)
-      [ -n "$key" ] && bal=$(curl -s -m 8 https://openrouter.ai/api/v1/credits -H "Authorization: Bearer $key" \\
+      # Pass the key via stdin (-H @-), not argv, so it never lands in /proc/PID/cmdline. printf is a
+      # bash builtin (no separate process), so the key isn't exposed there either.
+      [ -n "$key" ] && bal=$(printf 'Authorization: Bearer %s' "$key" | curl -s -m 8 https://openrouter.ai/api/v1/credits -H @- \\
         | python3 -c "import sys,json;d=json.load(sys.stdin).get('data',{});print(f'{d.get(\\"total_credits\\",0)-d.get(\\"total_usage\\",0):.2f}')" 2>/dev/null)
       [ -n "$bal" ] && printf '%s' "$bal" > "$cache" ) >/dev/null 2>&1 &
   fi

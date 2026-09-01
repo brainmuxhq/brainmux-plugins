@@ -39,6 +39,12 @@ test("stdin task via '-'", () => {
   assert.equal(opts.task, "big task from stdin");
 });
 
+test("unquoted multi-word task is joined, not truncated to the last word", () => {
+  assert.equal(parseDelegateArgs(["chat", "fix", "the", "bug"]).opts.task, "fix the bug");
+  assert.equal(parseDelegateArgs(["coder", "--write", "-C", "/tmp", "do", "it"]).opts.task, "do it");
+  assert.equal(parseDelegateArgs(["chat", "single"]).opts.task, "single");
+});
+
 test("rejects a missing brain (flag-first or empty)", () => {
   assert.throws(() => parseDelegateArgs(["--write", "x"]), /missing brain/i);
   assert.throws(() => parseDelegateArgs([]), /missing brain/i);

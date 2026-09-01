@@ -42,4 +42,6 @@ test("embedded script is bash, env-driven, and carries no hardcoded ports/paths 
   assert.ok(STATUSLINE_SCRIPT.includes("${BRAINMUX_HOME:-$HOME/.brainmux}"), "state dir must honor BRAINMUX_HOME");
   assert.ok(!/127\.0\.0\.1:4\d{3}/.test(STATUSLINE_SCRIPT), "no hardcoded brain ports");
   assert.ok(!STATUSLINE_SCRIPT.includes("claude-proxy"), "no dead claude-proxy path");
+  assert.ok(STATUSLINE_SCRIPT.includes("-H @-"), "OpenRouter key passed via stdin, not argv (/proc-safe)");
+  assert.ok(!/-H "Authorization: Bearer \$key"/.test(STATUSLINE_SCRIPT), "key must not sit in curl's argv");
 });

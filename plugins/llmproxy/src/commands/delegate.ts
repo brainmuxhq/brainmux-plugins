@@ -22,6 +22,7 @@ export function parseDelegateArgs(argv: string[], stdin?: string): { brain: stri
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
   const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, task: "" };
   const rest = argv.slice(1);
+  const parts: string[] = []; // bare positional words → joined, so an unquoted task isn't silently truncated to its last word
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     if (a === "--write") opts.mode = "write";
@@ -33,10 +34,11 @@ export function parseDelegateArgs(argv: string[], stdin?: string): { brain: stri
     else if (a === "-") { opts.task = stdin ?? ""; }
     else if (a === "--") { opts.task = rest.slice(i + 1).join(" "); break; }
     else if (a.startsWith("-")) throw new Error(`delegate: unknown option '${a}'`);
-    else opts.task = a;
+    else parts.push(a);
   }
   // Brain validity is the manifest's call (SSOT = brains.yaml); runDelegate/planLaunch
   // validate it against the live config. Here we only require a task.
+  if (!opts.task) opts.task = parts.join(" ");
   if (!opts.task) throw new Error("delegate: no task given");
   return { brain, opts };
 }
