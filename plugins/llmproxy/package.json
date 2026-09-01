@@ -7,20 +7,17 @@
   "bin": {
     "bmux": "bin/bmux"
   },
-  "files": [
-    "dist",
-    "bin",
-    "templates",
-    "skills",
-    "commands",
-    ".claude-plugin",
-    "README.md"
-  ],
+  "files": ["dist", "bin", "templates", "skills", "commands", ".claude-plugin", ".env.example", "README.md"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --test"
+    "test": "npm run build && node --test dist/test/"
   },
-  "engines": {
-    "node": ">=18"
-  }
+  "dependencies": {
+    "yaml": "^2.5.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0"
+  },
+  "engines": { "node": ">=18" }
 }
