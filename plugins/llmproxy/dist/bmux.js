@@ -11776,7 +11776,7 @@ var GUARD = "You are a DELEGATED worker brain invoked by an orchestrator. Do EXA
 function parseDelegateArgs(argv, stdin) {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, task: "" };
+  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, task: "" };
   const rest = argv.slice(1);
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
@@ -11784,6 +11784,7 @@ function parseDelegateArgs(argv, stdin) {
     else if (a === "--yolo") opts.mode = "yolo";
     else if (a === "--json") opts.outfmt = "json";
     else if (a === "--stream" || a === "-v" || a === "--verbose") opts.stream = true;
+    else if (a === "--mcp" || a === "--with-mcp") opts.mcp = true;
     else if (a === "-C") {
       opts.workdir = rest[++i] ?? ".";
     } else if (a === "-") {
@@ -11803,6 +11804,7 @@ function buildClaudeArgs(opts) {
   if (opts.mode === "analyze") args.push("--permission-mode", "default", "--allowedTools", "Read", "Grep", "Glob");
   else if (opts.mode === "write") args.push("--permission-mode", "acceptEdits");
   else args.push("--dangerously-skip-permissions");
+  if (!opts.mcp) args.push("--strict-mcp-config");
   return args;
 }
 function initProgress() {
@@ -11918,6 +11920,8 @@ async function runDelegate(argv, env = process.env) {
     return 1;
   }
   const plan = planLaunch(brain, env);
+  process.stderr.write(`delegate: ${brain} \xB7 ${opts.mode} \xB7 mcp ${opts.mcp ? "on" : "off"}
+`);
   if (opts.mode === "yolo") process.stderr.write(`delegate: \u26A0 --yolo \u2014 '${brain}' runs with NO permission checks in '${opts.workdir}'.
 `);
   const childEnv = { ...env, DELEGATE_DEPTH: "1", ANTHROPIC_BASE_URL: plan.base, ANTHROPIC_API_KEY: plan.apiKey };
@@ -12326,8 +12330,9 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
   bmux up | down | restart        manage the brain stack (regenerates from brains.yaml)
   bmux ps | logs [svc] | health   inspect the stack
   bmux <brain> [claude args...]   launch Claude Code on a brain (e.g. bmux chat)
-  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] "<task>"
+  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] "<task>"
                                   (--stream shows a live progress line: \u23F3 brain \xB7 5/34 \xB7 <step>)
+                                  (--mcp passes host MCP servers to the worker; default off = cheaper)
   bmux config add-brain <name> <port> <model> [providerKey]
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list

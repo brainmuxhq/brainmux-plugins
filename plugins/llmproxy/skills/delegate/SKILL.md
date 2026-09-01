@@ -47,7 +47,19 @@ detection sweeps) · `--write` (lets it EDIT files, shell still blocked) · `--y
 (no permission checks — risky, only in a throwaway dir/worktree).
 
 Options: `-C <dir>` run in a subdir/worktree · `--json` machine-readable output ·
-`--stream` (aka `-v`) show a live progress indicator.
+`--stream` (aka `-v`) show a live progress indicator · `--mcp` give the worker the
+host's MCP servers (off by default).
+
+Every call echoes its config to stderr so you know what went out:
+`delegate: coder · analyze · mcp off`.
+
+## MCP servers (`--mcp`, default OFF)
+A delegated worker does NOT get the host's MCP servers unless you pass `--mcp`. This is
+deliberate: loading them (Vercel/GSC/Chrome/render/…) adds ~35k+ input tokens per call and
+a grunt task never uses them — measured 30 tools / ~33k tokens without vs 147 tools / ~69k
+with. Keep the default for bulk/detection/refactor work. Add `--mcp` only when the task
+genuinely needs one (e.g. `context7` for live docs, `brave` for web search) — then it pays
+the token cost just for that call.
 
 ## Progress indicator (`--stream`)
 By default a delegate call is silent until it prints the final answer. Add `--stream` for

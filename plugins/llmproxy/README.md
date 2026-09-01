@@ -71,12 +71,15 @@ memory) for your use-case, then wire it with `bmux config set-model <brain> <id>
 bmux delegate coder "find and list every TODO in src/, file:line only"    # read-only
 bmux delegate coder --write -C ./scratch "implement the spec in SPEC.md"   # edits, tight scope
 bmux delegate coder --stream "find and list every TODO in src/"           # live progress line
+bmux delegate coder --mcp "read the react docs via context7 and summarize hooks"  # opt-in MCP
 ```
 Delegated brains run headless on the pay-as-you-go meter. Opus stays the orchestrator and
 **verifies** their output — see the `delegate` skill. `--stream` (or `-v`) shows a single
 live progress line (`⏳ coder · 5/34 · <current step>`) while it runs — no extra tokens,
-just a serialization change; the clean final answer still goes to stdout. Real per-brain
-spend is `bmux spend`.
+just a serialization change; the clean final answer still goes to stdout. Every call echoes
+its config (`delegate: coder · analyze · mcp off`). Workers get **no host MCP servers by
+default** (saves ~35k+ tokens/call for grunt work); pass `--mcp` for the rare task that
+needs one. Real per-brain spend is `bmux spend`.
 
 ## How it works
 

@@ -13,13 +13,14 @@ export interface DelegateOpts {
   workdir: string;
   outfmt: "text" | "json";
   stream: boolean;
+  mcp: boolean; // pass the host's MCP servers through to the worker (default off — see buildClaudeArgs)
   task: string;
 }
 
 export function parseDelegateArgs(argv: string[], stdin?: string): { brain: string; opts: DelegateOpts } {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, task: "" };
+  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, task: "" };
   const rest = argv.slice(1);
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
@@ -27,6 +28,7 @@ export function parseDelegateArgs(argv: string[], stdin?: string): { brain: stri
     else if (a === "--yolo") opts.mode = "yolo";
     else if (a === "--json") opts.outfmt = "json";
     else if (a === "--stream" || a === "-v" || a === "--verbose") opts.stream = true;
+    else if (a === "--mcp" || a === "--with-mcp") opts.mcp = true;
     else if (a === "-C") { opts.workdir = rest[++i] ?? "."; }
     else if (a === "-") { opts.task = stdin ?? ""; }
     else if (a === "--") { opts.task = rest.slice(i + 1).join(" "); break; }
@@ -47,6 +49,10 @@ export function buildClaudeArgs(opts: DelegateOpts): string[] {
   if (opts.mode === "analyze") args.push("--permission-mode", "default", "--allowedTools", "Read", "Grep", "Glob");
   else if (opts.mode === "write") args.push("--permission-mode", "acceptEdits");
   else args.push("--dangerously-skip-permissions");
+  // A grunt worker doesn't need the host's MCP servers (Vercel/GSC/Chrome/…). Loading
+  // them cost ~75k input tokens/call and zero benefit here, so drop them by default;
+  // --mcp passes the host config through for the rare task that genuinely needs one.
+  if (!opts.mcp) args.push("--strict-mcp-config");
   return args;
 }
 
@@ -183,6 +189,8 @@ export async function runDelegate(argv: string[], env: NodeJS.ProcessEnv = proce
   const { brain, opts } = parseDelegateArgs(argv, stdin);
   if (!fs.existsSync(opts.workdir)) { process.stderr.write(`delegate: -C dir '${opts.workdir}' not found\n`); return 1; }
   const plan = planLaunch(brain, env); // validates brain against manifest + resolves key/port
+  // Echo the outgoing config so you always know what went out (brain · mode · mcp state).
+  process.stderr.write(`delegate: ${brain} · ${opts.mode} · mcp ${opts.mcp ? "on" : "off"}\n`);
   if (opts.mode === "yolo") process.stderr.write(`delegate: ⚠ --yolo — '${brain}' runs with NO permission checks in '${opts.workdir}'.\n`);
   const childEnv = { ...env, DELEGATE_DEPTH: "1", ANTHROPIC_BASE_URL: plan.base, ANTHROPIC_API_KEY: plan.apiKey };
 

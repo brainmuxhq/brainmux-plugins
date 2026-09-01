@@ -51,6 +51,20 @@ test("stream is off by default; --stream / -v / --verbose turn it on", () => {
   }
 });
 
+test("mcp is off by default; --mcp / --with-mcp turn it on", () => {
+  assert.equal(parseDelegateArgs(["coder", "task"]).opts.mcp, false);
+  for (const flag of ["--mcp", "--with-mcp"]) {
+    assert.equal(parseDelegateArgs(["coder", flag, "task"]).opts.mcp, true, flag);
+  }
+});
+
+test("default drops host MCP (--strict-mcp-config); --mcp keeps it", () => {
+  const off = buildClaudeArgs(parseDelegateArgs(["coder", "do it"]).opts);
+  assert.ok(off.includes("--strict-mcp-config"), "default must isolate the worker from host MCP");
+  const on = buildClaudeArgs(parseDelegateArgs(["coder", "--mcp", "do it"]).opts);
+  assert.ok(!on.includes("--strict-mcp-config"), "--mcp must let the worker inherit host MCP");
+});
+
 test("--stream builds stream-json + --verbose (not the plain output-format)", () => {
   const { opts } = parseDelegateArgs(["coder", "--stream", "do it"]);
   const args = buildClaudeArgs(opts);
