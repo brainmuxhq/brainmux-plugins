@@ -17,7 +17,8 @@ const HELP = `bmux — brainmux/llmproxy CLI
   bmux up | down | restart        manage the brain stack (regenerates from brains.yaml)
   bmux ps | logs [svc] | health   inspect the stack
   bmux <brain> [claude args...]   launch Claude Code on a brain (e.g. bmux chat)
-  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] "<task>"
+  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] "<task>"
+                                  (--stream shows the worker's steps + cost live, logs to ~/.brainmux/logs/)
   bmux config add-brain <name> <port> <model> [providerKey]
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list
@@ -36,7 +37,7 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv = process.env)
   try {
     if (cmd === "init") return runInit(env);
     if (cmd === "test") return await runTest(env);
-    if (cmd === "delegate") return runDelegate(rest, env);
+    if (cmd === "delegate") return await runDelegate(rest, env);
     if (cmd === "config") return await runConfig(rest[0] ?? "", rest.slice(1), env);
     if (cmd === "models") return await runModels(rest, env);
     if (cmd === "spend") return await runSpend(rest, env);

@@ -9,6 +9,7 @@ export interface Paths {
   composeYaml: string;
   initDir: string;
   dataDir: string;
+  logsDir: string;
   brainConfig(name: string): string;
 }
 
@@ -23,6 +24,7 @@ export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
     composeYaml: path.join(generatedDir, "compose.yaml"),
     initDir: path.join(generatedDir, "init"),
     dataDir: path.join(home, "data", "postgres"),
+    logsDir: path.join(home, "logs"),
     brainConfig: (name: string) => path.join(generatedDir, `${name}.yaml`),
   };
 }

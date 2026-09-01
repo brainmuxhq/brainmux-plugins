@@ -46,7 +46,18 @@ Modes: default = **analyze** (READ-ONLY: Read/Grep/Glob, no edits/shell — safe
 detection sweeps) · `--write` (lets it EDIT files, shell still blocked) · `--yolo`
 (no permission checks — risky, only in a throwaway dir/worktree).
 
-Options: `-C <dir>` run in a subdir/worktree · `--json` machine-readable output.
+Options: `-C <dir>` run in a subdir/worktree · `--json` machine-readable output ·
+`--stream` (aka `-v`) show the worker's steps live.
+
+## Watching what a delegate does (`--stream`)
+By default you only get the worker's final answer. Add `--stream` to see its steps as
+they happen — each tool call (`🔧 Grep …`, `🔧 Read …`, `🔧 Edit …`), its inline notes
+(`💬 …`), tool errors, and a closing `✅ done — <in>→<out> tok, N turns, Nms` line. The
+raw event stream is also saved to `~/.brainmux/logs/delegate-<brain>-<ts>.jsonl`, so you
+can `tail -f` it from another terminal to watch a long run live, or read it afterward to
+audit exactly what the brain touched. Note: the done line shows **token counts, not
+dollars** — the worker's Claude Code can't price a brain's opaque model id, so real spend
+is `bmux spend`, not that stream.
 
 ## Consolidation discipline (required)
 Cheap brains are less reliable than Opus. After a delegate call, Opus **verifies** the

@@ -46,7 +46,7 @@ bmux init                                   scaffold ~/.brainmux
 bmux up | down | restart                    manage the stack (regenerates from brains.yaml)
 bmux ps | logs [brain] | health             inspect
 bmux chat | deep | coder [claude args...]   launch Claude Code on a brain (interactive)
-bmux delegate <brain> [--write|--yolo] [-C dir] [--json] "<task>"   headless one-shot
+bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] "<task>"  headless one-shot
 bmux config add-brain <name> <port> <model> [providerKey]
 bmux config remove-brain <name> | set-model <name> <model>
 bmux config add-key <ENV_VAR> [value] | list
@@ -70,9 +70,12 @@ memory) for your use-case, then wire it with `bmux config set-model <brain> <id>
 ```sh
 bmux delegate coder "find and list every TODO in src/, file:line only"    # read-only
 bmux delegate coder --write -C ./scratch "implement the spec in SPEC.md"   # edits, tight scope
+bmux delegate coder --stream "find and list every TODO in src/"           # watch its steps live
 ```
 Delegated brains run headless on the pay-as-you-go meter. Opus stays the orchestrator and
-**verifies** their output — see the `delegate` skill.
+**verifies** their output — see the `delegate` skill. `--stream` (or `-v`) prints the
+worker's tool calls + notes as they happen and mirrors the raw event stream to
+`~/.brainmux/logs/` (tail it to watch a long run); real per-brain spend is `bmux spend`.
 
 ## How it works
 
