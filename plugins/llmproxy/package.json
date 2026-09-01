@@ -1,0 +1,26 @@
+{
+  "name": "@brainmux/llmproxy",
+  "version": "0.0.0",
+  "description": "Run Claude Code on cheap/alternate LLM brains and delegate grunt work to save your Opus quota.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "bmux": "bin/bmux"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "templates",
+    "skills",
+    "commands",
+    ".claude-plugin",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
