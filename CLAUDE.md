@@ -31,6 +31,10 @@
 - **Routing = PORT.** Claude Code proxy'ye **opak/hash model id** yollar (test edildi 2026-09-01) → model-adına göre tek-instance routing İMKANSIZ. Beyin ayrımı port ile (bmux `ANTHROPIC_BASE_URL` set eder).
 - **Kontrol paneli:** Claude Code + `bmux` **birincil** (declarative, `brains.yaml`+`.env` SSOT). **LiteLLM UI = gözlem** (spend/log/param) — link ver, tekrar yazma. **Kendi web UI YAZMA.**
 - **Delege disiplini:** ucuz beyin çıktısını Opus **doğrular** (rubber-stamp yok). Task/Agent tool bu beyinlere erişemez (Opus'u miras alır) — sadece `bmux delegate`.
+- **Doğal dil çalıştırma (NL → komut):** kullanıcı bir `bmux`/brainmux işini doğal dille isterse Claude uygun komutu **kendisi Bash'le çalıştırır** (elle yazdırma) ve **ne çalıştırdığını tek satır bildirir** (şeffaflık — sonuç + varsa uyarı).
+  - **Güvenlik riski yoksa → doğrudan koş:** `statusline install`, `spend`, `up|down|restart|ps|health|logs`, `config list|set-model|add-brain|remove-brain`, `models`, `test`.
+  - **Riskli/geri-alınamaz/secret/dışa-dönük → önce komutu + etkisini açıkla, onay al:** `delegate --yolo`, `config add-key <değer>` (secret), `statusline install --force` (mevcut ayarı ezer), veri/beyin silen ya da dış servise yazan her iş.
+  - **Emin değilsen çalıştırma:** komutu ve ne yapacağını açıkla, kullanıcıya bırak. (En azından komut hakkında bilgi ver.)
 
 ## Motor: LiteLLM
 - Rol: **Anthropic↔OpenAI çeviri** (streaming + tool-use). Vendored dependency, bizim kod değil.
