@@ -1,0 +1,7 @@
+litellm_settings:
+  drop_params: true
+
+model_list:
+  - model_name: "*"
+    litellm_params:
+      model: openrouter/qwen/qwen3-coder-next
