@@ -83,7 +83,8 @@
 - `brainmux` skill: model/fiyat/use-case → canlı listeden öner (memory'den değil); setup **default OpenRouter** (provider menüsü yok). add-key gizli-prompt.
 - Spec `docs/specs/2026-09-02-openrouter-model-picker-design.md`, plan `docs/plans/2026-09-02-openrouter-model-picker.md`. 44 test.
 
-**Sıradaki iş — yayın/sertleştirme (opsiyonel):**
-1. GHCR paketini public yap (`ghcr.io/brainmuxhq/brainmux-litellm`) + multi-arch mirror (şu an amd64 tek-platform).
-2. marketplace/plugin `version` 0.0.0 → semver bump (yayın anında).
-3. (istenirse) `?category=` doğrula + `bmux models --category`; direkt-provider (`deepseek`/`openai`) /models listeleri.
+**Yayın/sertleştirme:**
+- ✅ Multi-arch mirror: `ghcr.io/brainmuxhq/brainmux-litellm` (amd64+arm64), IMAGE_REF = manifest-list `sha256:693d839d…`.
+- ✅ Version 0.1.0 (plugin.json + marketplace plugin entry + package.json).
+- ⏳ **GHCR paketini public yap** (org UI: brainmuxhq/packages → brainmux-litellm → settings → Change visibility → Public). Dış kullanıcıların `bmux up`'ta image çekmesi için ŞART; şu an private.
+- (opsiyonel) `?category=` doğrula + `bmux models --category`; direkt-provider (`deepseek`/`openai`) /models listeleri.
