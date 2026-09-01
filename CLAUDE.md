@@ -77,8 +77,13 @@
 - Prototip `claude-proxy` + fish/settings kalıntısı silindi.
 - Referans: `docs/specs/2026-09-01-brainmux-architecture-design.md`, `docs/specs/2026-09-02-llmproxy-control-plane-design.md`, `docs/plans/2026-09-0{1,2}-*.md`.
 
-**Sıradaki iş — Plan 3 (OpenRouter model-picker):**
-1. SSOT tek dosya `plugins/llmproxy/templates/openrouter.yaml` (api endpoints + use-case kataloğu) + `src/core/openrouter.ts` zod loader.
-2. `bmux models [--use-case <c>] [query]` → OpenRouter public kataloğu (`GET /api/v1/models`, key yok) → `id · ctx · $girdi/$çıktı · isim` bas.
-3. `brainmux` skill: Claude use-case'e göre model önerir (**canlı katalogdan**, memory'den değil — kanıtsız yorum yok), user seçer, `bmux config set-model|add-brain` ile bağlar.
-4. Yayın hazırlığı: GHCR paketini public yap; multi-arch mirror; marketplace/plugin `version` 0.0.0→bump.
+**Plan 3 (OpenRouter model-picker) — BİTTİ (main `16ae4ce`):**
+- SSOT: `src/core/openrouter.ts` (embedded const: api endpoint + use-case rehberi, zod-doğrulanır). Dosya değil constant (bundle-path güvenli, generate/init deseniyle tutarlı).
+- `bmux models [query]` (canlı OpenRouter kataloğu, Node'da parse — uydurma yok) · `--use-cases` · `--json` (detay: benchmarks/params/reasoning/modality). Fiyat 1M-token başına. Canlı doğrulandı (421 model).
+- `brainmux` skill: model/fiyat/use-case → canlı listeden öner (memory'den değil); setup **default OpenRouter** (provider menüsü yok). add-key gizli-prompt.
+- Spec `docs/specs/2026-09-02-openrouter-model-picker-design.md`, plan `docs/plans/2026-09-02-openrouter-model-picker.md`. 44 test.
+
+**Sıradaki iş — yayın/sertleştirme (opsiyonel):**
+1. GHCR paketini public yap (`ghcr.io/brainmuxhq/brainmux-litellm`) + multi-arch mirror (şu an amd64 tek-platform).
+2. marketplace/plugin `version` 0.0.0 → semver bump (yayın anında).
+3. (istenirse) `?category=` doğrula + `bmux models --category`; direkt-provider (`deepseek`/`openai`) /models listeleri.
