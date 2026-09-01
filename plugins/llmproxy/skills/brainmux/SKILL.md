@@ -44,7 +44,11 @@ brain in question: `http://127.0.0.1:<port>/ui` (log in with that brain's master
 observability. `bmux config list` shows each brain's port.
 
 ## Discipline
-- Secrets (`.env`) are never committed and never printed back to the user.
+- **Provider keys: the user adds them, never via chat.** When a provider key is missing, tell
+  the user to run `bmux config add-key OPENROUTER_API_KEY <key>` **themselves in the terminal**
+  (or export the env var) — do NOT ask them to paste the key into the conversation, and never
+  echo it. A key pasted into chat leaks into the transcript/logs.
+- Secrets (`.env`, chmod 600) are never committed and never printed back to the user.
 - Cheap-brain *delegation* is a separate skill ([[delegate]]); this skill is about managing
   the brains themselves.
 - Prefer one small change at a time: edit via `bmux config`, then `bmux up`, then `bmux health`.
