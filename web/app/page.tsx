@@ -11,7 +11,7 @@ export default function Home() {
           <nav className="nav-right">
             <a href="#products">Products</a>
             <a href="#llmproxy">llmproxy</a>
-            <a href="https://github.com/brainmuxhq/brainmux" className="ghbtn">GitHub ↗</a>
+            <a href="https://github.com/brainmuxhq/brainmux" className="ghbtn" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
           </nav>
         </div>
       </header>
@@ -28,7 +28,7 @@ export default function Home() {
             </p>
             <div className="cta-row">
               <a className="btn btn-primary" href="#llmproxy">Explore llmproxy</a>
-              <a className="btn btn-ghost" href="https://github.com/brainmuxhq/brainmux">GitHub ↗</a>
+              <a className="btn btn-ghost" href="https://github.com/brainmuxhq/brainmux" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
             </div>
             <div className="mux" aria-hidden="true" style={{ marginTop: 26 }}>
               <svg viewBox="0 0 520 168" role="img" aria-label="Claude Code routed through bmux to chat, deep and coder brains">
@@ -179,8 +179,8 @@ export default function Home() {
           <span className="brand mono">brain<span className="accent">mux</span></span>
           <span>LLM tooling for Claude Code · Engine: LiteLLM (MIT)</span>
           <span style={{ display: "flex", gap: 20 }}>
-            <a href="https://github.com/brainmuxhq/brainmux">GitHub</a>
-            <a href="https://brainmux.com">brainmux.com</a>
+            <a href="https://github.com/brainmuxhq/brainmux" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="/">brainmux.com</a>
             <span>MIT</span>
           </span>
         </div>
