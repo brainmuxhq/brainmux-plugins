@@ -1,8 +1,11 @@
 import CopyButton from "./CopyButton";
+import StructuredData from "./StructuredData";
+import { FAQ } from "./faq";
 
 export default function Home() {
   return (
     <>
+      <StructuredData />
       <header>
         <div className="wrap nav">
           <a className="brand" href="#top">
@@ -68,6 +71,17 @@ export default function Home() {
               <div className="row"><span className="out">▸ more </span><span className="cmt">soon</span><span className="cursor" /></div>
             </div>
           </div>
+        </section>
+
+        {/* WHAT IS IT — answer-first block (GEO / AI Overviews) */}
+        <section id="what" aria-label="What is brainmux">
+          <p className="eyebrow">What is it</p>
+          <p className="answer">
+            brainmux is LLM tooling for <strong>Claude Code</strong>. Its first tool, <strong>llmproxy</strong>,
+            routes Claude Code to cheap OpenRouter models through local LiteLLM proxies and delegates the grunt
+            work to them — one OpenRouter key reaches thousands of models, the brains run pay-as-you-go and never
+            touch your Anthropic quota, and Opus stays the orchestrator.
+          </p>
         </section>
 
         {/* PRODUCTS */}
@@ -170,6 +184,19 @@ export default function Home() {
               <div className="row"><span className="prompt">$</span><span>bmux test</span></div>
               <div className="row"><span className="ok">chat OK · deep OK · coder OK</span></div>
             </div>
+          </div>
+        </section>
+
+        {/* FAQ — visible + FAQPage JSON-LD source (SEO/GEO) */}
+        <section id="faq">
+          <div className="sec-head"><p className="eyebrow">FAQ</p><h2>Questions, answered.</h2></div>
+          <div className="faq">
+            {FAQ.map((f) => (
+              <div className="qa" key={f.q}>
+                <h3>{f.q}</h3>
+                <p>{f.a}</p>
+              </div>
+            ))}
           </div>
         </section>
       </main>

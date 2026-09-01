@@ -11,7 +11,21 @@ export const metadata: Metadata = {
   title,
   description,
   applicationName: "brainmux",
+  keywords: [
+    "brainmux", "llmproxy", "Claude Code", "OpenRouter", "LiteLLM", "LLM proxy",
+    "cheap LLM", "delegate", "Opus quota", "AI coding agent", "DeepSeek", "Qwen",
+  ],
+  authors: [{ name: "brainmux", url: "https://github.com/brainmuxhq/brainmux" }],
+  creator: "brainmux",
+  publisher: "brainmux",
+  category: "technology",
+  formatDetection: { email: false, address: false, telephone: false },
   alternates: { canonical: "https://brainmux.com" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+  },
   openGraph: {
     title,
     description: "Run Claude Code on cheap brains. One OpenRouter key, thousands of models, your Opus quota untouched.",

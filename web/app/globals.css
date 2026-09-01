@@ -106,3 +106,14 @@ footer { border-top: 1px solid var(--line); padding: 40px 0 60px; }
 }
 
 :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 4px; }
+
+/* answer-first block (GEO) */
+.answer { font-size: clamp(19px, 2.4vw, 24px); color: var(--fg); max-width: 62ch; line-height: 1.55; margin: 0; }
+.answer strong { color: var(--amber); font-weight: 700; }
+
+/* FAQ */
+.faq { display: grid; gap: 0; }
+.qa { padding: 22px 0; border-top: 1px solid var(--line); }
+.qa:first-child { border-top: none; }
+.qa h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.qa p { color: var(--fg-dim); margin: 0; max-width: 70ch; }
