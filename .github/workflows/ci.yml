@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  llmproxy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22" # node:test glob runner needs >=21
+      - run: npm ci
+      # Fails if the committed esbuild bundle (dist/bmux.js) drifted from src/.
+      - name: dist-check
+        run: npm run dist-check --workspace plugins/llmproxy
+      # Unit + golden + the bundle-level init test (no Docker; smoke is Docker-gated, run locally).
+      - name: test
+        run: npm test --workspace plugins/llmproxy
