@@ -37,6 +37,17 @@ After `add-brain`/`set-model`/`remove-brain`, run `bmux up` (or `restart`) to ap
 auto-generates master keys + salt + Postgres password; the user supplies provider keys via
 `add-key` (secrets live in `.env`, never in `brains.yaml`).
 
+## Model discovery (OpenRouter)
+For "which model / how much / what's good for X" questions, use the **live** catalog — never
+recommend a model slug from memory (models + prices change):
+- `bmux models --use-cases` — the use-case guidance catalog (chat/coding/deep/cheap/long).
+- `bmux models [query]` — live OpenRouter models: `id · ctx · $in/out per 1M · modality`, cheapest first.
+- `bmux models --json [query]` — full records (benchmarks, supported_parameters, reasoning, modalities) for deeper judgment.
+
+Flow: run `bmux models --use-cases` + `bmux models [query]`, pick per the use-case guidance from the
+**live output**, propose it to the user, and on confirmation wire it with `bmux config set-model <brain> <id>`
+(or `add-brain`), then `bmux up`. Verify a new slug actually works with `bmux test`.
+
 ## Spend / usage / logs → LiteLLM UI (don't rebuild it)
 For spend, request logs, and parameter tuning, point the user at the **LiteLLM UI** for the
 brain in question: `http://127.0.0.1:<port>/ui` (log in with that brain's master key from
@@ -44,6 +55,10 @@ brain in question: `http://127.0.0.1:<port>/ui` (log in with that brain's master
 observability. `bmux config list` shows each brain's port.
 
 ## Discipline
+- **Default provider = OpenRouter; do NOT present a provider-choice menu on setup.** One OpenRouter
+  key reaches thousands of models across providers (DeepSeek/Qwen/GLM/GPT/Gemini…), so setup assumes
+  OpenRouter: have the user add `OPENROUTER_API_KEY` (hidden, separate terminal) — nothing else. Use a
+  direct provider (`deepseek/…`, `openai/…`) only if the user explicitly asks; never ask them to pick a provider first.
 - **Provider keys: the user adds them, never via chat.** When a provider key is missing, tell
   the user to run — **in a separate terminal, not the chat** — `bmux config add-key OPENROUTER_API_KEY`
   **with the value OMITTED**; it prompts for the key hidden (no echo), so the secret never touches
