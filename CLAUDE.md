@@ -67,7 +67,7 @@
 - Migration + control-plane tamam. Plugin marketplace'ten kurulur:
   `/plugin marketplace add brainmuxhq/brainmux` → `/plugin install llmproxy@brainmux`.
 - `bmux` CLI (Node/TS; ship = self-contained esbuild bundle `dist/bmux.js`, runtime dep yok):
-  init · up/down/restart · ps/logs/health · chat|deep|coder (launch) · delegate · config · test.
+  init · up/down/restart · ps/logs/health · chat|deep|coder (launch) · delegate · config · spend · models · test.
 - SSOT: `brains.yaml` (zod) → generate → compose + per-brain config + init sql (golden-parity).
   State `~/.brainmux/` (BRAINMUX_HOME): brains.yaml · .env (chmod 600) · generated/ · data/postgres.
 - Routing = PORT; her beyin `model_name:"*"` + `drop_params:true`. 1 LiteLLM/brain + 1 Postgres.
@@ -83,8 +83,20 @@
 - `brainmux` skill: model/fiyat/use-case → canlı listeden öner (memory'den değil); setup **default OpenRouter** (provider menüsü yok). add-key gizli-prompt.
 - Spec `docs/specs/2026-09-02-openrouter-model-picker-design.md`, plan `docs/plans/2026-09-02-openrouter-model-picker.md`. 44 test.
 
+**Delege gözlemlenebilirlik + izolasyon — BİTTİ (main, 0.1.1→0.1.5):**
+- `bmux spend` (0.1.1): beyin başına istek/token/spend (LiteLLM'den).
+- `bmux delegate --stream|-v` (0.1.2→0.1.3): **insan-terminali** için tek satır canlı gösterge
+  (`⏳ brain · 5/34 · <adım>` → `✅ done`; X/Y worker TodoWrite tutarsa, yoksa `step N`). TTY-only,
+  dosya yok, ekstra token yok; stdout = temiz cevap.
+- `bmux delegate --mcp` (0.1.4): worker default'ta host MCP **almaz** (`--strict-mcp-config`) —
+  ölçüm 147→30 tool, ~69k→~33k input token, sıfır fayda kaybı; `--mcp` (alias `--with-mcp`) ile
+  opt-in. Her çağrı config'i stderr'e basar: `brain · mode · mcp on/off`.
+- Delege skill (0.1.5): orchestrator flag dayatmaz; **her delegeden sonra kullanıcıya tek satır
+  özet raporlar** (Claude Code best-practice: sonuç tarif et; canlı stream parent'a gitmez, cost için `--json`).
+- Test: 60 unit/golden. Commit'ler: `5ccca9c` (stream) · `6296daf` (mcp) · `3df3502` (skill).
+
 **Yayın/sertleştirme:**
 - ✅ Multi-arch mirror: `ghcr.io/brainmuxhq/brainmux-litellm` (amd64+arm64), IMAGE_REF = manifest-list `sha256:693d839d…`.
-- ✅ Version 0.1.0 (plugin.json + marketplace plugin entry + package.json).
+- ✅ Version **0.1.5** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.5).
 - ⏳ **GHCR paketini public yap** (org UI: brainmuxhq/packages → brainmux-litellm → settings → Change visibility → Public). Dış kullanıcıların `bmux up`'ta image çekmesi için ŞART; şu an private.
 - (opsiyonel) `?category=` doğrula + `bmux models --category`; direkt-provider (`deepseek`/`openai`) /models listeleri.
