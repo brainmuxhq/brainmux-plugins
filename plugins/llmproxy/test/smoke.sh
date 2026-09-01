@@ -11,7 +11,14 @@ CLI="node $HERE/bin/bmux"
 HOME_DIR="$(mktemp -d)"
 export BRAINMUX_HOME="$HOME_DIR"
 
-cleanup() { $CLI down >/dev/null 2>&1 || true; rm -rf "$HOME_DIR"; }
+# Best-effort teardown — never let cleanup mask the smoke's own exit code.
+# Postgres writes data/ as root (container uid), so a plain rm can't remove it;
+# wipe the scratch home's contents from inside a throwaway root container first.
+cleanup() {
+  $CLI down >/dev/null 2>&1 || true
+  docker run --rm -v "$HOME_DIR:/scratch" alpine sh -c 'rm -rf /scratch/..?* /scratch/.[!.]* /scratch/*' >/dev/null 2>&1 || true
+  rm -rf "$HOME_DIR" >/dev/null 2>&1 || true
+}
 trap cleanup EXIT
 
 [ -n "${OPENROUTER_API_KEY:-}" ] || { echo "smoke: set OPENROUTER_API_KEY to run the live smoke" >&2; exit 2; }
