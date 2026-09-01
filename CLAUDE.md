@@ -47,6 +47,14 @@
 - Integration: smoke — `bmux up` sonrası her beyne gerçek `/v1/messages` (text VEYA thinking-only = ayakta).
 - CI: unit docker'sız, smoke docker-gated. **Test etmeden "çalışır" deme.**
 
+## Kod disiplini
+- **Katmanlar tek yön:** `cli → commands → core` (paths·manifest·env·generate·docker). Ters/atlamalı bağımlılık yok.
+- **Dosya küçük + odaklı:** bir dosya = bir sorumluluk; ~500 satırı aşmadan sorumluluğa göre böl.
+- **Hata yutma yok:** her komut/async yol anlamlı mesaj + doğru exit code döner; sessiz catch yok.
+- **Commit hijyeni:** küçük commit (~50–200 satır), Conventional Commits; commit/push sadece Ali isteyince.
+- **Docs:** konu başına tek dosya — `_v2/_FINAL` kopya yok, mevcut dosyayı yerinde düzenle; yeni doc'tan önce `docs/`'a bak.
+- **Delege dengesi:** tek/bilinen-dosya işi için subagent açma (inline hızlı); subagent'ı yalnız geniş-arama/paralellik + Ali isteyince kullan.
+
 ## Referans
 - Mimari spec: `docs/specs/2026-09-01-brainmux-architecture-design.md` (mevcut `claude-proxy` çalışmasından taşınacak).
 - Göç: mevcut `~/Development/Projects/claude-proxy` (çalışan sh prototip, klasör adı kalır) → `plugins/llmproxy/`'a Node olarak taşınır; brains.yaml'dan golden-parity ile üretilir.
