@@ -11815,6 +11815,47 @@ function runDelegate(argv, env = process.env) {
 // src/commands/config.ts
 var import_yaml2 = __toESM(require_dist(), 1);
 import fs5 from "node:fs";
+import readline from "node:readline";
+function readSecret(promptText) {
+  const input = process.stdin;
+  if (!input.isTTY) {
+    return new Promise((resolve) => {
+      const rl = readline.createInterface({ input });
+      rl.once("line", (line) => {
+        rl.close();
+        resolve(line.trim());
+      });
+      rl.once("close", () => resolve(""));
+    });
+  }
+  return new Promise((resolve, reject) => {
+    process.stdout.write(promptText);
+    input.setRawMode(true);
+    input.resume();
+    input.setEncoding("utf8");
+    let val = "";
+    const finish = (cb) => {
+      input.setRawMode(false);
+      input.pause();
+      input.removeListener("data", onData);
+      process.stdout.write("\n");
+      cb();
+    };
+    const onData = (chunk) => {
+      for (const ch of chunk) {
+        const code = ch.charCodeAt(0);
+        if (code === 13 || code === 10 || code === 4) return finish(() => resolve(val));
+        if (code === 3) return finish(() => reject(new Error("aborted")));
+        if (code === 127 || code === 8) {
+          val = val.slice(0, -1);
+          continue;
+        }
+        val += ch;
+      }
+    };
+    input.on("data", onData);
+  });
+}
 function load(paths) {
   return parseBrains(fs5.readFileSync(paths.brainsYaml, "utf8"));
 }
@@ -11833,7 +11874,7 @@ function addBrain(paths, name, port, model, providerKey) {
   cfg.brains[name] = { port, model, providerKey };
   save(paths, cfg);
 }
-function runConfig(sub, rest, env = process.env) {
+async function runConfig(sub, rest, env = process.env) {
   const paths = resolvePaths(env);
   try {
     switch (sub) {
@@ -11864,8 +11905,10 @@ function runConfig(sub, rest, env = process.env) {
       }
       case "add-key": {
         const [key, value] = rest;
-        if (!key || value === void 0) throw new Error("usage: bmux config add-key <ENV_VAR> <value>");
-        setKey(paths.envFile, key, value);
+        if (!key) throw new Error("usage: bmux config add-key <ENV_VAR> [value]  (omit value to enter it hidden)");
+        const secret = value !== void 0 ? value : await readSecret(`Value for ${key} (hidden, won't echo): `);
+        if (!secret) throw new Error(`no value provided for ${key}`);
+        setKey(paths.envFile, key, secret);
         console.log(`set ${key} in .env`);
         return 0;
       }
@@ -11979,7 +12022,7 @@ async function main(argv, env = process.env) {
     if (cmd === "init") return runInit(env);
     if (cmd === "test") return await runTest(env);
     if (cmd === "delegate") return runDelegate(rest, env);
-    if (cmd === "config") return runConfig(rest[0] ?? "", rest.slice(1), env);
+    if (cmd === "config") return await runConfig(rest[0] ?? "", rest.slice(1), env);
     if (STACK.has(cmd)) return await runStack(cmd, rest, env);
     const cfg = loadBrains(resolvePaths(env).brainsYaml);
     if (cfg.brains[cmd]) return runLaunch(cmd, rest, env);

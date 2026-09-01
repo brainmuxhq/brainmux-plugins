@@ -45,9 +45,10 @@ observability. `bmux config list` shows each brain's port.
 
 ## Discipline
 - **Provider keys: the user adds them, never via chat.** When a provider key is missing, tell
-  the user to run `bmux config add-key OPENROUTER_API_KEY <key>` **themselves in the terminal**
-  (or export the env var) — do NOT ask them to paste the key into the conversation, and never
-  echo it. A key pasted into chat leaks into the transcript/logs.
+  the user to run — **in a separate terminal, not the chat** — `bmux config add-key OPENROUTER_API_KEY`
+  **with the value OMITTED**; it prompts for the key hidden (no echo), so the secret never touches
+  argv, shell history, or the conversation transcript. Never ask the user to paste a key into the
+  chat (a pasted key leaks into the transcript/logs), and never echo it.
 - Secrets (`.env`, chmod 600) are never committed and never printed back to the user.
 - Cheap-brain *delegation* is a separate skill ([[delegate]]); this skill is about managing
   the brains themselves.

@@ -33,7 +33,7 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv = process.env)
     if (cmd === "init") return runInit(env);
     if (cmd === "test") return await runTest(env);
     if (cmd === "delegate") return runDelegate(rest, env);
-    if (cmd === "config") return runConfig(rest[0] ?? "", rest.slice(1), env);
+    if (cmd === "config") return await runConfig(rest[0] ?? "", rest.slice(1), env);
     if (STACK.has(cmd)) return await runStack(cmd, rest, env);
 
     // otherwise: treat cmd as a brain name to launch (chat/deep/coder/...)
