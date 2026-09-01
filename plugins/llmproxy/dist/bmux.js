@@ -11657,6 +11657,10 @@ function runInit(env = process.env) {
   writeGenerated(paths, cfg);
   console.log(`bmux: initialized ${paths.home}`);
   console.log(`  brains.yaml, .env (chmod 600), generated/ written.`);
+  console.log(`  brains (edit brains.yaml or \`bmux config\` to change):`);
+  for (const [name, b] of Object.entries(cfg.brains)) {
+    console.log(`    ${name.padEnd(8)} :${b.port}  ${b.model}`);
+  }
   const missing = Object.values(cfg.brains).map((b) => b.providerKey).filter((k, i, a) => a.indexOf(k) === i).filter((k) => !readEnv(paths.envFile).get(k));
   if (missing.length) {
     console.log(`  next: add provider key(s): ${missing.map((k) => `bmux config add-key ${k} <value>`).join("  ")}`);
@@ -11697,6 +11701,14 @@ function liveliness(port, timeoutMs = 3e3) {
 }
 
 // src/commands/stack.ts
+function upSummary(cfg) {
+  const lines = ["", "brains up. observe spend/logs in each LiteLLM UI (login: admin):"];
+  for (const [name, b] of Object.entries(cfg.brains)) {
+    lines.push(`  ${name.padEnd(8)} http://127.0.0.1:${b.port}/ui   password: $${masterKeyVar(name)}`);
+  }
+  lines.push("  (password values live in ~/.brainmux/.env \xB7 `bmux spend` for a quick total)");
+  return lines.join("\n");
+}
 async function runStack(sub, rest, env = process.env) {
   const paths = resolvePaths(env);
   if (sub === "up" || sub === "restart") {
@@ -11704,7 +11716,9 @@ async function runStack(sub, rest, env = process.env) {
     const cfg = loadBrains(paths.brainsYaml);
     writeGenerated(paths, cfg);
     const args = sub === "restart" ? ["up", "-d", "--force-recreate"] : ["up", "-d"];
-    return runCompose(paths, args);
+    const code = runCompose(paths, args);
+    if (code === 0) process.stdout.write(upSummary(cfg) + "\n");
+    return code;
   }
   if (sub === "down") {
     ensureDocker();
@@ -12041,8 +12055,102 @@ async function runModels(rest, _env = process.env) {
   }
 }
 
-// src/commands/test.ts
+// src/core/spend.ts
 import http2 from "node:http";
+function toNum(v) {
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  if (typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v))) return Number(v);
+  return 0;
+}
+function aggregateSpend(brain, rows) {
+  if (!Array.isArray(rows)) return { brain, ok: false, requests: 0, tokens: 0, spend: 0, note: "unexpected response" };
+  let spend = 0, tokens = 0;
+  for (const r of rows) {
+    const o = r ?? {};
+    spend += toNum(o.spend);
+    tokens += toNum(o.total_tokens);
+  }
+  return { brain, ok: true, requests: rows.length, tokens, spend };
+}
+function usd(n) {
+  return `$${n.toFixed(6)}`;
+}
+function formatSpend(rows, ports = {}) {
+  const header = `${"brain".padEnd(8)} ${"requests".padStart(9)} ${"tokens".padStart(10)} ${"spend".padStart(14)}`;
+  const body = rows.map(
+    (r) => r.ok ? `${r.brain.padEnd(8)} ${String(r.requests).padStart(9)} ${String(r.tokens).padStart(10)} ${usd(r.spend).padStart(14)}` : `${r.brain.padEnd(8)} ${"\u2014".padStart(9)} ${"\u2014".padStart(10)} ${"\u2014".padStart(14)}  (${r.note ?? "unreachable"})`
+  );
+  const live = rows.filter((r) => r.ok);
+  const total = {
+    requests: live.reduce((s, r) => s + r.requests, 0),
+    tokens: live.reduce((s, r) => s + r.tokens, 0),
+    spend: live.reduce((s, r) => s + r.spend, 0)
+  };
+  const sep = "\u2500".repeat(header.length);
+  const totalLine = `${"TOTAL".padEnd(8)} ${String(total.requests).padStart(9)} ${String(total.tokens).padStart(10)} ${usd(total.spend).padStart(14)}`;
+  const anyPort = Object.values(ports)[0];
+  const hint = anyPort ? `
+full detail + charts: each brain's LiteLLM UI at http://127.0.0.1:<port>/ui` : "";
+  return [header, ...body, sep, totalLine, hint].filter((s) => s !== "").join("\n");
+}
+function fetchSpendLogs(port, apiKey, timeoutMs = 1e4) {
+  return new Promise((resolve, reject) => {
+    const req = http2.get(
+      {
+        host: "127.0.0.1",
+        port,
+        path: "/spend/logs",
+        timeout: timeoutMs,
+        headers: { authorization: `Bearer ${apiKey}` }
+      },
+      (res) => {
+        const status = res.statusCode ?? 0;
+        if (status >= 400) {
+          res.resume();
+          reject(new Error(`HTTP ${status}`));
+          return;
+        }
+        let body = "";
+        res.setEncoding("utf8");
+        res.on("data", (c) => body += c);
+        res.on("end", () => {
+          try {
+            resolve(JSON.parse(body));
+          } catch (e) {
+            reject(new Error(`bad JSON: ${e.message}`));
+          }
+        });
+      }
+    );
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("timed out"));
+    });
+    req.on("error", (e) => reject(new Error(e.message)));
+  });
+}
+
+// src/commands/spend.ts
+async function runSpend(_rest = [], env = process.env) {
+  const paths = resolvePaths(env);
+  const cfg = loadBrains(paths.brainsYaml);
+  const results = [];
+  const ports = {};
+  for (const [name, b] of Object.entries(cfg.brains)) {
+    ports[name] = b.port;
+    const key = getKey(paths.envFile, masterKeyVar(name)) ?? "";
+    try {
+      results.push(aggregateSpend(name, await fetchSpendLogs(b.port, key)));
+    } catch (e) {
+      results.push({ brain: name, ok: false, requests: 0, tokens: 0, spend: 0, note: e.message });
+    }
+  }
+  console.log(formatSpend(results, ports));
+  return 0;
+}
+
+// src/commands/test.ts
+import http3 from "node:http";
 function isAlive(responseJson) {
   try {
     const o = JSON.parse(responseJson);
@@ -12058,7 +12166,7 @@ function messagesProbe(port, apiKey) {
     messages: [{ role: "user", content: "reply exactly: OK" }]
   });
   return new Promise((resolve) => {
-    const req = http2.request(
+    const req = http3.request(
       {
         host: "127.0.0.1",
         port,
@@ -12119,6 +12227,7 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list
   bmux test                       smoke every brain via /v1/messages
+  bmux spend                      per-brain requests/tokens/spend (from LiteLLM)
   bmux models [query] | --use-cases | --json   list OpenRouter models (live) / use-cases
 `;
 var STACK = /* @__PURE__ */ new Set(["up", "down", "restart", "ps", "logs", "health"]);
@@ -12135,6 +12244,7 @@ async function main(argv, env = process.env) {
     if (cmd === "delegate") return runDelegate(rest, env);
     if (cmd === "config") return await runConfig(rest[0] ?? "", rest.slice(1), env);
     if (cmd === "models") return await runModels(rest, env);
+    if (cmd === "spend") return await runSpend(rest, env);
     if (STACK.has(cmd)) return await runStack(cmd, rest, env);
     const cfg = loadBrains(resolvePaths(env).brainsYaml);
     if (cfg.brains[cmd]) return runLaunch(cmd, rest, env);

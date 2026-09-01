@@ -51,6 +51,7 @@ bmux config add-brain <name> <port> <model> [providerKey]
 bmux config remove-brain <name> | set-model <name> <model>
 bmux config add-key <ENV_VAR> [value] | list
 bmux test                                   smoke every brain via /v1/messages
+bmux spend                                  per-brain requests / tokens / spend
 bmux models [query] | --use-cases | --json  browse the live OpenRouter catalog
 ```
 
@@ -88,8 +89,11 @@ add-key <ENV_VAR>` (value omitted → hidden prompt) in a terminal — don't pas
 
 ## Observability
 
-Spend, request logs, and parameter tuning live in each brain's **LiteLLM UI** at
-`http://127.0.0.1:<port>/ui` (log in with that brain's master key from `~/.brainmux/.env`).
+`bmux spend` prints a quick per-brain requests/tokens/spend roll-up in the terminal. For the
+full picture — request logs, charts, parameter tuning — open each brain's **LiteLLM UI** at
+`http://127.0.0.1:<port>/ui` and log in with username `admin` and that brain's master key
+(`<BRAIN>_MASTER_KEY` in `~/.brainmux/.env`). `bmux up` prints the URLs + key names on start.
+Ground-truth billing (all brains combined) is your [OpenRouter dashboard](https://openrouter.ai/activity).
 
 ---
 

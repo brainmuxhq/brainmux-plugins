@@ -53,6 +53,10 @@ export function runInit(env: NodeJS.ProcessEnv = process.env): number {
 
   console.log(`bmux: initialized ${paths.home}`);
   console.log(`  brains.yaml, .env (chmod 600), generated/ written.`);
+  console.log(`  brains (edit brains.yaml or \`bmux config\` to change):`);
+  for (const [name, b] of Object.entries(cfg.brains)) {
+    console.log(`    ${name.padEnd(8)} :${b.port}  ${b.model}`);
+  }
   const missing = Object.values(cfg.brains).map((b) => b.providerKey)
     .filter((k, i, a) => a.indexOf(k) === i)
     .filter((k) => !readEnv(paths.envFile).get(k));

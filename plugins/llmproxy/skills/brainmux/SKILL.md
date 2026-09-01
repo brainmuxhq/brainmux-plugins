@@ -23,6 +23,7 @@ bmux up | down | restart     # manage the stack (up/restart regenerate from brai
 bmux ps | logs [brain]       # inspect
 bmux health                  # liveliness per brain (UP/DOWN)
 bmux test                    # POST /v1/messages to each brain (text or thinking = alive)
+bmux spend                   # per-brain requests/tokens/spend roll-up (LiteLLM /spend/logs)
 ```
 
 ## Config (edits brains.yaml → regenerates)
@@ -49,9 +50,11 @@ Flow: run `bmux models --use-cases` + `bmux models [query]`, pick per the use-ca
 (or `add-brain`), then `bmux up`. Verify a new slug actually works with `bmux test`.
 
 ## Spend / usage / logs → LiteLLM UI (don't rebuild it)
-For spend, request logs, and parameter tuning, point the user at the **LiteLLM UI** for the
-brain in question: `http://127.0.0.1:<port>/ui` (log in with that brain's master key from
-`~/.brainmux/.env`). Do NOT build a custom dashboard — the LiteLLM UI already owns
+For a quick "how much have I spent" answer, run `bmux spend` — a per-brain requests/tokens/spend
+roll-up read from LiteLLM's `/spend/logs`. For request logs, charts, and parameter tuning, point
+the user at the **LiteLLM UI** for the brain: `http://127.0.0.1:<port>/ui`, log in with username
+`admin` and that brain's master key (`<BRAIN>_MASTER_KEY` in `~/.brainmux/.env`; `bmux up` prints
+the URLs + key names). Do NOT build a custom web dashboard — the LiteLLM UI already owns
 observability. `bmux config list` shows each brain's port.
 
 ## Discipline
