@@ -9,9 +9,8 @@
   Claude Code'u ucuz/alternatif LiteLLM "beyinleri" arasında yönlendirir ve grunt/tespit
   işini onlara **delege** eder, böylece Opus (Anthropic abonelik kotası) sadece mimari +
   review + fix'te kullanılır.
-  (Not: yerel prototip klasörü `claude-proxy` adıyla kalır — özel klasör, marka sorunu yok.
-  "claude" adı yalnız PUBLIC üründe kullanılmaz → Anthropic marka riski. Bu yüzden public
-  ad `llmproxy`.)
+  (Not: public ad `llmproxy` — "claude" adı PUBLIC üründe kullanılmaz → Anthropic marka riski.
+  Prototip `claude-proxy` klasörü migration sonrası silindi.)
 - **Repo:** `brainmuxhq/brainmux` (monorepo). **Marketplace:** `/plugin marketplace add brainmuxhq/brainmux`.
 - **Değer:** darboğaz Anthropic kotası (Pro 5x). Proxy beyinleri OpenRouter'da ayrı sayaçta
   çalışır → abonelik kotasına dokunmaz.
@@ -57,40 +56,29 @@
 
 ## Referans
 - Mimari spec: `docs/specs/2026-09-01-brainmux-architecture-design.md` (mevcut `claude-proxy` çalışmasından taşınacak).
-- Göç: mevcut `~/Development/Projects/claude-proxy` (çalışan sh prototip, klasör adı kalır) → `plugins/llmproxy/`'a Node olarak taşınır; brains.yaml'dan golden-parity ile üretilir.
+- Göç: sh prototip (`claude-proxy`) → `plugins/llmproxy/` Node/TS'e taşındı (golden-parity), prototip silindi.
+- Control-plane spec: `docs/specs/2026-09-02-llmproxy-control-plane-design.md`. Planlar: `docs/plans/2026-09-0{1,2}-*.md`.
 
-## Durum & sıradaki adımlar (handoff — 2026-09-01)
+## Durum & sıradaki adımlar (handoff — 2026-09-02)
 
-> Yeni oturum bunu okusun; kaldığımız yer burası. (Bu CLAUDE.md üst dizinden — ör.
-> `plugins/llmproxy`'dan çalışırken — otomatik yüklenir.)
+> Yeni oturum bunu okusun. (Bu CLAUDE.md üst dizinden otomatik yüklenir.)
 
-**Kurulu (bu repo, push edildi `brainmuxhq/brainmux`):**
-- Monorepo iskelet: `package.json` (workspaces `plugins/*`), `.claude-plugin/marketplace.json`
-  (`metadata.pluginRoot: "./plugins"`, plugin `llmproxy`), `tsconfig`, MIT LICENSE.
-- `plugins/llmproxy/`: `.claude-plugin/plugin.json`, `package.json` (@brainmux/llmproxy),
-  `tsconfig.json`, `bin/bmux` (shim), `src/cli.ts` (STUB), boş dizinler
-  (skills/ commands/ templates/ test/ src/core src/commands).
-- `web/` placeholder (brainmux.com sitesi — sonra).
-- `docs/specs/2026-09-01-brainmux-architecture-design.md` (onaylı mimari — TAM referans).
+**BİTTİ — main'de (`brainmuxhq/brainmux`), user-doğrulandı:**
+- Migration + control-plane tamam. Plugin marketplace'ten kurulur:
+  `/plugin marketplace add brainmuxhq/brainmux` → `/plugin install llmproxy@brainmux`.
+- `bmux` CLI (Node/TS; ship = self-contained esbuild bundle `dist/bmux.js`, runtime dep yok):
+  init · up/down/restart · ps/logs/health · chat|deep|coder (launch) · delegate · config · test.
+- SSOT: `brains.yaml` (zod) → generate → compose + per-brain config + init sql (golden-parity).
+  State `~/.brainmux/` (BRAINMUX_HOME): brains.yaml · .env (chmod 600) · generated/ · data/postgres.
+- Routing = PORT; her beyin `model_name:"*"` + `drop_params:true`. 1 LiteLLM/brain + 1 Postgres.
+- Skills: `delegate` + `brainmux` (plugin içinde; eski `~/.claude/skills/delegate` silindi). Slash: `/brainmux <alt-komut>`.
+- LiteLLM image mirror: `ghcr.io/brainmuxhq/brainmux-litellm@sha256:e53c8f4f012fe1286fcfd78b6a108cdf0865af21f735dd10cff47df93bf9f23f` (generated compose ona bakar).
+- Doğrulama: 39 unit/golden test + canlı smoke (3 beyin gerçek `/v1/messages`) + fresh-clone install. CI: `.github/workflows/ci.yml` (dist-check + test).
+- Prototip `claude-proxy` + fish/settings kalıntısı silindi.
+- Referans: `docs/specs/2026-09-01-brainmux-architecture-design.md`, `docs/specs/2026-09-02-llmproxy-control-plane-design.md`, `docs/plans/2026-09-0{1,2}-*.md`.
 
-**Çalışan prototip (kaynak, DOKUNMA ad):** `~/Development/Projects/claude-proxy`
-- `bin/bmux` (sh: chat/deep/coder/delegate/up/down/health/test) · `bin/delegate` · `bin/smoke-test.sh`
-- `config/{chat,deep,coder}.yaml` (`model_name:"*"`, `drop_params:true`) · `compose.yaml`
-  (brainmux-* container + 1 Postgres) · `init/01-databases.sql`
-- Stack AYAKTA: brainmux-chat/deep/coder :4567/4568/4569 + brainmux-postgres. `bin/bmux test` geçiyor.
-
-**Sıradaki iş (migration — önce writing-plans ile plan):**
-1. `brains.yaml` (SSOT) + zod şema.
-2. Generator: brains.yaml → LiteLLM config + compose + init sql. **Golden-parity:** mevcut 3 beyni birebir üret.
-3. `bmux` komutlarını Node'a taşı (launch/delegate/stack/config/init/test) — prototip mantığı birebir.
-4. State `~/.brainmux/` (BRAINMUX_HOME): brains.yaml · .env · generated/ · data/.
-5. Skills: prototipteki delegate skill (`~/.claude/skills/delegate/SKILL.md`) → `plugins/llmproxy/skills/delegate/`'e taşı+güncelle; `brainmux` config skill'i ekle.
-6. Slash commands → `plugins/llmproxy/commands/`.
-7. Mirroring: LiteLLM image pin `ghcr.io/berriai/litellm-database@sha256:5ead13edd4efd89f32dab349c1f19447d395affca53f3aeae00f5e6e01b8c08d` → kendi registry'ne mirror; generated compose ona baksın.
-8. Doğrula: `npm run build` + smoke (test etmeden "çalışır" deme).
-
-**Bilinen kalıntı (temizle):**
-- `~/.config/fish/functions/claude-{chat,deep,coder}.fish` → silinen `bin/claude-*`'a bakıyor (**KIRIK**). `bmux`'e çevir ya da sil.
-- `~/.claude/settings.json` allow: `Bash(.../claude-proxy/bin/delegate:*)` → yeni bmux yoluna güncelle.
-
-**Tam sohbet gerekiyorsa:** `~/Development/Projects/claude-proxy`'dan `claude --continue`.
+**Sıradaki iş — Plan 3 (OpenRouter model-picker):**
+1. SSOT tek dosya `plugins/llmproxy/templates/openrouter.yaml` (api endpoints + use-case kataloğu) + `src/core/openrouter.ts` zod loader.
+2. `bmux models [--use-case <c>] [query]` → OpenRouter public kataloğu (`GET /api/v1/models`, key yok) → `id · ctx · $girdi/$çıktı · isim` bas.
+3. `brainmux` skill: Claude use-case'e göre model önerir (**canlı katalogdan**, memory'den değil — kanıtsız yorum yok), user seçer, `bmux config set-model|add-brain` ile bağlar.
+4. Yayın hazırlığı: GHCR paketini public yap; multi-arch mirror; marketplace/plugin `version` 0.0.0→bump.
