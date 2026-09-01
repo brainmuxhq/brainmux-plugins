@@ -7,13 +7,10 @@
   },
   "description": "brainmux — Claude Code plugin marketplace (LLM tooling).",
   "version": "0.1.0",
-  "metadata": {
-    "pluginRoot": "./plugins"
-  },
   "plugins": [
     {
       "name": "llmproxy",
-      "source": "llmproxy",
+      "source": "./plugins/llmproxy",
       "description": "Run Claude Code on cheap/alternate LLM brains and delegate grunt work to save your Opus quota.",
       "version": "0.0.0",
       "license": "MIT",
