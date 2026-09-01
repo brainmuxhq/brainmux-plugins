@@ -11436,7 +11436,10 @@ var NEVER = INVALID;
 // src/core/manifest.ts
 var BrainSchema = external_exports.object({
   port: external_exports.number().int().min(1).max(65535),
-  model: external_exports.string().min(1),
+  // Restrict to bare model-id chars so the value can't inject YAML into the generated
+  // per-brain config.yaml (e.g. a newline + `master_key: …`). Covers OpenRouter slugs
+  // like `openrouter/qwen/qwen3.7-flash` and variant suffixes (`…:free`).
+  model: external_exports.string().regex(/^[A-Za-z0-9/._:-]+$/, "model must be a bare model id (letters, digits and / . _ : -)"),
   providerKey: external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "providerKey must be an ENV_VAR-style name")
 });
 var BrainsConfigSchema = external_exports.object({
@@ -12046,6 +12049,7 @@ async function runConfig(sub, rest, env = process.env) {
       }
       case "set-model": {
         const [name, model] = rest;
+        if (!name || !model) throw new Error("usage: bmux config set-model <name> <model>");
         const cfg = load(paths);
         if (!cfg.brains[name]) throw new Error(`no such brain '${name}'`);
         cfg.brains[name].model = model;
@@ -12286,7 +12290,7 @@ async function runSpend(_rest = [], env = process.env) {
     }
   }
   console.log(formatSpend(results, ports));
-  return 0;
+  return results.some((r) => r.ok) ? 0 : 1;
 }
 
 // src/commands/statusline.ts
@@ -12346,15 +12350,16 @@ fi
 
 # OpenRouter balance \u2014 only on a proxy brain; 5-min cache, refreshed in the background so it never blocks a render.
 if [ -n "$brain" ] && [ -f "$home/.env" ]; then
-  cache="$HOME/.cache/brainmux/or-balance"; mkdir -p "$(dirname "$cache")" 2>/dev/null
-  age=99999; [ -f "$cache" ] && age=$(( $(date +%s) - $(stat -c %Y "$cache" 2>/dev/null || echo 0) ))
+  cache="\${XDG_CACHE_HOME:-$HOME/.cache}/brainmux/or-balance"; mkdir -p "$(dirname "$cache")" 2>/dev/null
+  # stat mtime: GNU (-c %Y) then BSD/macOS (-f %m) \u2014 portable across Linux and macOS.
+  age=99999; [ -f "$cache" ] && age=$(( $(date +%s) - $(stat -c %Y "$cache" 2>/dev/null || stat -f %m "$cache" 2>/dev/null || echo 0) ))
   if [ "$age" -gt 300 ]; then
     ( key=$(grep -E '^OPENROUTER_API_KEY=' "$home/.env" | cut -d= -f2-)
       # Pass the key via stdin (-H @-), not argv, so it never lands in /proc/PID/cmdline. printf is a
       # bash builtin (no separate process), so the key isn't exposed there either.
       [ -n "$key" ] && bal=$(printf 'Authorization: Bearer %s' "$key" | curl -s -m 8 https://openrouter.ai/api/v1/credits -H @- \\
         | python3 -c "import sys,json;d=json.load(sys.stdin).get('data',{});print(f'{d.get(\\"total_credits\\",0)-d.get(\\"total_usage\\",0):.2f}')" 2>/dev/null)
-      [ -n "$bal" ] && printf '%s' "$bal" > "$cache" ) >/dev/null 2>&1 &
+      [ -n "$bal" ] && { printf '%s' "$bal" > "$cache.$$" && mv "$cache.$$" "$cache"; } ) >/dev/null 2>&1 &
   fi
   [ -f "$cache" ] && bal=$(cat "$cache" 2>/dev/null)
   if [ -n "$bal" ]; then bc=$GR; awk "BEGIN{exit !($bal < 2)}" 2>/dev/null && bc=$RE; out="\${out}\${S}\${bc}\u{1F4B3} \\$\${bal}\${R}"; fi
@@ -12381,7 +12386,7 @@ function planStatuslineSettings(existing, command, force) {
 }
 function runStatusline(argv, env = process.env) {
   const home = env.HOME || os2.homedir();
-  const claudeDir = path4.join(home, ".claude");
+  const claudeDir = env.CLAUDE_CONFIG_DIR || path4.join(home, ".claude");
   const dest = path4.join(claudeDir, "brainmux-statusline.sh");
   if (argv[0] !== "install") {
     process.stdout.write(
@@ -12538,7 +12543,7 @@ async function main(argv, env = process.env) {
 ${HELP}`);
     return 1;
   } catch (e) {
-    process.stderr.write(`bmux: ${e.message}
+    process.stderr.write(`bmux: ${e instanceof Error ? e.message : String(e)}
 `);
     return 1;
   }

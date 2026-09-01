@@ -23,5 +23,5 @@ export async function runSpend(_rest: string[] = [], env: NodeJS.ProcessEnv = pr
     }
   }
   console.log(formatSpend(results, ports));
-  return 0;
+  return results.some((r) => r.ok) ? 0 : 1; // non-zero only if no brain was reachable (stack down / no keys)
 }

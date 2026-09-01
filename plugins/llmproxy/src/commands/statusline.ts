@@ -62,15 +62,16 @@ fi
 
 # OpenRouter balance — only on a proxy brain; 5-min cache, refreshed in the background so it never blocks a render.
 if [ -n "$brain" ] && [ -f "$home/.env" ]; then
-  cache="$HOME/.cache/brainmux/or-balance"; mkdir -p "$(dirname "$cache")" 2>/dev/null
-  age=99999; [ -f "$cache" ] && age=$(( $(date +%s) - $(stat -c %Y "$cache" 2>/dev/null || echo 0) ))
+  cache="\${XDG_CACHE_HOME:-$HOME/.cache}/brainmux/or-balance"; mkdir -p "$(dirname "$cache")" 2>/dev/null
+  # stat mtime: GNU (-c %Y) then BSD/macOS (-f %m) — portable across Linux and macOS.
+  age=99999; [ -f "$cache" ] && age=$(( $(date +%s) - $(stat -c %Y "$cache" 2>/dev/null || stat -f %m "$cache" 2>/dev/null || echo 0) ))
   if [ "$age" -gt 300 ]; then
     ( key=$(grep -E '^OPENROUTER_API_KEY=' "$home/.env" | cut -d= -f2-)
       # Pass the key via stdin (-H @-), not argv, so it never lands in /proc/PID/cmdline. printf is a
       # bash builtin (no separate process), so the key isn't exposed there either.
       [ -n "$key" ] && bal=$(printf 'Authorization: Bearer %s' "$key" | curl -s -m 8 https://openrouter.ai/api/v1/credits -H @- \\
         | python3 -c "import sys,json;d=json.load(sys.stdin).get('data',{});print(f'{d.get(\\"total_credits\\",0)-d.get(\\"total_usage\\",0):.2f}')" 2>/dev/null)
-      [ -n "$bal" ] && printf '%s' "$bal" > "$cache" ) >/dev/null 2>&1 &
+      [ -n "$bal" ] && { printf '%s' "$bal" > "$cache.$$" && mv "$cache.$$" "$cache"; } ) >/dev/null 2>&1 &
   fi
   [ -f "$cache" ] && bal=$(cat "$cache" 2>/dev/null)
   if [ -n "$bal" ]; then bc=$GR; awk "BEGIN{exit !($bal < 2)}" 2>/dev/null && bc=$RE; out="\${out}\${S}\${bc}💳 \\$\${bal}\${R}"; fi
@@ -106,7 +107,9 @@ export function planStatuslineSettings(existing: unknown, command: string, force
 
 export function runStatusline(argv: string[], env: NodeJS.ProcessEnv = process.env): number {
   const home = env.HOME || os.homedir();
-  const claudeDir = path.join(home, ".claude");
+  // Honor CLAUDE_CONFIG_DIR — Claude Code reads its settings from there when set, so the
+  // status line must install into the same dir or it would never render.
+  const claudeDir = env.CLAUDE_CONFIG_DIR || path.join(home, ".claude");
   const dest = path.join(claudeDir, "brainmux-statusline.sh");
 
   if (argv[0] !== "install") {

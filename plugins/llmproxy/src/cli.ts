@@ -54,7 +54,7 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv = process.env)
     process.stderr.write(`bmux: unknown command '${cmd}'\n\n${HELP}`);
     return 1;
   } catch (e) {
-    process.stderr.write(`bmux: ${(e as Error).message}\n`);
+    process.stderr.write(`bmux: ${e instanceof Error ? e.message : String(e)}\n`);
     return 1;
   }
 }

@@ -4,7 +4,10 @@ import { z } from "zod";
 
 const BrainSchema = z.object({
   port: z.number().int().min(1).max(65535),
-  model: z.string().min(1),
+  // Restrict to bare model-id chars so the value can't inject YAML into the generated
+  // per-brain config.yaml (e.g. a newline + `master_key: …`). Covers OpenRouter slugs
+  // like `openrouter/qwen/qwen3.7-flash` and variant suffixes (`…:free`).
+  model: z.string().regex(/^[A-Za-z0-9/._:-]+$/, "model must be a bare model id (letters, digits and / . _ : -)"),
   providerKey: z.string().regex(/^[A-Z][A-Z0-9_]*$/, "providerKey must be an ENV_VAR-style name"),
 });
 

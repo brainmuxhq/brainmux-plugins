@@ -89,6 +89,7 @@ export async function runConfig(sub: string, rest: string[], env: NodeJS.Process
       }
       case "set-model": {
         const [name, model] = rest;
+        if (!name || !model) throw new Error("usage: bmux config set-model <name> <model>");
         const cfg = load(paths);
         if (!cfg.brains[name]) throw new Error(`no such brain '${name}'`);
         cfg.brains[name].model = model;

@@ -50,3 +50,16 @@ brains:
 `;
   assert.throws(() => parseBrains(bad), /providerKey/i);
 });
+
+test("rejects a model with YAML-injection chars (space/newline), accepts a bare slug", () => {
+  // A model value carrying a space would let a quoted string smuggle newlines into the
+  // generated per-brain config.yaml — the regex blocks anything but a bare model id.
+  const inject = `
+version: 1
+brains:
+  chat: { port: 4001, model: "x\\n    master_key: evil", providerKey: OPENROUTER_API_KEY }
+`;
+  assert.throws(() => parseBrains(inject), /model/i);
+  // legitimate slugs (with / . _ - : variant suffix) still parse
+  assert.ok(parseBrains("version: 1\nbrains:\n  c: { port: 4001, model: openrouter/qwen/qwen3.7-flash:free, providerKey: OPENROUTER_API_KEY }"));
+});
