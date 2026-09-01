@@ -1,29 +1,54 @@
 #!/usr/bin/env node
-/**
- * @brainmux/llmproxy — bmux CLI entry.
- *
- * STATUS: scaffold only. Implementation is being migrated from the working sh
- * prototype at ~/Development/Projects/claude-proxy (bin/bmux, bin/delegate,
- * config/*.yaml, compose.yaml) into this Node/TS package, driven by a declarative
- * `brains.yaml` -> generator. See ../../../CLAUDE.md and ../../../docs/specs.
- *
- * Planned command surface (from the design spec):
- *   bmux init | up | down | restart | ps | logs | health
- *   bmux chat | deep | coder [claude args...]
- *   bmux delegate <brain> [--write|--yolo] [-C dir] [--json] "<task>"
- *   bmux config add-brain | remove-brain | set-model | add-key | list
- *   bmux test | ui
- */
+import { fileURLToPath } from "node:url";
+import { runInit } from "./commands/init.js";
+import { runStack } from "./commands/stack.js";
+import { runLaunch } from "./commands/launch.js";
+import { runDelegate } from "./commands/delegate.js";
+import { runConfig } from "./commands/config.js";
+import { runTest } from "./commands/test.js";
+import { loadBrains } from "./core/manifest.js";
+import { resolvePaths } from "./core/paths.js";
 
-async function main(argv: string[]): Promise<number> {
+const HELP = `bmux — brainmux/llmproxy CLI
+
+  bmux init                       scaffold ~/.brainmux (brains.yaml, .env, generated/)
+  bmux up | down | restart        manage the brain stack (regenerates from brains.yaml)
+  bmux ps | logs [svc] | health   inspect the stack
+  bmux <brain> [claude args...]   launch Claude Code on a brain (e.g. bmux chat)
+  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] "<task>"
+  bmux config add-brain <name> <port> <model> [providerKey]
+  bmux config remove-brain <name> | set-model <name> <model>
+  bmux config add-key <ENV_VAR> <value> | list
+  bmux test                       smoke every brain via /v1/messages
+`;
+
+const STACK = new Set(["up", "down", "restart", "ps", "logs", "health"]);
+
+export async function main(argv: string[], env: NodeJS.ProcessEnv = process.env): Promise<number> {
   const cmd = argv[0];
-  if (!cmd || cmd === "-h" || cmd === "--help") {
-    console.log("bmux — brainmux/llmproxy CLI (scaffold). Not yet implemented.");
-    console.log("See CLAUDE.md and docs/specs for the planned command surface.");
-    return 0;
+  const rest = argv.slice(1);
+  if (!cmd || cmd === "-h" || cmd === "--help") { process.stdout.write(HELP); return 0; }
+
+  try {
+    if (cmd === "init") return runInit(env);
+    if (cmd === "test") return await runTest(env);
+    if (cmd === "delegate") return runDelegate(rest, env);
+    if (cmd === "config") return runConfig(rest[0] ?? "", rest.slice(1), env);
+    if (STACK.has(cmd)) return await runStack(cmd, rest, env);
+
+    // otherwise: treat cmd as a brain name to launch (chat/deep/coder/...)
+    const cfg = loadBrains(resolvePaths(env).brainsYaml);
+    if (cfg.brains[cmd]) return runLaunch(cmd, rest, env);
+
+    process.stderr.write(`bmux: unknown command '${cmd}'\n\n${HELP}`);
+    return 1;
+  } catch (e) {
+    process.stderr.write(`bmux: ${(e as Error).message}\n`);
+    return 1;
   }
-  console.error(`bmux: '${cmd}' not implemented yet (scaffold).`);
-  return 1;
 }
 
-main(process.argv.slice(2)).then((code) => process.exit(code));
+// Executed directly (via bin/bmux -> dist/src/cli.js)
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main(process.argv.slice(2)).then((code) => process.exit(code));
+}
