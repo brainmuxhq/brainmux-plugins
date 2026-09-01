@@ -11844,7 +11844,7 @@ function foldEvent(p, ev) {
         if (ip) p.current = clip(String(ip.activeForm ?? ip.content ?? ""), 50);
       } else {
         p.current = actionLabel(b);
-        const f = b.input?.file_path ?? b.input?.path;
+        const f = b.input?.file_path;
         if (f != null) {
           const base = path3.basename(String(f));
           if (!p.touched.includes(base)) p.touched.push(base);

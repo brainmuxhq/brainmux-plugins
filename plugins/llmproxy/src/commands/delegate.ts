@@ -108,8 +108,9 @@ export function foldEvent(p: Progress, ev: unknown): Progress {
         if (ip) p.current = clip(String(ip.activeForm ?? ip.content ?? ""), 50);
       } else {
         p.current = actionLabel(b);
-        // Record what the worker actually touched, so we can summarize it at the end.
-        const f = b.input?.file_path ?? b.input?.path;
+        // Record what the worker actually touched. Only `file_path` (Read/Edit/Write target) —
+        // NOT `path`, which for Grep/Glob is a search directory, not a file.
+        const f = b.input?.file_path;
         if (f != null) { const base = path.basename(String(f)); if (!p.touched.includes(base)) p.touched.push(base); }
         if (b.name === "Edit" || b.name === "Write" || b.name === "MultiEdit") p.edits++;
       }

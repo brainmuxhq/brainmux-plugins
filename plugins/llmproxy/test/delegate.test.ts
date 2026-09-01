@@ -104,10 +104,11 @@ test("foldEvent: TodoWrite drives real X/Y progress + the in-progress label", ()
 test("foldEvent: tracks touched files (unique, basename) and counts edits", () => {
   const p = initProgress();
   foldEvent(p, { type: "assistant", message: { content: [{ type: "tool_use", name: "Read", input: { file_path: "/a/b/foo.ts" } }] } });
-  foldEvent(p, { type: "assistant", message: { content: [{ type: "tool_use", name: "Grep", input: { pattern: "x" } }] } }); // no path → not a file
+  foldEvent(p, { type: "assistant", message: { content: [{ type: "tool_use", name: "Grep", input: { pattern: "x", path: "/a/b/src" } }] } }); // path is a search DIR → not a touched file
+  foldEvent(p, { type: "assistant", message: { content: [{ type: "tool_use", name: "Glob", input: { pattern: "*.ts", path: "/a/b" } }] } }); // same — dir, not a file
   foldEvent(p, { type: "assistant", message: { content: [{ type: "tool_use", name: "Edit", input: { file_path: "/a/b/foo.ts" } }] } }); // same file, dup
   foldEvent(p, { type: "assistant", message: { content: [{ type: "tool_use", name: "Write", input: { file_path: "/c/bar.ts" } }] } });
-  assert.deepEqual(p.touched, ["foo.ts", "bar.ts"]);
+  assert.deepEqual(p.touched, ["foo.ts", "bar.ts"]); // only file_path targets, no Grep/Glob dirs
   assert.equal(p.edits, 2); // Edit + Write
 });
 

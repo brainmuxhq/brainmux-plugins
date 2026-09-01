@@ -106,6 +106,7 @@
 
 **Yayın/sertleştirme:**
 - ✅ Multi-arch mirror: `ghcr.io/brainmuxhq/brainmux-litellm` (amd64+arm64), IMAGE_REF = manifest-list `sha256:693d839d…`.
-- ✅ Version **0.1.7** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.7).
+- ✅ Version **0.1.8** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.8).
+  (0.1.8: `↳` özet satırı sadece `file_path`'i sayar — Grep/Glob'un arama-dizini `path`'i dosya sanmaz.)
 - ⏳ **GHCR paketini public yap** (org UI: brainmuxhq/packages → brainmux-litellm → settings → Change visibility → Public). Dış kullanıcıların `bmux up`'ta image çekmesi için ŞART; şu an private.
 - (opsiyonel) `?category=` doğrula + `bmux models --category`; direkt-provider (`deepseek`/`openai`) /models listeleri.
