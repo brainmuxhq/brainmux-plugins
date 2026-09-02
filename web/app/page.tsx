@@ -1,6 +1,7 @@
 import CopyButton from "./CopyButton";
 import StructuredData from "./StructuredData";
 import { FAQ } from "./faq";
+import { BrainmuxMark, LlmproxyMark, GraphmuxMark } from "./marks";
 
 export default function Home() {
   return (
@@ -9,7 +10,7 @@ export default function Home() {
       <header>
         <div className="wrap nav">
           <a className="brand" href="#top">
-            <span className="dot" />brain<span className="accent">mux</span>
+            <BrainmuxMark size={20} />brain<span className="accent">mux</span>
           </a>
           <nav className="nav-right">
             <a href="#products">Products</a>
@@ -95,7 +96,7 @@ export default function Home() {
           </div>
           <div className="prod">
             <div className="card">
-              <div className="top"><h3>llmproxy</h3><span className="badge live">Live · v0.1</span></div>
+              <div className="top"><span style={{ display: "flex", alignItems: "center", gap: 11 }}><LlmproxyMark size={26} /><h3>llmproxy</h3></span><span className="badge live">Live · v0.1</span></div>
               <p>
                 Run Claude Code on cheap LLM brains and delegate the grunt work — one OpenRouter key,
                 thousands of models, your Opus quota untouched.
@@ -103,7 +104,7 @@ export default function Home() {
               <a className="explore" href="#llmproxy">Explore llmproxy ↓</a>
             </div>
             <div className="card">
-              <div className="top"><h3>graphmux</h3><span className="badge live">Live · v0.1</span></div>
+              <div className="top"><span style={{ display: "flex", alignItems: "center", gap: 11 }}><GraphmuxMark size={26} /><h3>graphmux</h3></span><span className="badge live">Live · v0.1</span></div>
               <p>
                 Give Claude Code and bmux delegates a local, deterministic code graph — real callers,
                 callees and impact — so agents ground on your codebase instead of guessing.
@@ -117,7 +118,7 @@ export default function Home() {
         <section id="llmproxy">
           <div className="prod-detail">
             <div className="sec-head" style={{ marginBottom: 0 }}>
-              <p className="eyebrow">llmproxy · our first tool</p>
+              <p className="eyebrow" style={{ display: "flex", alignItems: "center", gap: 8 }}><LlmproxyMark size={16} />llmproxy · our first tool</p>
               <h2>Run Claude Code on cheap brains.</h2>
               <p>
                 Your Opus quota is the bottleneck. llmproxy routes Claude Code to cheap OpenRouter models
@@ -198,7 +199,7 @@ export default function Home() {
         <section id="graphmux">
           <div className="prod-detail">
             <div className="sec-head" style={{ marginBottom: 0 }}>
-              <p className="eyebrow">graphmux · our second tool</p>
+              <p className="eyebrow" style={{ display: "flex", alignItems: "center", gap: 8 }}><GraphmuxMark size={16} />graphmux · our second tool</p>
               <h2>Ground agents on your codebase.</h2>
               <p>
                 Cheap brains hallucinate about code. graphmux gives them a local, deterministic code graph — real
@@ -243,7 +244,7 @@ export default function Home() {
 
       <footer>
         <div className="wrap foot">
-          <span className="brand mono">brain<span className="accent">mux</span></span>
+          <span className="brand mono"><BrainmuxMark size={16} />brain<span className="accent">mux</span></span>
           <span>LLM tooling for Claude Code · Engines: LiteLLM · CodeGraph (MIT)</span>
           <span style={{ display: "flex", gap: 20 }}>
             <a href="https://github.com/brainmuxhq/brainmux" target="_blank" rel="noopener noreferrer">GitHub</a>
