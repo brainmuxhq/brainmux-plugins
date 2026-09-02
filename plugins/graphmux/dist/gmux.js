@@ -168,7 +168,7 @@ function runRaw(argv, env = process.env) {
 var HELP = `gmux \u2014 brainmux/graphmux CLI (local codebase memory; vendors CodeGraph v${CODEGRAPH_VERSION})
 
   gmux install                    download + SHA256-verify the pinned CodeGraph binary (telemetry off),
-                                  then write the "codegraph" MCP config for delegates / Claude Code
+                                  then write the "graphmux" MCP config for delegates / Claude Code
   gmux index [path]               build/rebuild the code graph for a repo
   gmux status [path]              show index status (files, nodes, edges, staleness)
   gmux sync [path]                sync changes since last index
