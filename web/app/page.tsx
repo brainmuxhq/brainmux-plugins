@@ -66,6 +66,20 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* NASIL ÇALIŞIR — mimari akış (hero altında, en üstte) */}
+        <section id="nasil" style={{ borderTop: "none", paddingTop: "22px" }}>
+          <div className="sec-head">
+            <p className="eyebrow">nasıl çalışır · ne nerede koşar</p>
+            <h2>Bulut kapı + kasa; makineniz fabrika.</h2>
+            <p>
+              Buluttan giriş yapar ve aboneliğinizi yönetirsiniz. Ekip ve veritabanı bir kutu (container)
+              içinde çalışır — <strong>kendi makinenizde</strong> ya da isterseniz <strong>bizde</strong>.
+              Veriniz makinenizde kalır; ekip hazırlar, dışarıya giden çıktıyı siz onaylarsınız.
+            </p>
+          </div>
+          <MimariAkis />
+        </section>
+
         {/* NE — cevap-önce blok */}
         <section id="ne" aria-label="brainmux nedir">
           <p className="eyebrow">nedir</p>
@@ -119,20 +133,6 @@ export default async function Home() {
             <strong style={{ color: "var(--fg)" }}>⏰ İki türlü çalışır:</strong> siz isteyince ya da zamanlanmış (örn. &quot;her sabah 09:00&apos;da gönderiyi hazırla&quot;).
             Dışarıya giden her çıktıyı <strong style={{ color: "var(--fg)" }}>siz onaylarsınız</strong>. Yeni modüller sürekli eklenir.
           </p>
-        </section>
-
-        {/* NASIL ÇALIŞIR — mimari akış */}
-        <section id="nasil">
-          <div className="sec-head">
-            <p className="eyebrow">nasıl çalışır · ne nerede koşar</p>
-            <h2>Bulut kapı + kasa; makineniz fabrika.</h2>
-            <p>
-              Buluttan giriş yapar ve aboneliğinizi yönetirsiniz. Ekip ve veritabanı bir kutu (container)
-              içinde çalışır — <strong>kendi makinenizde</strong> ya da isterseniz <strong>bizde</strong>.
-              Veriniz makinenizde kalır; ekip hazırlar, dışarıya giden çıktıyı siz onaylarsınız.
-            </p>
-          </div>
-          <MimariAkis />
         </section>
 
         {/* AÇIK KAYNAK — funnel */}

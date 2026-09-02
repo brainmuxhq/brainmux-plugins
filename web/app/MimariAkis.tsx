@@ -52,6 +52,9 @@ export default function MimariAkis() {
           <g id="a-user" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
             <circle cx="12" cy="8" r="3.4" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" />
           </g>
+          <g id="a-desktop" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="12" rx="1.6" /><path d="M9 20h6M12 16v4" />
+          </g>
         </defs>
       </svg>
 
@@ -82,7 +85,7 @@ export default function MimariAkis() {
         <div className="arch-split">
           {/* KENDİ MAKİNENİZDE */}
           <div className="arch-tier local">
-            <div className="arch-head"><span className="arch-name">◈ Kendi makinenizde</span><span className="arch-tag hot">veri çıkmaz</span></div>
+            <div className="arch-head"><span className="arch-name"><Ico id="a-desktop" className="sm" color="var(--teal)" />Kendi makinenizde</span><span className="arch-tag hot">veri çıkmaz</span></div>
             <div className="arch-where">Nerede: <b>sizin sunucunuz / bilgisayarınız</b> — tek komutla kurulur</div>
             <div className="arch-cframe">
               <span className="arch-cbadge"><Ico id="a-container" className="sm" />kutu · sizin makinenizde</span>
@@ -96,7 +99,7 @@ export default function MimariAkis() {
 
           {/* BİZDE */}
           <div className="arch-tier managed">
-            <div className="arch-head"><span className="arch-name">☁ Bizde (kolay)</span><span className="arch-tag">hazır</span></div>
+            <div className="arch-head"><span className="arch-name"><Ico id="a-cloud" className="sm" color="var(--amber)" />Bizde (kolay)</span><span className="arch-tag">hazır</span></div>
             <div className="arch-where">Nerede: <b>bizim sunucumuz</b> — kurulum yok, aç kullan</div>
             <div className="arch-cframe">
               <span className="arch-cbadge"><Ico id="a-container" className="sm" />kutu · bizim sunucumuzda</span>
