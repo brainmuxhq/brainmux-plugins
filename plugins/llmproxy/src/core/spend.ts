@@ -13,7 +13,8 @@ export interface BrainSpend {
 
 function toNum(v: unknown): number {
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
-  if (typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v))) return Number(v);
+  // Number.isFinite (not !isNaN) so a "Infinity"/"1e999" string can't slip through as a real value.
+  if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v);
   return 0;
 }
 
@@ -33,7 +34,8 @@ export function aggregateSpend(brain: string, rows: unknown, cutoffMs?: number):
   for (const r of rows) {
     const o = (r ?? {}) as Record<string, unknown>;
     if (cutoffMs != null) {
-      const t = Date.parse(String(o.startTime ?? ""));
+      // startTime is normally an ISO string; tolerate a numeric epoch-ms too (Date.parse can't).
+      const t = typeof o.startTime === "number" ? o.startTime : Date.parse(String(o.startTime ?? ""));
       if (!Number.isFinite(t) || t < cutoffMs) continue;
     }
     spend += toNum(o.spend);

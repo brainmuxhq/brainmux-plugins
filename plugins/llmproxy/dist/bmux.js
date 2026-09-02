@@ -12379,7 +12379,7 @@ async function runModels(rest, _env = process.env) {
 import http2 from "node:http";
 function toNum(v) {
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
-  if (typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v))) return Number(v);
+  if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v);
   return 0;
 }
 function sinceMs(w) {
@@ -12394,7 +12394,7 @@ function aggregateSpend(brain, rows, cutoffMs) {
   for (const r of rows) {
     const o = r ?? {};
     if (cutoffMs != null) {
-      const t = Date.parse(String(o.startTime ?? ""));
+      const t = typeof o.startTime === "number" ? o.startTime : Date.parse(String(o.startTime ?? ""));
       if (!Number.isFinite(t) || t < cutoffMs) continue;
     }
     spend += toNum(o.spend);

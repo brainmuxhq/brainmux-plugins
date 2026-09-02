@@ -107,7 +107,9 @@
 
 **Yayın/sertleştirme:**
 - ✅ Multi-arch mirror: `ghcr.io/brainmuxhq/brainmux-litellm` (amd64+arm64), IMAGE_REF = manifest-list `sha256:693d839d…`.
-- ✅ Version **0.1.17** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.17).
+- ✅ Version **0.1.18** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.18).
+  (0.1.18: TIGHT dsflash delege-review fix'leri (loose=%0 gerçek/uydurma vs tight=grounded deneyi) — spend toNum
+   string-path `Number.isFinite` ("Infinity"/"1e999" → 0) · aggregateSpend `--since` numeric epoch startTime toleransı.)
   (0.1.17: `bmux delegate --retry [n]` — boş/hata sonuçta otomatik tekrar (net sinyal, fuzzy değil), opt-in+parametrik, non-stream yol.)
   (0.1.16: `bmux delegate --template <ad>` — hazır görev şablonları. SSOT `core/templates.ts` (embedded built-in'ler
    audit/drift-scan/review/todo-scan + `~/.brainmux/templates.yaml` user kayıtları, user override eder).

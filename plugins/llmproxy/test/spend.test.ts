@@ -22,6 +22,24 @@ test("aggregateSpend tolerates string numbers and missing fields", () => {
   assert.ok(Math.abs(r.spend - 0.5) < 1e-12);
 });
 
+test("aggregateSpend: 'Infinity'/'NaN' strings are treated as 0 (not a real value)", () => {
+  const r = aggregateSpend("chat", [{ spend: "Infinity", total_tokens: "1e999" }, { spend: "NaN" }]);
+  assert.equal(r.spend, 0);
+  assert.equal(r.tokens, 0);
+});
+
+test("aggregateSpend --since: numeric epoch startTime is honored (not only ISO strings)", () => {
+  const cutoff = Date.parse("2026-09-02T05:00:00.000Z");
+  const newer = cutoff + 3_600_000; // epoch ms, after cutoff
+  const older = cutoff - 3_600_000;
+  const r = aggregateSpend("coder", [
+    { spend: 2, total_tokens: 20, startTime: newer }, // numeric, in window
+    { spend: 9, total_tokens: 90, startTime: older }, // numeric, before window
+  ], cutoff);
+  assert.equal(r.requests, 1);
+  assert.equal(r.spend, 2);
+});
+
 test("aggregateSpend on empty logs = zeroed but ok", () => {
   const r = aggregateSpend("deep", []);
   assert.equal(r.ok, true);
