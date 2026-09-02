@@ -16,18 +16,23 @@ models (a separate pay-as-you-go meter that never touches your Anthropic quota),
 | Plugin | What it does |
 |---|---|
 | [`llmproxy`](plugins/llmproxy/) | Run Claude Code on cheap/alternate LLM brains + delegate grunt work, managed by the `bmux` CLI + skills. |
+| [`graphmux`](plugins/graphmux/) | Give agents (and `bmux delegate --memory`) a local, deterministic code graph — callers, callees, impact — via the `gmux` CLI. Thin wrapper over CodeGraph. |
+
+Same house-style for both: vendor a mature open-source core (LiteLLM, CodeGraph), pin it, and wrap
+it in a thin control layer — same core, our packaging.
 
 ## Install
 
 ```
 /plugin marketplace add brainmuxhq/brainmux
 /plugin install llmproxy@brainmux
+/plugin install graphmux@brainmux
 /reload-plugins
 ```
 
 `brainmuxhq/brainmux` is the repo **source** (GitHub owner/repo); `brainmux` is the marketplace
-**name** — hence the plugin id `llmproxy@brainmux`. See [`plugins/llmproxy/README.md`](plugins/llmproxy/README.md)
-for setup + usage.
+**name** — hence the plugin ids `llmproxy@brainmux` / `graphmux@brainmux`. See each plugin's README
+([llmproxy](plugins/llmproxy/README.md) · [graphmux](plugins/graphmux/README.md)) for setup + usage.
 
 ## Structure
 
@@ -41,4 +46,4 @@ Requirements: Docker + an OpenRouter API key (see the plugin README).
 
 ---
 
-Brand: [brainmux.com](https://brainmux.com) · Engine: LiteLLM (MIT core) · License: MIT
+Brand: [brainmux.com](https://brainmux.com) · Engines: LiteLLM · CodeGraph (MIT cores) · License: MIT
