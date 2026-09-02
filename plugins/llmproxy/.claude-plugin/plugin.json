@@ -1,6 +1,6 @@
 {
   "name": "llmproxy",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "Run Claude Code on cheap/alternate LLM brains and delegate grunt work to save your Opus quota.",
   "author": {
     "name": "brainmux",

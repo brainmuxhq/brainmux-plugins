@@ -25,6 +25,7 @@ const HELP = `bmux — brainmux/llmproxy CLI
                                    --allow-tools mcp__brave-search__brave_web_search for grounded web search, no --yolo)
                                   (--verify: draft, then a grounded pass web-checks each claim → ✅/⚠ with sources)
                                   (--template <name>: expand a saved task template — bmux config list-templates)
+                                  (--retry [n]: on an empty/failed result, auto-retry up to n times — default 1)
   bmux config add-brain <name> <port> <model> [providerKey]
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list

@@ -78,6 +78,7 @@ bmux delegate coder --mcp "read the react docs via context7 and summarize hooks"
 bmux delegate dsflash --allow-tools mcp__brave-search__brave_web_search "verify X, cite source"  # grounded, no --yolo
 bmux delegate deep --verify "which of these 5 regulations are still in force?"  # draft → web-check each claim
 bmux delegate coder --template drift-scan -C .   # expand a saved template (built-in or your own)
+bmux delegate dsflash --retry 2 "..."            # auto-retry up to 2x on an empty/failed result
 ```
 Templates: built-ins `audit` · `drift-scan` · `review` · `todo-scan`; add your own with
 `bmux config add-template <name> "<prompt>"` (stored in `~/.brainmux/templates.yaml`), list with

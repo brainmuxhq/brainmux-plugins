@@ -107,7 +107,8 @@
 
 **Yayın/sertleştirme:**
 - ✅ Multi-arch mirror: `ghcr.io/brainmuxhq/brainmux-litellm` (amd64+arm64), IMAGE_REF = manifest-list `sha256:693d839d…`.
-- ✅ Version **0.1.16** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.16).
+- ✅ Version **0.1.17** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.17).
+  (0.1.17: `bmux delegate --retry [n]` — boş/hata sonuçta otomatik tekrar (net sinyal, fuzzy değil), opt-in+parametrik, non-stream yol.)
   (0.1.16: `bmux delegate --template <ad>` — hazır görev şablonları. SSOT `core/templates.ts` (embedded built-in'ler
    audit/drift-scan/review/todo-scan + `~/.brainmux/templates.yaml` user kayıtları, user override eder).
    `bmux config add-template/list-templates`. README-güncel konvansiyonu eklendi.)

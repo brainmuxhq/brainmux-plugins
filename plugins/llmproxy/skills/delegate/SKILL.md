@@ -86,6 +86,17 @@ bmux delegate coder --template drift-scan -C .          # built-in
 bmux delegate coder --template audit "focus on env.ts"  # template + extra scope
 ```
 
+## `--retry [n]` — auto-retry on a bad result
+`--retry [n]` (default 1) re-runs the delegate when the result is **empty** or the child
+**errored** (reliable signals only — no fuzzy "garbled" detection). Non-stream path only; the
+output is captured then emitted (so text isn't live under retry). Use it for a flaky/rate-limited
+cheap brain (e.g. dsflash sometimes returns nothing). As orchestrator, pick `n` from context or
+ask the user.
+
+```sh
+bmux delegate dsflash --retry 2 "extract the key dates from this text"
+```
+
 ## `--verify` — draft, then grounded fact-check
 `--verify` (opt-in) runs the task, then a **second grounded pass** that forces the grounding
 tool on each factual claim of the draft and marks it `✅ <claim> — <url>` or `⚠ <claim> — no

@@ -98,6 +98,16 @@ test("--template is parsed; task not required when a template is given", () => {
   assert.equal(withExtra.task, "focus on env.ts"); // extra scope appended (joined by runDelegate)
 });
 
+test("--retry: bare = 1, with a number = that count, absent = 0; number isn't eaten as the task", () => {
+  assert.equal(parseDelegateArgs(["coder", "task"]).opts.retry, 0);
+  const bare = parseDelegateArgs(["coder", "--retry", "do it"]).opts;
+  assert.equal(bare.retry, 1);
+  assert.equal(bare.task, "do it"); // 'do it' is the task, not a count
+  const n = parseDelegateArgs(["coder", "--retry", "3", "do it"]).opts;
+  assert.equal(n.retry, 3);
+  assert.equal(n.task, "do it"); // '3' consumed as count, not task
+});
+
 test("--verify is off by default; the flag turns it on (doesn't leak into claude args)", () => {
   assert.equal(parseDelegateArgs(["deep", "task"]).opts.verify, false);
   const { opts } = parseDelegateArgs(["deep", "--verify", "check these facts"]);

@@ -11825,7 +11825,7 @@ var GUARD = "You are a DELEGATED worker brain invoked by an orchestrator. Do EXA
 function parseDelegateArgs(argv, stdin) {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", task: "" };
+  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", retry: 0, task: "" };
   const rest = argv.slice(1);
   const parts = [];
   for (let i = 0; i < rest.length; i++) {
@@ -11840,6 +11840,12 @@ function parseDelegateArgs(argv, stdin) {
     } else if (a === "--verify") opts.verify = true;
     else if (a === "--template") {
       opts.template = rest[++i] ?? "";
+    } else if (a === "--retry") {
+      const nx = rest[i + 1];
+      if (nx && /^\d+$/.test(nx)) {
+        opts.retry = Number(nx);
+        i++;
+      } else opts.retry = 1;
     } else if (a === "-C") {
       opts.workdir = rest[++i] ?? ".";
     } else if (a === "-") {
@@ -12045,11 +12051,32 @@ async function runVerify(brain, opts, childEnv) {
 
 DRAFT:
 ${draft}`;
-  const p2 = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", task: vTask };
+  const p2 = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", retry: 0, task: vTask };
   if (opts.stream) return runStreamed(brain, p2, childEnv);
   const r2 = spawnSync3("claude", buildClaudeArgs(p2), { cwd: opts.workdir, stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: childEnv });
   if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
   return r2.status ?? 1;
+}
+function runWithRetry(brain, opts, childEnv, wantsStdin) {
+  const max = 1 + opts.retry;
+  let out = "", code = 1;
+  for (let attempt = 1; attempt <= max; attempt++) {
+    const r = spawnSync3("claude", buildClaudeArgs(opts), {
+      cwd: opts.workdir,
+      stdio: wantsStdin ? ["inherit", "pipe", "pipe"] : ["ignore", "pipe", "pipe"],
+      encoding: "utf8",
+      env: childEnv
+    });
+    if (r.stderr) process.stderr.write(cleanStderr(r.stderr));
+    out = r.stdout ?? "";
+    code = r.status ?? 1;
+    const ok = code === 0 && (opts.outfmt === "json" ? !!draftFromJson(out) : out.trim().length > 0);
+    if (ok || attempt === max) break;
+    process.stderr.write(`delegate: \u27F3 retry ${attempt}/${opts.retry} (empty/failed result)
+`);
+  }
+  process.stdout.write(opts.outfmt === "json" ? reshapeDelegateJson(brain, out) + "\n" : out);
+  return code;
 }
 async function runDelegate(argv, env = process.env) {
   if (env.DELEGATE_DEPTH) {
@@ -12071,13 +12098,14 @@ ${opts.task}` : tpl;
     return 1;
   }
   const plan = planLaunch(brain, env);
-  process.stderr.write(`delegate: ${brain} \xB7 ${opts.mode} \xB7 mcp ${opts.mcp ? "on" : "off"}${opts.verify ? " \xB7 verify" : ""}
+  process.stderr.write(`delegate: ${brain} \xB7 ${opts.mode} \xB7 mcp ${opts.mcp ? "on" : "off"}${opts.verify ? " \xB7 verify" : ""}${opts.retry > 0 ? ` \xB7 retry ${opts.retry}` : ""}
 `);
   if (opts.mode === "yolo") process.stderr.write(`delegate: \u26A0 --yolo \u2014 '${brain}' runs with NO permission checks in '${opts.workdir}'.
 `);
   const childEnv = { ...env, DELEGATE_DEPTH: "1", ANTHROPIC_BASE_URL: plan.base, ANTHROPIC_API_KEY: plan.apiKey };
   if (opts.verify) return runVerify(brain, opts, childEnv);
   if (opts.stream) return runStreamed(brain, opts, childEnv);
+  if (opts.retry > 0) return runWithRetry(brain, opts, childEnv, wantsStdin);
   if (opts.outfmt === "json") {
     const r2 = spawnSync3("claude", buildClaudeArgs(opts), {
       cwd: opts.workdir,
@@ -12721,6 +12749,7 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
                                    --allow-tools mcp__brave-search__brave_web_search for grounded web search, no --yolo)
                                   (--verify: draft, then a grounded pass web-checks each claim \u2192 \u2705/\u26A0 with sources)
                                   (--template <name>: expand a saved task template \u2014 bmux config list-templates)
+                                  (--retry [n]: on an empty/failed result, auto-retry up to n times \u2014 default 1)
   bmux config add-brain <name> <port> <model> [providerKey]
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list

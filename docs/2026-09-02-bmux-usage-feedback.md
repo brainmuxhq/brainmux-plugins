@@ -48,8 +48,11 @@ the code; each item marked DONE (with version), DEFER (with reason), or BACKLOG.
   `audit`/`drift-scan`/`review`/`todo-scan`; user templates persist in `~/.brainmux/templates.yaml`
   (`bmux config add-template`/`list-templates`, user overrides built-in). SSOT in `core/templates.ts`.
 
+## Done — v0.1.17
+- **`--retry [n]`** — auto-retry the (non-stream) delegate on a reliable failure (empty result /
+  non-zero exit), up to n times (default 1). Opt-in + parametric; no fuzzy garbled-detection.
+
 ## Backlog (features)
-- **retry / degrade-detection** — detect garbled (rate-limited) output and re-run.
 - **brain `reliability: memory|grounded` label** — surface which brains have web grounding.
 
 ## Keep (working well)
