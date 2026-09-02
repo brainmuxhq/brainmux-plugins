@@ -21,9 +21,11 @@ export const CODEGRAPH_SHA256: Record<string, string> = {
   "win32-arm64": "3ca980010bd718a6b5e75be1145806ae6491afb1a59a2cec6cee4bf5c39f1b3a",
 };
 
-// Primary = our mirror (set once assets are re-pushed to brainmuxhq/brainmux releases);
-// fallback = upstream. Empty mirror ⇒ upstream only (pre-mirror phase).
-const MIRROR_BASE = ""; // e.g. https://github.com/brainmuxhq/brainmux/releases/download/codegraph-v1.6.0
+// Primary = our GHCR-adjacent GitHub-release mirror (byte-identical assets, digest-pinned) →
+// upstream-death insurance + controlled updates; fallback = upstream. Empty mirror ⇒ upstream only.
+// Note the two URL shapes: mirror release tag is `codegraph-v<ver>` (assets directly under it),
+// upstream release tag is `v<ver>` — assetUrl() builds each correctly.
+const MIRROR_BASE = `https://github.com/brainmuxhq/brainmux/releases/download/codegraph-v${CODEGRAPH_VERSION}`;
 const UPSTREAM_BASE = "https://github.com/colbymchenry/codegraph/releases/download";
 
 // Telemetry OFF by default — brainmux is local-first; nothing phones home unless the user opts in.
@@ -48,8 +50,10 @@ export function assetName(key: string): string {
 }
 
 export function assetUrl(key: string, source: "mirror" | "upstream"): string {
-  const root = source === "mirror" ? MIRROR_BASE : UPSTREAM_BASE;
-  return `${root}/v${CODEGRAPH_VERSION}/${assetName(key)}`;
+  const name = assetName(key);
+  // Mirror: assets sit directly under the `codegraph-v<ver>` release tag (base already includes it).
+  // Upstream: assets sit under the `v<ver>` release tag.
+  return source === "mirror" ? `${MIRROR_BASE}/${name}` : `${UPSTREAM_BASE}/v${CODEGRAPH_VERSION}/${name}`;
 }
 
 export function sha256Hex(buf: Buffer): string {

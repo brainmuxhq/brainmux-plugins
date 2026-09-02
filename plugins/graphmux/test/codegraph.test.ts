@@ -31,11 +31,16 @@ test("assetName picks .zip for windows, .tar.gz otherwise", () => {
   assert.equal(assetName("win32-x64"), "codegraph-win32-x64.zip");
 });
 
-test("assetUrl builds the pinned upstream release URL", () => {
+test("assetUrl builds pinned upstream + mirror URLs (distinct tag shapes, no double version)", () => {
   assert.equal(
     assetUrl("linux-x64", "upstream"),
     `https://github.com/colbymchenry/codegraph/releases/download/v${CODEGRAPH_VERSION}/codegraph-linux-x64.tar.gz`,
   );
+  assert.equal(
+    assetUrl("darwin-arm64", "mirror"),
+    `https://github.com/brainmuxhq/brainmux/releases/download/codegraph-v${CODEGRAPH_VERSION}/codegraph-darwin-arm64.tar.gz`,
+  );
+  assert.ok(!assetUrl("linux-x64", "mirror").includes("/v" + CODEGRAPH_VERSION + "/codegraph-linux"), "no double-version path");
 });
 
 test("binPath points at codegraph(.exe) inside the extracted per-platform dir", () => {
