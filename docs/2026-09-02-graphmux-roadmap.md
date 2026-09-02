@@ -51,7 +51,9 @@ trust it.
 `node getKazaList` → "Symbol not found" though it's the real handler wired at `kazaRoutes.js:96`. Affects
 Express apps using the `exports.X = arrow` controller style. Ask: index that assignment form as a node.
 
-*(Not filed yet — pending Ali's go; posting to a third-party public repo is an outward action.)*
+**Filed upstream (2026-09-02):**
+- Issue 1 → [colbymchenry/codegraph#1674](https://github.com/colbymchenry/codegraph/issues/1674)
+- Issue 2 → [colbymchenry/codegraph#1675](https://github.com/colbymchenry/codegraph/issues/1675)
 
 ## Non-goal
 Vector/embedding search — graphmux's embedding-free determinism is its edge (2026 consensus: structural
