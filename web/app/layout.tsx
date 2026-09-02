@@ -12,8 +12,9 @@ export const metadata: Metadata = {
   description,
   applicationName: "brainmux",
   keywords: [
-    "brainmux", "llmproxy", "Claude Code", "OpenRouter", "LiteLLM", "LLM proxy",
+    "brainmux", "llmproxy", "graphmux", "Claude Code", "OpenRouter", "LiteLLM", "LLM proxy",
     "cheap LLM", "delegate", "Opus quota", "AI coding agent", "DeepSeek", "Qwen",
+    "code graph", "codebase memory", "CodeGraph", "MCP", "call graph", "tree-sitter",
   ],
   authors: [{ name: "brainmux", url: "https://github.com/brainmuxhq/brainmux" }],
   creator: "brainmux",

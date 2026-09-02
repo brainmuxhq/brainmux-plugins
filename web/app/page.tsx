@@ -14,6 +14,7 @@ export default function Home() {
           <nav className="nav-right">
             <a href="#products">Products</a>
             <a href="#llmproxy">llmproxy</a>
+            <a href="#graphmux">graphmux</a>
             <a href="https://github.com/brainmuxhq/brainmux" className="ghbtn" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
           </nav>
         </div>
@@ -68,7 +69,7 @@ export default function Home() {
             <div className="term-body">
               <div className="row"><span className="cmt"># one brand, a family of Claude Code tools</span></div>
               <div className="row"><span className="out">▸ llmproxy </span><span className="ok">live</span></div>
-              <div className="row"><span className="out">▸ more </span><span className="cmt">soon</span><span className="cursor" /></div>
+              <div className="row"><span className="out">▸ graphmux </span><span className="ok">live</span><span className="cursor" /></div>
             </div>
           </div>
         </section>
@@ -77,10 +78,12 @@ export default function Home() {
         <section id="what" aria-label="What is brainmux">
           <p className="eyebrow">What is it</p>
           <p className="answer">
-            brainmux is LLM tooling for <strong>Claude Code</strong>. Its first tool, <strong>llmproxy</strong>,
-            routes Claude Code to cheap OpenRouter models through local LiteLLM proxies and delegates the grunt
-            work to them — one OpenRouter key reaches thousands of models, the brains run pay-as-you-go and never
-            touch your Anthropic quota, and Opus stays the orchestrator.
+            brainmux is LLM tooling for <strong>Claude Code</strong>. <strong>llmproxy</strong> routes Claude Code
+            to cheap OpenRouter models through local LiteLLM proxies and delegates the grunt work to them — one key
+            reaches thousands of models, the brains run pay-as-you-go and never touch your Anthropic quota, and Opus
+            stays the orchestrator. <strong>graphmux</strong> gives those agents a local, deterministic code graph, so
+            they ground on your codebase instead of guessing. Each tool wraps a mature open-source core (LiteLLM,
+            CodeGraph) in a thin, pinned layer — same core, our packaging.
           </p>
         </section>
 
@@ -88,7 +91,7 @@ export default function Home() {
         <section id="products">
           <div className="sec-head">
             <p className="eyebrow">Products</p>
-            <h2>One tool today. A family in the making.</h2>
+            <h2>Two tools today. A family in the making.</h2>
           </div>
           <div className="prod">
             <div className="card">
@@ -99,9 +102,13 @@ export default function Home() {
               </p>
               <a className="explore" href="#llmproxy">Explore llmproxy ↓</a>
             </div>
-            <div className="card soon">
-              <div className="top"><h3>more brainmux tools</h3><span className="badge">Soon</span></div>
-              <p>Same idea, new surfaces. Built in the open under brainmux.</p>
+            <div className="card">
+              <div className="top"><h3>graphmux</h3><span className="badge live">Live · v0.1</span></div>
+              <p>
+                Give Claude Code and bmux delegates a local, deterministic code graph — real callers,
+                callees and impact — so agents ground on your codebase instead of guessing.
+              </p>
+              <a className="explore" href="#graphmux">Explore graphmux ↓</a>
             </div>
           </div>
         </section>
@@ -187,6 +194,39 @@ export default function Home() {
           </div>
         </section>
 
+        {/* GRAPHMUX deep-dive */}
+        <section id="graphmux">
+          <div className="prod-detail">
+            <div className="sec-head" style={{ marginBottom: 0 }}>
+              <p className="eyebrow">graphmux · our second tool</p>
+              <h2>Ground agents on your codebase.</h2>
+              <p>
+                Cheap brains hallucinate about code. graphmux gives them a local, deterministic code graph — real
+                callers, callees, impact and verbatim source — so they look up your codebase instead of guessing.
+                A thin wrapper over the vendored CodeGraph engine (tree-sitter → local SQLite): no embeddings, no
+                cloud, telemetry off.
+              </p>
+              <div className="cta-row"><a className="btn btn-ghost" href="https://github.com/brainmuxhq/brainmux" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div>
+            </div>
+            <div className="term">
+              <div className="term-bar"><i /><i /><i /><span className="t">install · Claude Code</span></div>
+              <div className="term-body">
+                <div className="row"><span className="prompt">&gt;</span><span>/plugin install graphmux@brainmux</span><CopyButton text="/plugin install graphmux@brainmux" /></div>
+                <div className="row"><span className="ok">✓ installed graphmux</span></div>
+                <div className="row"><span className="prompt">$</span><span>gmux install</span><span className="cmt">  # pinned CodeGraph, SHA-verified, telemetry off</span></div>
+                <div className="row"><span className="prompt">$</span><span>gmux index .</span><CopyButton text="gmux index ." /></div>
+                <div className="row"><span className="ok">✓ indexed · 199 nodes, 499 edges</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="cards3">
+            <div className="card"><span className="k">deterministic</span><h3>Real call-graph, not guesses</h3><p>tree-sitter-grade callers, callees and blast-radius — exact references, not approximate vector matches.</p></div>
+            <div className="card"><span className="k">100% local</span><h3>Your code never leaves</h3><p>Indexes to a local SQLite graph. No embeddings API, no cloud, and the vendored engine&apos;s telemetry is forced off.</p></div>
+            <div className="card"><span className="k">grounds delegates</span><h3>Cheap brains stop inventing</h3><p><code>bmux delegate --memory</code> wires the graph into a cheap brain, so it queries real symbols before it acts.</p></div>
+          </div>
+        </section>
+
         {/* FAQ — visible + FAQPage JSON-LD source (SEO/GEO) */}
         <section id="faq">
           <div className="sec-head"><p className="eyebrow">FAQ</p><h2>Questions, answered.</h2></div>
@@ -204,7 +244,7 @@ export default function Home() {
       <footer>
         <div className="wrap foot">
           <span className="brand mono">brain<span className="accent">mux</span></span>
-          <span>LLM tooling for Claude Code · Engine: LiteLLM (MIT)</span>
+          <span>LLM tooling for Claude Code · Engines: LiteLLM · CodeGraph (MIT)</span>
           <span style={{ display: "flex", gap: 20 }}>
             <a href="https://github.com/brainmuxhq/brainmux" target="_blank" rel="noopener noreferrer">GitHub</a>
             <a href="/">brainmux.com</a>

@@ -16,7 +16,12 @@ export function GET() {
 brainmux is a brand of tools for Claude Code. Its first tool, llmproxy (CLI: bmux),
 routes Claude Code to cheap OpenRouter models through local LiteLLM proxies — one
 proxy ("brain") per model, isolated by port. A single brains.yaml is the source of
-truth; bmux generates the Docker Compose stack from it.
+truth; bmux generates the Docker Compose stack from it. Its second tool, graphmux
+(CLI: gmux), gives agents a local, deterministic code graph (callers, callees, impact,
+verbatim source) so they ground on your codebase instead of guessing — a thin wrapper
+over the CodeGraph engine (tree-sitter to a local SQLite graph; no embeddings, no
+cloud, telemetry off). Each tool wraps a mature open-source core (LiteLLM, CodeGraph)
+in a thin, version-pinned layer.
 
 ## Key facts
 - One OpenRouter key reaches thousands of models (DeepSeek, Qwen, GLM, Kimi, GPT, Gemini, and more).
@@ -43,10 +48,19 @@ bmux models [query] | --use-cases | --json   # live OpenRouter catalog
 bmux spend                        # per-brain requests/tokens/spend
 bmux test                         # smoke every brain via /v1/messages
 
+## graphmux (CLI: gmux)
+- Local, deterministic code graph for Claude Code and bmux delegates — no embeddings, no cloud, telemetry off.
+- Install: /plugin install graphmux@brainmux
+- gmux install                 # download + SHA256-verify the pinned CodeGraph binary, write the MCP config
+- gmux index [path]            # build/rebuild the code graph for a repo
+- gmux status | sync [path]    # index stats / sync changes
+- gmux -- explore | callers | callees | impact | node   # query the graph
+- bmux delegate <brain> --memory "<task>"   # ground a cheap brain on the code graph (stops hallucination)
+
 ## Links
 - GitHub: https://github.com/brainmuxhq/brainmux
 - Site: https://brainmux.com
-- Engine: LiteLLM (MIT core)
+- Engines: LiteLLM (MIT) + CodeGraph (MIT)
 
 ## FAQ
 ${faq}
