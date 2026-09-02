@@ -118,8 +118,13 @@ strict, so no host MCP noise). Use it whenever the task reasons about code struc
 guessing file paths/names. Needs graphmux once: `gmux install` (then `gmux index <repo>`).
 
 ```sh
-bmux delegate coder --memory -C ./myrepo "update every caller of getPort to pass a string"
+bmux delegate coder --memory -C ./myrepo "call codegraph_impact getPort, list it verbatim, then update every caller to pass a string"
 ```
+
+**Name the exact graph tool in the task.** A cheap brain told loosely to "list callers" tends to pick
+the fuzzy `codegraph_explore` over exact `codegraph_callers`/`codegraph_impact`, then mixes in false
+positives. Say "call `codegraph_impact <sym>` and list its output verbatim". Also: the graph's `callers`
+caps at 20 silently — prefer `codegraph_impact` for blast-radius. It's a lead; you still verify.
 
 ## Grounding — cheap brains invent facts
 A cheap brain with **no web access confidently fabricates** factual claims (regulation names,

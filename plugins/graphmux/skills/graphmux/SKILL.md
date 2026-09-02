@@ -28,19 +28,44 @@ First use needs `gmux install` once (fetches the pinned binary; needs `curl` + `
 
 ## Answer code-structure questions directly
 ```sh
-gmux -- explore "how does auth work"     # relevant symbols + call paths + blast-radius + verbatim source, one shot
-gmux -- callers getPort                   # every function that calls getPort (name + file:line)
-gmux -- impact getPort                    # what changing getPort affects (blast radius)
-gmux -- node runSpend                     # one symbol's source + caller/callee trail
+gmux -- explore "how does auth work"      # relevant symbols + call paths + blast-radius + verbatim source, one shot
+gmux -- callers getPort --limit 500       # every function that calls getPort — ALWAYS pass a high --limit (see below)
+gmux -- impact getPort                    # what changing getPort affects (blast radius) — no cap, transitive; PREFER this
+gmux -- node runSpend --limit 500         # one symbol's source + caller/callee trail
 ```
 Run these when the user asks "who calls X", "what breaks if I change Y", "trace this", "map the repo".
-Ground your own edits with `impact`/`callers` before changing a widely-used symbol.
+Ground your own edits with `impact` before changing a widely-used symbol.
+
+## Limits — how to trust the answer (dogfooded on a 26k-node repo)
+graphmux is a **static** call-graph: excellent for synchronous, lexically-visible calls; blind to
+some dynamic/framework wiring. Follow these or you'll get confidently-wrong answers:
+
+- **`callers`/`node` silently cap at `--limit 20`** (no "…N more" warning; JSON + the MCP tool inherit
+  the cap). A high-fan-in symbol under-counts badly → **always pass `--limit 500`**. For "what breaks
+  if I change X", use **`impact`** instead — it has no cap and is transitive (more complete than `callers`).
+- **"No callers found" ≠ dead code.** Framework/queue entry points look call-less: queue workers,
+  Next.js `getServerSideProps`/API routes/page default exports, inline event handlers, registry-lazy
+  (`registerX('k', () => import())`). Never delete on "no callers" alone — check for a framework entry.
+- **Ripgrep these zones; don't trust the graph:** CommonJS `exports.X = async () => {}` route handlers
+  (invisible), ORM calls (`prisma.<model>.…`, DB blast-radius is off-graph), queue enqueue↔worker pairs
+  (`boss.send(Q)` ↔ `queue.work(Q, …)` — edge is broken), middleware chains (`app.use(...spread)`).
+- **Generic / same-named symbols** (`create`, `error`, `deleteUser`, `getServerSideProps`) collide into
+  one node → run `gmux -- node <sym>` first to see how many definitions exist, then trust callers/callees.
+- **`explore`** is good for English-named static code; weak on non-English domain terms (query in the
+  code's language) and dynamic `require()`. Treat it as a lead, not proof.
+
+Bottom line: **fast pre-scan that a human/Opus verifies** — not yet a blindly-trusted source of truth.
 
 ## Ground a delegate (with llmproxy)
 `bmux delegate <brain> --memory "<task>"` wires graphmux's MCP into the cheap brain (isolated —
 only the graph loads, no host MCP) so it queries real callers/impact instead of hallucinating.
 Requires `gmux install` first. Suggest `--memory` whenever delegating a task that reasons about
 code structure (refactors, "update every caller of…", impact analysis).
+
+**Command by tool name — don't leave it fuzzy.** A cheap brain, told loosely to "list callers", tends
+to pick `codegraph_explore` (fuzzy) over `codegraph_callers`/`codegraph_impact` (exact) and then mixes
+in false positives or invents results. Name the exact tool in the task: *"call `codegraph_impact <sym>`
+and list its output verbatim — do not use explore."* Then Opus verifies (the graph is a lead, not gospel).
 
 ## Notes
 - **State:** binary cached under `~/.brainmux/graphmux/<version>/`; MCP config at

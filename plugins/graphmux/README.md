@@ -44,6 +44,20 @@ gmux -- callers getPort
 gmux -- impact getPort
 ```
 
+## Known limits (dogfooded on a 26k-node repo)
+
+It's a **static** call-graph — great for synchronous, lexically-visible calls; blind to some
+dynamic/framework wiring. Use it as a fast pre-scan a human/Opus verifies, not a blind source of truth.
+
+- **`callers` / `node` silently cap at `--limit 20`** (no "…N more"; JSON + the MCP tool inherit it).
+  Always pass `--limit 500`; for blast-radius use **`impact`** (no cap, transitive, more complete).
+- **"No callers" ≠ dead code** — queue workers, Next.js entry points, event handlers and registry-lazy
+  imports look call-less. Check for a framework entry before deleting.
+- **Ripgrep, don't trust the graph, for:** CommonJS `exports.X = () => {}` handlers, ORM calls
+  (`prisma.<model>.…`), queue enqueue↔worker pairs, middleware chains (`app.use(...spread)`).
+- **Generic/same-named symbols collide** — run `gmux -- node <sym>` first to see the definition count.
+- **`explore`** is good for English-named static code; weak on non-English domain terms + dynamic `require()`.
+
 ## Notes
 
 - **State:** the binary is cached under `~/.brainmux/graphmux/<version>/`; the MCP config is
