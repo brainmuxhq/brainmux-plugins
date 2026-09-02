@@ -56,6 +56,7 @@
 - **Hata yutma yok:** her komut/async yol anlamlı mesaj + doğru exit code döner; sessiz catch yok.
 - **Commit hijyeni:** küçük commit (~50–200 satır), Conventional Commits; commit/push sadece Ali isteyince.
 - **Docs:** konu başına tek dosya — `_v2/_FINAL` kopya yok, mevcut dosyayı yerinde düzenle; yeni doc'tan önce `docs/`'a bak.
+- **README hep güncel:** her yeni komut/bayrak/özellikte `plugins/llmproxy/README.md`'yi (komut listesi + örnek) AYNI commit'te güncelle — README shipped davranıştan asla geri kalmaz.
 - **Delege dengesi:** tek/bilinen-dosya işi için subagent açma (inline hızlı); subagent'ı yalnız geniş-arama/paralellik + Ali isteyince kullan.
 
 ## Referans
@@ -106,7 +107,10 @@
 
 **Yayın/sertleştirme:**
 - ✅ Multi-arch mirror: `ghcr.io/brainmuxhq/brainmux-litellm` (amd64+arm64), IMAGE_REF = manifest-list `sha256:693d839d…`.
-- ✅ Version **0.1.15** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.15).
+- ✅ Version **0.1.16** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.16).
+  (0.1.16: `bmux delegate --template <ad>` — hazır görev şablonları. SSOT `core/templates.ts` (embedded built-in'ler
+   audit/drift-scan/review/todo-scan + `~/.brainmux/templates.yaml` user kayıtları, user override eder).
+   `bmux config add-template/list-templates`. README-güncel konvansiyonu eklendi.)
   (0.1.15: `bmux delegate --verify` (opt-in) — iki-geçiş: taslak → grounded doğrulama (brave default, agent aracı seçer/sorabilir)
    her iddiayı `✅ kaynak URL`/`⚠ kaynak yok` işaretler. Canlı doğrulandı (Node LTS nüansı yakalandı). ~2x maliyet, sadece kullanınca.)
   (0.1.14: `bmux delegate --json` katı şema — `{brain,ok,result,input_tokens,output_tokens,num_turns,duration_ms,cost_usd_estimate}` (claude zarfından reshape; cost "estimate" — opak model, `bmux spend` yetkili).)

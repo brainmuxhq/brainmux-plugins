@@ -43,9 +43,13 @@ the code; each item marked DONE (with version), DEFER (with reason), or BACKLOG.
   per task (brave / direct fetch / context7) and may be confirmed with the user. ~2x cost, only
   when used. Verified live (caught a "Node 26 lands Oct 2026" nuance with real source URLs).
 
+## Done — v0.1.16
+- **prompt-template library** — `bmux delegate --template <name>` expands a saved prompt; built-ins
+  `audit`/`drift-scan`/`review`/`todo-scan`; user templates persist in `~/.brainmux/templates.yaml`
+  (`bmux config add-template`/`list-templates`, user overrides built-in). SSOT in `core/templates.ts`.
+
 ## Backlog (features)
 - **retry / degrade-detection** — detect garbled (rate-limited) output and re-run.
-- **prompt-template library** — ready-made `audit` / `review` / `drift-scan` delegate tasks.
 - **brain `reliability: memory|grounded` label** — surface which brains have web grounding.
 
 ## Keep (working well)

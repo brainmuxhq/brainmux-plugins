@@ -113,17 +113,17 @@ var require_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    function visit_(key, node, visitor, path6) {
-      const ctrl = callVisitor(key, node, visitor, path6);
+    function visit_(key, node, visitor, path7) {
+      const ctrl = callVisitor(key, node, visitor, path7);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path6, ctrl);
-        return visit_(key, ctrl, visitor, path6);
+        replaceNode(key, path7, ctrl);
+        return visit_(key, ctrl, visitor, path7);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path6 = Object.freeze(path6.concat(node));
+          path7 = Object.freeze(path7.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = visit_(i, node.items[i], visitor, path6);
+            const ci = visit_(i, node.items[i], visitor, path7);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -134,13 +134,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path6 = Object.freeze(path6.concat(node));
-          const ck = visit_("key", node.key, visitor, path6);
+          path7 = Object.freeze(path7.concat(node));
+          const ck = visit_("key", node.key, visitor, path7);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = visit_("value", node.value, visitor, path6);
+          const cv = visit_("value", node.value, visitor, path7);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -161,17 +161,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node, visitor, path6) {
-      const ctrl = await callVisitor(key, node, visitor, path6);
+    async function visitAsync_(key, node, visitor, path7) {
+      const ctrl = await callVisitor(key, node, visitor, path7);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path6, ctrl);
-        return visitAsync_(key, ctrl, visitor, path6);
+        replaceNode(key, path7, ctrl);
+        return visitAsync_(key, ctrl, visitor, path7);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path6 = Object.freeze(path6.concat(node));
+          path7 = Object.freeze(path7.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = await visitAsync_(i, node.items[i], visitor, path6);
+            const ci = await visitAsync_(i, node.items[i], visitor, path7);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -182,13 +182,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path6 = Object.freeze(path6.concat(node));
-          const ck = await visitAsync_("key", node.key, visitor, path6);
+          path7 = Object.freeze(path7.concat(node));
+          const ck = await visitAsync_("key", node.key, visitor, path7);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = await visitAsync_("value", node.value, visitor, path6);
+          const cv = await visitAsync_("value", node.value, visitor, path7);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -215,23 +215,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node, visitor, path6) {
+    function callVisitor(key, node, visitor, path7) {
       if (typeof visitor === "function")
-        return visitor(key, node, path6);
+        return visitor(key, node, path7);
       if (identity.isMap(node))
-        return visitor.Map?.(key, node, path6);
+        return visitor.Map?.(key, node, path7);
       if (identity.isSeq(node))
-        return visitor.Seq?.(key, node, path6);
+        return visitor.Seq?.(key, node, path7);
       if (identity.isPair(node))
-        return visitor.Pair?.(key, node, path6);
+        return visitor.Pair?.(key, node, path7);
       if (identity.isScalar(node))
-        return visitor.Scalar?.(key, node, path6);
+        return visitor.Scalar?.(key, node, path7);
       if (identity.isAlias(node))
-        return visitor.Alias?.(key, node, path6);
+        return visitor.Alias?.(key, node, path7);
       return void 0;
     }
-    function replaceNode(key, path6, node) {
-      const parent = path6[path6.length - 1];
+    function replaceNode(key, path7, node) {
+      const parent = path7[path7.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node;
       } else if (identity.isPair(parent)) {
@@ -841,10 +841,10 @@ var require_Collection = __commonJS({
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path6, value) {
+    function collectionFromPath(schema, path7, value) {
       let v = value;
-      for (let i = path6.length - 1; i >= 0; --i) {
-        const k = path6[i];
+      for (let i = path7.length - 1; i >= 0; --i) {
+        const k = path7[i];
         if (typeof k === "number" && Number.isInteger(k) && k >= 0) {
           const a = [];
           a[k] = v;
@@ -863,7 +863,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path6) => path6 == null || typeof path6 === "object" && !!path6[Symbol.iterator]().next().done;
+    var isEmptyPath = (path7) => path7 == null || typeof path7 === "object" && !!path7[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -893,11 +893,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path6, value) {
-        if (isEmptyPath(path6))
+      addIn(path7, value) {
+        if (isEmptyPath(path7))
           this.add(value);
         else {
-          const [key, ...rest] = path6;
+          const [key, ...rest] = path7;
           const node = this.get(key, true);
           if (identity.isCollection(node))
             node.addIn(rest, value);
@@ -911,8 +911,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path6) {
-        const [key, ...rest] = path6;
+      deleteIn(path7) {
+        const [key, ...rest] = path7;
         if (rest.length === 0)
           return this.delete(key);
         const node = this.get(key, true);
@@ -926,8 +926,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path6, keepScalar) {
-        const [key, ...rest] = path6;
+      getIn(path7, keepScalar) {
+        const [key, ...rest] = path7;
         const node = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node) ? node.value : node;
@@ -945,8 +945,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path6) {
-        const [key, ...rest] = path6;
+      hasIn(path7) {
+        const [key, ...rest] = path7;
         if (rest.length === 0)
           return this.has(key);
         const node = this.get(key, true);
@@ -956,8 +956,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path6, value) {
-        const [key, ...rest] = path6;
+      setIn(path7, value) {
+        const [key, ...rest] = path7;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -3472,9 +3472,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path6, value) {
+      addIn(path7, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path6, value);
+          this.contents.addIn(path7, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -3549,14 +3549,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path6) {
-        if (Collection.isEmptyPath(path6)) {
+      deleteIn(path7) {
+        if (Collection.isEmptyPath(path7)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path6) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path7) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -3571,10 +3571,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path6, keepScalar) {
-        if (Collection.isEmptyPath(path6))
+      getIn(path7, keepScalar) {
+        if (Collection.isEmptyPath(path7))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path6, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path7, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -3585,10 +3585,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path6) {
-        if (Collection.isEmptyPath(path6))
+      hasIn(path7) {
+        if (Collection.isEmptyPath(path7))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path6) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path7) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -3605,13 +3605,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path6, value) {
-        if (Collection.isEmptyPath(path6)) {
+      setIn(path7, value) {
+        if (Collection.isEmptyPath(path7)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path6), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path7), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path6, value);
+          this.contents.setIn(path7, value);
         }
       }
       /**
@@ -5571,9 +5571,9 @@ var require_cst_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    visit.itemAtPath = (cst, path6) => {
+    visit.itemAtPath = (cst, path7) => {
       let item = cst;
-      for (const [field, index] of path6) {
+      for (const [field, index] of path7) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -5582,23 +5582,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit.parentCollection = (cst, path6) => {
-      const parent = visit.itemAtPath(cst, path6.slice(0, -1));
-      const field = path6[path6.length - 1][0];
+    visit.parentCollection = (cst, path7) => {
+      const parent = visit.itemAtPath(cst, path7.slice(0, -1));
+      const field = path7[path7.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path6, item, visitor) {
-      let ctrl = visitor(item, path6);
+    function _visit(path7, item, visitor) {
+      let ctrl = visitor(item, path7);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path6.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path7.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -5609,10 +5609,10 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path6);
+            ctrl = ctrl(item, path7);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path6) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path7) : ctrl;
     }
     exports.visit = visit;
   }
@@ -6914,14 +6914,14 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs8 = this.flowScalar(this.type);
+              const fs9 = this.flowScalar(this.type);
               if (atNextItem || it.value) {
-                map.items.push({ start, key: fs8, sep: [] });
+                map.items.push({ start, key: fs9, sep: [] });
                 this.onKeyLine = true;
               } else if (it.sep) {
-                this.stack.push(fs8);
+                this.stack.push(fs9);
               } else {
-                Object.assign(it, { key: fs8, sep: [] });
+                Object.assign(it, { key: fs9, sep: [] });
                 this.onKeyLine = true;
               }
               return;
@@ -7049,13 +7049,13 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs8 = this.flowScalar(this.type);
+              const fs9 = this.flowScalar(this.type);
               if (!it || it.value)
-                fc.items.push({ start: [], key: fs8, sep: [] });
+                fc.items.push({ start: [], key: fs9, sep: [] });
               else if (it.sep)
-                this.stack.push(fs8);
+                this.stack.push(fs9);
               else
-                Object.assign(it, { key: fs8, sep: [] });
+                Object.assign(it, { key: fs9, sep: [] });
               return;
             }
             case "flow-map-end":
@@ -7870,8 +7870,8 @@ function getErrorMap() {
 
 // ../../node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path6, errorMaps, issueData } = params;
-  const fullPath = [...path6, ...issueData.path || []];
+  const { data, path: path7, errorMaps, issueData } = params;
+  const fullPath = [...path7, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7987,11 +7987,11 @@ var errorUtil;
 
 // ../../node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path6, key) {
+  constructor(parent, value, path7, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path6;
+    this._path = path7;
     this._key = key;
   }
   get path() {
@@ -11781,13 +11781,51 @@ function runLaunch(brain, claudeArgs, env = process.env) {
 
 // src/commands/delegate.ts
 import { spawn, spawnSync as spawnSync3 } from "node:child_process";
+import fs5 from "node:fs";
+import path4 from "node:path";
+
+// src/core/templates.ts
+var import_yaml2 = __toESM(require_dist(), 1);
 import fs4 from "node:fs";
 import path3 from "node:path";
+var BUILTIN_TEMPLATES = {
+  audit: "Audit the code in scope for correctness bugs, edge cases, and error handling. Report each real issue as 'file:line \u2014 issue \u2014 why'. No praise, no restating code. If none, output NONE.",
+  "drift-scan": "Compare the docs (README / skills / comments) against the ACTUAL code in scope. Report drift only: documented behavior/flags/paths that don't match code, as 'file:line \u2014 claim vs reality'. If none, output NONE.",
+  review: "Review the code/diff in scope for real defects (bugs, security, resource leaks) and clear simplifications. One line per finding: 'file:line \u2014 problem \u2014 fix'. No nits, no praise. If none, output NONE.",
+  "todo-scan": "Find every TODO / FIXME / HACK / XXX marker in scope. Output one line each: 'file:line \u2014 the note'. Nothing else."
+};
+var TemplatesSchema = external_exports.record(external_exports.string().min(1), external_exports.string().min(1));
+function templatesPath(paths) {
+  return path3.join(paths.home, "templates.yaml");
+}
+function loadUserTemplates(paths) {
+  const f = templatesPath(paths);
+  if (!fs4.existsSync(f)) return {};
+  const raw = import_yaml2.default.parse(fs4.readFileSync(f, "utf8")) ?? {};
+  return TemplatesSchema.parse(raw);
+}
+function allTemplates(paths) {
+  return { ...BUILTIN_TEMPLATES, ...loadUserTemplates(paths) };
+}
+function resolveTemplate(name, paths) {
+  const all = allTemplates(paths);
+  const t = all[name];
+  if (!t) throw new Error(`no template '${name}' (have: ${Object.keys(all).join(", ")})`);
+  return t;
+}
+function saveUserTemplate(paths, name, prompt) {
+  const cur = loadUserTemplates(paths);
+  cur[name] = prompt;
+  fs4.mkdirSync(paths.home, { recursive: true });
+  fs4.writeFileSync(templatesPath(paths), import_yaml2.default.stringify(cur));
+}
+
+// src/commands/delegate.ts
 var GUARD = "You are a DELEGATED worker brain invoked by an orchestrator. Do EXACTLY the task, nothing more. Never delegate further. Be concise; return ONLY the result the orchestrator asked for (no preamble, no sign-off).";
 function parseDelegateArgs(argv, stdin) {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, task: "" };
+  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", task: "" };
   const rest = argv.slice(1);
   const parts = [];
   for (let i = 0; i < rest.length; i++) {
@@ -11800,7 +11838,9 @@ function parseDelegateArgs(argv, stdin) {
     else if (a === "--allow-tools" || a === "--allowed-tools") {
       opts.allowTools = (rest[++i] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
     } else if (a === "--verify") opts.verify = true;
-    else if (a === "-C") {
+    else if (a === "--template") {
+      opts.template = rest[++i] ?? "";
+    } else if (a === "-C") {
       opts.workdir = rest[++i] ?? ".";
     } else if (a === "-") {
       opts.task = stdin ?? "";
@@ -11812,7 +11852,7 @@ function parseDelegateArgs(argv, stdin) {
   }
   if (opts.allowTools.some((t) => t.startsWith("mcp__"))) opts.mcp = true;
   if (!opts.task) opts.task = parts.join(" ");
-  if (!opts.task) throw new Error("delegate: no task given");
+  if (!opts.task && !opts.template) throw new Error("delegate: no task given");
   return { brain, opts };
 }
 function buildClaudeArgs(opts) {
@@ -11836,7 +11876,7 @@ function clip(s, n) {
 function actionLabel(b) {
   const i = b.input ?? {};
   const file = i.file_path ?? i.path;
-  if (file != null) return `${b.name}: ${path3.basename(String(file))}`;
+  if (file != null) return `${b.name}: ${path4.basename(String(file))}`;
   const other = i.pattern ?? i.query ?? i.command ?? i.url;
   return other != null ? `${b.name}: ${clip(String(other), 40)}` : String(b.name ?? "");
 }
@@ -11857,7 +11897,7 @@ function foldEvent(p, ev) {
         p.current = actionLabel(b);
         const f = b.input?.file_path;
         if (f != null) {
-          const base = path3.basename(String(f));
+          const base = path4.basename(String(f));
           if (!p.touched.includes(base)) p.touched.push(base);
         }
         if (b.name === "Edit" || b.name === "Write" || b.name === "MultiEdit") p.edits++;
@@ -12005,7 +12045,7 @@ async function runVerify(brain, opts, childEnv) {
 
 DRAFT:
 ${draft}`;
-  const p2 = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, task: vTask };
+  const p2 = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", task: vTask };
   if (opts.stream) return runStreamed(brain, p2, childEnv);
   const r2 = spawnSync3("claude", buildClaudeArgs(p2), { cwd: opts.workdir, stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: childEnv });
   if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
@@ -12017,9 +12057,15 @@ async function runDelegate(argv, env = process.env) {
     return 2;
   }
   const wantsStdin = argv.includes("-");
-  const stdin = wantsStdin ? fs4.readFileSync(0, "utf8") : void 0;
+  const stdin = wantsStdin ? fs5.readFileSync(0, "utf8") : void 0;
   const { brain, opts } = parseDelegateArgs(argv, stdin);
-  if (!fs4.existsSync(opts.workdir)) {
+  if (opts.template) {
+    const tpl = resolveTemplate(opts.template, resolvePaths(env));
+    opts.task = opts.task ? `${tpl}
+
+${opts.task}` : tpl;
+  }
+  if (!fs5.existsSync(opts.workdir)) {
     process.stderr.write(`delegate: -C dir '${opts.workdir}' not found
 `);
     return 1;
@@ -12054,8 +12100,8 @@ async function runDelegate(argv, env = process.env) {
 }
 
 // src/commands/config.ts
-var import_yaml2 = __toESM(require_dist(), 1);
-import fs5 from "node:fs";
+var import_yaml3 = __toESM(require_dist(), 1);
+import fs6 from "node:fs";
 import readline from "node:readline";
 function readSecret(promptText) {
   const input = process.stdin;
@@ -12098,11 +12144,11 @@ function readSecret(promptText) {
   });
 }
 function load(paths) {
-  return parseBrains(fs5.readFileSync(paths.brainsYaml, "utf8"));
+  return parseBrains(fs6.readFileSync(paths.brainsYaml, "utf8"));
 }
 function save(paths, cfg) {
-  const validated = parseBrains(import_yaml2.default.stringify(cfg));
-  fs5.writeFileSync(paths.brainsYaml, import_yaml2.default.stringify(validated));
+  const validated = parseBrains(import_yaml3.default.stringify(cfg));
+  fs6.writeFileSync(paths.brainsYaml, import_yaml3.default.stringify(validated));
   ensureSecrets(paths, validated);
   writeGenerated(paths, validated);
 }
@@ -12160,6 +12206,22 @@ async function runConfig(sub, rest, env = process.env) {
         const cfg = load(paths);
         for (const [name, b] of Object.entries(cfg.brains)) {
           console.log(`${name.padEnd(8)} :${b.port}  ${b.model}  (${b.providerKey})`);
+        }
+        return 0;
+      }
+      case "add-template": {
+        const [name, ...promptParts] = rest;
+        const prompt = promptParts.join(" ");
+        if (!name || !prompt) throw new Error('usage: bmux config add-template <name> "<prompt>"');
+        saveUserTemplate(paths, name, prompt);
+        console.log(`saved template '${name}' to templates.yaml`);
+        return 0;
+      }
+      case "list-templates": {
+        const user = loadUserTemplates(paths);
+        for (const [n, p] of Object.entries(allTemplates(paths))) {
+          const tag = n in user ? "user " : "built";
+          console.log(`[${tag}] ${n.padEnd(12)} ${p.length > 66 ? p.slice(0, 65) + "\u2026" : p}`);
         }
         return 0;
       }
@@ -12399,9 +12461,9 @@ async function runSpend(rest = [], env = process.env) {
 }
 
 // src/commands/statusline.ts
-import fs6 from "node:fs";
+import fs7 from "node:fs";
 import os2 from "node:os";
-import path4 from "node:path";
+import path5 from "node:path";
 var STATUSLINE_SCRIPT = `#!/usr/bin/env bash
 # brainmux status line \u2014 installed by \`bmux statusline install\`. Safe to edit.
 #   \u{1F4C1} dir \xB7 \u{1F33F} git \xB7 \u{1F9E0} brain|\u{1F916} model \xB7 \u26A1 effort \xB7 \u{1F9E0} context% \xB7 \u{1F4B0} cost \xB7 \u{1F4B3} balance \xB7 \xB1lines \xB7 \u23F1\uFE0F time
@@ -12491,8 +12553,8 @@ function planStatuslineSettings(existing, command, force) {
 }
 function runStatusline(argv, env = process.env) {
   const home = env.HOME || os2.homedir();
-  const claudeDir = env.CLAUDE_CONFIG_DIR || path4.join(home, ".claude");
-  const dest = path4.join(claudeDir, "brainmux-statusline.sh");
+  const claudeDir = env.CLAUDE_CONFIG_DIR || path5.join(home, ".claude");
+  const dest = path5.join(claudeDir, "brainmux-statusline.sh");
   if (argv[0] !== "install") {
     process.stdout.write(
       `bmux statusline install [--force]   enable the brainmux status line
@@ -12503,14 +12565,14 @@ function runStatusline(argv, env = process.env) {
     return 0;
   }
   const force = argv.includes("--force");
-  fs6.mkdirSync(claudeDir, { recursive: true });
-  fs6.writeFileSync(dest, STATUSLINE_SCRIPT);
-  fs6.chmodSync(dest, 493);
-  const settingsFile = path4.join(claudeDir, "settings.json");
+  fs7.mkdirSync(claudeDir, { recursive: true });
+  fs7.writeFileSync(dest, STATUSLINE_SCRIPT);
+  fs7.chmodSync(dest, 493);
+  const settingsFile = path5.join(claudeDir, "settings.json");
   let existing = {};
-  if (fs6.existsSync(settingsFile)) {
+  if (fs7.existsSync(settingsFile)) {
     try {
-      existing = JSON.parse(fs6.readFileSync(settingsFile, "utf8"));
+      existing = JSON.parse(fs7.readFileSync(settingsFile, "utf8"));
     } catch {
       process.stderr.write(`statusline: ${settingsFile} is not valid JSON \u2014 fix it, then re-run.
 `);
@@ -12527,7 +12589,7 @@ function runStatusline(argv, env = process.env) {
     );
     return 0;
   }
-  fs6.writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + "\n");
+  fs7.writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + "\n");
   const what = action === "replaced" ? "replaced your previous statusLine" : "enabled the status line";
   process.stdout.write(
     `\u2713 brainmux status line installed \u2014 ${what}.
@@ -12540,9 +12602,9 @@ function runStatusline(argv, env = process.env) {
 }
 
 // src/commands/shim.ts
-import fs7 from "node:fs";
+import fs8 from "node:fs";
 import os3 from "node:os";
-import path5 from "node:path";
+import path6 from "node:path";
 var SHIM_LAUNCHER = `#!/bin/sh
 # brainmux launcher \u2014 installed by \`bmux install-shim\`. Resolves the active llmproxy
 # version at run time, so \`bmux\` survives plugin updates and works from any shell.
@@ -12553,24 +12615,24 @@ exec "$bin" "$@"
 `;
 function runShim(argv, env = process.env) {
   const home = env.HOME || os3.homedir();
-  const dir = path5.join(home, ".local", "bin");
-  const dest = path5.join(dir, "bmux");
+  const dir = path6.join(home, ".local", "bin");
+  const dest = path6.join(dir, "bmux");
   const force = argv.includes("--force");
-  if (fs7.existsSync(dest) && !force) {
-    const cur = fs7.readFileSync(dest, "utf8");
+  if (fs8.existsSync(dest) && !force) {
+    const cur = fs8.readFileSync(dest, "utf8");
     if (!cur.includes("brainmux launcher")) {
       process.stderr.write(`install-shim: ${dest} exists and is not a brainmux launcher \u2014 re-run with --force to overwrite.
 `);
       return 1;
     }
   }
-  fs7.mkdirSync(dir, { recursive: true });
-  fs7.writeFileSync(dest, SHIM_LAUNCHER);
-  fs7.chmodSync(dest, 493);
+  fs8.mkdirSync(dir, { recursive: true });
+  fs8.writeFileSync(dest, SHIM_LAUNCHER);
+  fs8.chmodSync(dest, 493);
   process.stdout.write(`\u2713 bmux shim installed \u2192 ${dest}
   It resolves the active llmproxy version at run time (survives updates).
 `);
-  const onPath = (env.PATH ?? "").split(path5.delimiter).includes(dir);
+  const onPath = (env.PATH ?? "").split(path6.delimiter).includes(dir);
   if (!onPath) {
     process.stdout.write(`  \u26A0 ${dir} is not on your PATH. Add it (then restart your shell):
     export PATH="$HOME/.local/bin:$PATH"
@@ -12658,9 +12720,11 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
                                   (--mcp passes host MCP servers; --allow-tools pre-allows tools headless \u2014 e.g.
                                    --allow-tools mcp__brave-search__brave_web_search for grounded web search, no --yolo)
                                   (--verify: draft, then a grounded pass web-checks each claim \u2192 \u2705/\u26A0 with sources)
+                                  (--template <name>: expand a saved task template \u2014 bmux config list-templates)
   bmux config add-brain <name> <port> <model> [providerKey]
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list
+  bmux config add-template <name> "<prompt>" | list-templates   (reusable delegate task templates)
   bmux test                       smoke every brain via /v1/messages
   bmux spend [--since 1h|30m|7d]  per-brain requests/tokens/spend (from LiteLLM); --since scopes a window
   bmux install-shim [--force]     put a version-agnostic bmux on ~/.local/bin (works from any shell)

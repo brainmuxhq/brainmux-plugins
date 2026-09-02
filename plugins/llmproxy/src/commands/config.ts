@@ -5,6 +5,7 @@ import { resolvePaths, type Paths } from "../core/paths.js";
 import { parseBrains, type BrainsConfig } from "../core/manifest.js";
 import { writeGenerated, ensureSecrets } from "./init.js";
 import { setKey } from "../core/env.js";
+import { saveUserTemplate, allTemplates, loadUserTemplates } from "../core/templates.js";
 
 // Read a secret without it landing on the command line / shell history / AI transcript.
 // TTY: masked (no-echo) prompt. Piped stdin: read one line (for scripting, e.g. `... | bmux config add-key K`).
@@ -112,6 +113,22 @@ export async function runConfig(sub: string, rest: string[], env: NodeJS.Process
         const cfg = load(paths);
         for (const [name, b] of Object.entries(cfg.brains)) {
           console.log(`${name.padEnd(8)} :${b.port}  ${b.model}  (${b.providerKey})`);
+        }
+        return 0;
+      }
+      case "add-template": {
+        const [name, ...promptParts] = rest;
+        const prompt = promptParts.join(" ");
+        if (!name || !prompt) throw new Error('usage: bmux config add-template <name> "<prompt>"');
+        saveUserTemplate(paths, name, prompt);
+        console.log(`saved template '${name}' to templates.yaml`);
+        return 0;
+      }
+      case "list-templates": {
+        const user = loadUserTemplates(paths);
+        for (const [n, p] of Object.entries(allTemplates(paths))) {
+          const tag = n in user ? "user " : "built";
+          console.log(`[${tag}] ${n.padEnd(12)} ${p.length > 66 ? p.slice(0, 65) + "…" : p}`);
         }
         return 0;
       }

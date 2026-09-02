@@ -39,7 +39,11 @@ bmux config add-brain <name> <port> <model> [providerKey]   # default providerKe
 bmux config remove-brain <name>
 bmux config set-model <name> <model>
 bmux config add-key <ENV_VAR> <value>                       # write a provider key to .env
+bmux config add-template <name> "<prompt>" | list-templates # reusable delegate task templates
 ```
+Templates persist in `~/.brainmux/templates.yaml` (user entries override built-in `audit`/
+`drift-scan`/`review`/`todo-scan`); used via `bmux delegate --template <name>`. You may set a
+template on the user's behalf from a natural-language request.
 After `add-brain`/`set-model`/`remove-brain`, run `bmux up` (or `restart`) to apply. `bmux init`
 auto-generates master keys + salt + Postgres password; the user supplies provider keys via
 `add-key` (secrets live in `.env`, never in `brains.yaml`).

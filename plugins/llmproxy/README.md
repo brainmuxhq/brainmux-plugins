@@ -50,6 +50,7 @@ bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] "<ta
 bmux config add-brain <name> <port> <model> [providerKey]
 bmux config remove-brain <name> | set-model <name> <model>
 bmux config add-key <ENV_VAR> [value] | list
+bmux config add-template <name> "<prompt>" | list-templates   reusable delegate task templates
 bmux test                                   smoke every brain via /v1/messages
 bmux spend [--since 1h|30m|7d]              per-brain requests / tokens / spend (--since scopes a window)
 bmux models [query] | --use-cases | --json  browse the live OpenRouter catalog
@@ -76,7 +77,11 @@ bmux delegate coder --stream "find and list every TODO in src/"           # live
 bmux delegate coder --mcp "read the react docs via context7 and summarize hooks"  # opt-in MCP
 bmux delegate dsflash --allow-tools mcp__brave-search__brave_web_search "verify X, cite source"  # grounded, no --yolo
 bmux delegate deep --verify "which of these 5 regulations are still in force?"  # draft → web-check each claim
+bmux delegate coder --template drift-scan -C .   # expand a saved template (built-in or your own)
 ```
+Templates: built-ins `audit` · `drift-scan` · `review` · `todo-scan`; add your own with
+`bmux config add-template <name> "<prompt>"` (stored in `~/.brainmux/templates.yaml`), list with
+`bmux config list-templates`.
 Delegated brains run headless on the pay-as-you-go meter. Opus stays the orchestrator and
 **verifies** their output — see the `delegate` skill. `--stream` (or `-v`) shows a single
 live progress line (`⏳ coder · 5/34 · <current step>`) while it runs, then a closing summary

@@ -2,6 +2,8 @@ import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { planLaunch } from "./launch.js";
+import { resolvePaths } from "../core/paths.js";
+import { resolveTemplate } from "../core/templates.js";
 
 const GUARD =
   "You are a DELEGATED worker brain invoked by an orchestrator. Do EXACTLY the task, " +
@@ -16,13 +18,14 @@ export interface DelegateOpts {
   mcp: boolean; // pass the host's MCP servers through to the worker (default off — see buildClaudeArgs)
   allowTools: string[]; // extra tools auto-allowed headless (e.g. an MCP tool) so it needn't fall back to --yolo
   verify: boolean; // opt-in: after the draft, run a grounded pass that fact-checks each claim
+  template: string; // named task template (built-in or ~/.brainmux/templates.yaml); resolved in runDelegate
   task: string;
 }
 
 export function parseDelegateArgs(argv: string[], stdin?: string): { brain: string; opts: DelegateOpts } {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, task: "" };
+  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", task: "" };
   const rest = argv.slice(1);
   const parts: string[] = []; // bare positional words → joined, so an unquoted task isn't silently truncated to its last word
   for (let i = 0; i < rest.length; i++) {
@@ -34,6 +37,7 @@ export function parseDelegateArgs(argv: string[], stdin?: string): { brain: stri
     else if (a === "--mcp" || a === "--with-mcp") opts.mcp = true;
     else if (a === "--allow-tools" || a === "--allowed-tools") { opts.allowTools = (rest[++i] ?? "").split(",").map((s) => s.trim()).filter(Boolean); }
     else if (a === "--verify") opts.verify = true;
+    else if (a === "--template") { opts.template = rest[++i] ?? ""; }
     else if (a === "-C") { opts.workdir = rest[++i] ?? "."; }
     else if (a === "-") { opts.task = stdin ?? ""; }
     else if (a === "--") { opts.task = rest.slice(i + 1).join(" "); break; }
@@ -45,7 +49,8 @@ export function parseDelegateArgs(argv: string[], stdin?: string): { brain: stri
   // Brain validity is the manifest's call (SSOT = brains.yaml); runDelegate/planLaunch
   // validate it against the live config. Here we only require a task.
   if (!opts.task) opts.task = parts.join(" ");
-  if (!opts.task) throw new Error("delegate: no task given");
+  // A template can BE the task, so a bare task isn't required when --template is given.
+  if (!opts.task && !opts.template) throw new Error("delegate: no task given");
   return { brain, opts };
 }
 
@@ -281,7 +286,7 @@ async function runVerify(brain: string, opts: DelegateOpts, childEnv: NodeJS.Pro
     `Fact-check the DRAFT below. For EACH factual claim you MUST call ${GROUNDING_TOOL} — do NOT rely on memory. ` +
     `Output one terse line per claim: "✅ <claim> — <source URL you fetched>" if confirmed, or ` +
     `"⚠ <claim> — no source found" if not. Do not restate unverified claims as fact.\n\nDRAFT:\n${draft}`;
-  const p2: DelegateOpts = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, task: vTask };
+  const p2: DelegateOpts = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", task: vTask };
   if (opts.stream) return runStreamed(brain, p2, childEnv);
   const r2 = spawnSync("claude", buildClaudeArgs(p2), { cwd: opts.workdir, stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: childEnv });
   if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
@@ -296,6 +301,12 @@ export async function runDelegate(argv: string[], env: NodeJS.ProcessEnv = proce
   const wantsStdin = argv.includes("-");
   const stdin = wantsStdin ? fs.readFileSync(0, "utf8") : undefined;
   const { brain, opts } = parseDelegateArgs(argv, stdin);
+  // Expand a named template (built-in or ~/.brainmux/templates.yaml) into the task; a free-text
+  // task after it is appended as extra scope/instructions.
+  if (opts.template) {
+    const tpl = resolveTemplate(opts.template, resolvePaths(env));
+    opts.task = opts.task ? `${tpl}\n\n${opts.task}` : tpl;
+  }
   if (!fs.existsSync(opts.workdir)) { process.stderr.write(`delegate: -C dir '${opts.workdir}' not found\n`); return 1; }
   const plan = planLaunch(brain, env); // validates brain against manifest + resolves key/port
   // Echo the outgoing config so you always know what went out (brain · mode · mcp · verify).

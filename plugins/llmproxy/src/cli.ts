@@ -24,9 +24,11 @@ const HELP = `bmux — brainmux/llmproxy CLI
                                   (--mcp passes host MCP servers; --allow-tools pre-allows tools headless — e.g.
                                    --allow-tools mcp__brave-search__brave_web_search for grounded web search, no --yolo)
                                   (--verify: draft, then a grounded pass web-checks each claim → ✅/⚠ with sources)
+                                  (--template <name>: expand a saved task template — bmux config list-templates)
   bmux config add-brain <name> <port> <model> [providerKey]
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list
+  bmux config add-template <name> "<prompt>" | list-templates   (reusable delegate task templates)
   bmux test                       smoke every brain via /v1/messages
   bmux spend [--since 1h|30m|7d]  per-brain requests/tokens/spend (from LiteLLM); --since scopes a window
   bmux install-shim [--force]     put a version-agnostic bmux on ~/.local/bin (works from any shell)

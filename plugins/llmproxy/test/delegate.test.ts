@@ -88,6 +88,16 @@ test("--allow-tools with only non-MCP tools does NOT auto-enable MCP", () => {
   assert.ok(buildClaudeArgs(opts).includes("--strict-mcp-config"));
 });
 
+test("--template is parsed; task not required when a template is given", () => {
+  const { opts } = parseDelegateArgs(["coder", "--template", "audit", "-C", "src"]);
+  assert.equal(opts.template, "audit");
+  assert.equal(opts.workdir, "src");
+  assert.doesNotThrow(() => parseDelegateArgs(["coder", "--template", "drift-scan"])); // template can BE the task
+  const withExtra = parseDelegateArgs(["coder", "--template", "audit", "focus on env.ts"]).opts;
+  assert.equal(withExtra.template, "audit");
+  assert.equal(withExtra.task, "focus on env.ts"); // extra scope appended (joined by runDelegate)
+});
+
 test("--verify is off by default; the flag turns it on (doesn't leak into claude args)", () => {
   assert.equal(parseDelegateArgs(["deep", "task"]).opts.verify, false);
   const { opts } = parseDelegateArgs(["deep", "--verify", "check these facts"]);

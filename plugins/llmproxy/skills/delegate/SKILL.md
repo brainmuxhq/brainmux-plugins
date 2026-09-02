@@ -74,6 +74,18 @@ An `mcp__…` name in `--allow-tools` implies `--mcp` (the server must load to b
 `--allow-tools` also works for built-ins (e.g. `--allow-tools Bash` to let an analyze worker
 run a command). Prefer this narrow grant over `--yolo` for grounded/web tasks.
 
+## `--template <name>` — reusable task prompts
+`--template <name>` expands a saved prompt into the task (append free text for extra scope).
+Built-ins: `audit` · `drift-scan` · `review` · `todo-scan`. Add your own with
+`bmux config add-template <name> "<prompt>"` (persisted in `~/.brainmux/templates.yaml`, user
+entries override built-ins); `bmux config list-templates` shows all. As the orchestrator you can
+pick a template from the user's NL request, or set a new one on their behalf.
+
+```sh
+bmux delegate coder --template drift-scan -C .          # built-in
+bmux delegate coder --template audit "focus on env.ts"  # template + extra scope
+```
+
 ## `--verify` — draft, then grounded fact-check
 `--verify` (opt-in) runs the task, then a **second grounded pass** that forces the grounding
 tool on each factual claim of the draft and marks it `✅ <claim> — <url>` or `⚠ <claim> — no
