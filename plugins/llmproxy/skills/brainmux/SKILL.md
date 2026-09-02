@@ -23,8 +23,9 @@ bmux up | down | restart     # manage the stack (up/restart regenerate from brai
 bmux ps | logs [brain]       # inspect
 bmux health                  # liveliness per brain (UP/DOWN)
 bmux test                    # POST /v1/messages to each brain (text or thinking = alive)
-bmux spend                   # per-brain requests/tokens/spend roll-up (LiteLLM /spend/logs)
+bmux spend [--since 1h|30m|7d] # per-brain requests/tokens/spend roll-up; --since scopes a recent window
 bmux statusline install      # opt-in Claude Code status line (dir·git·brain·context%·cost·OR balance)
+bmux install-shim            # version-agnostic bmux on ~/.local/bin (works from non-interactive shells)
 ```
 When the user asks to "enable/turn on the status line", run `bmux statusline install` (add `--force`
 only if they confirm replacing an existing one). It needs `jq`, writes

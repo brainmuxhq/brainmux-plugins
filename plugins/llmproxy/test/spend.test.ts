@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { aggregateSpend, formatSpend, type BrainSpend } from "../src/core/spend.js";
+import { aggregateSpend, formatSpend, sinceMs, type BrainSpend } from "../src/core/spend.js";
 
 test("aggregateSpend sums spend + tokens and counts rows", () => {
   const rows = [
@@ -33,6 +33,30 @@ test("aggregateSpend on non-array = not ok", () => {
   const r = aggregateSpend("deep", { error: "nope" });
   assert.equal(r.ok, false);
   assert.ok(r.note);
+});
+
+test("sinceMs parses s/m/h/d; throws on garbage", () => {
+  assert.equal(sinceMs("90s"), 90_000);
+  assert.equal(sinceMs("30m"), 1_800_000);
+  assert.equal(sinceMs("1h"), 3_600_000);
+  assert.equal(sinceMs("7d"), 604_800_000);
+  assert.throws(() => sinceMs("1w"), /--since/);
+  assert.throws(() => sinceMs("abc"), /--since/);
+});
+
+test("aggregateSpend --since cutoff counts only rows at/after the cutoff", () => {
+  const rows = [
+    { spend: 1, total_tokens: 10, startTime: "2026-09-02T04:00:00.000Z" }, // old
+    { spend: 2, total_tokens: 20, startTime: "2026-09-02T06:00:00.000Z" }, // new
+    { spend: 4, total_tokens: 40, startTime: "not-a-date" },                // unparseable → excluded when filtering
+  ];
+  const cutoff = Date.parse("2026-09-02T05:00:00.000Z");
+  const r = aggregateSpend("coder", rows, cutoff);
+  assert.equal(r.requests, 1);
+  assert.equal(r.tokens, 20);
+  assert.equal(r.spend, 2);
+  // without a cutoff, everything counts (bad startTime doesn't matter)
+  assert.equal(aggregateSpend("coder", rows).requests, 3);
 });
 
 test("formatSpend renders a TOTAL row summing only reachable brains", () => {

@@ -17,16 +17,30 @@ function toNum(v: unknown): number {
   return 0;
 }
 
-// Pure: fold a /spend/logs array into one brain's totals.
-export function aggregateSpend(brain: string, rows: unknown): BrainSpend {
+// Parse a `--since` window (`90s` `30m` `1h` `7d`) into milliseconds. Throws on bad input.
+export function sinceMs(w: string): number {
+  const m = /^(\d+)\s*([smhd])$/.exec(w.trim());
+  if (!m) throw new Error(`--since: use <n><s|m|h|d> (e.g. 1h, 30m, 7d), got '${w}'`);
+  const unit = { s: 1000, m: 60000, h: 3600000, d: 86400000 }[m[2] as "s" | "m" | "h" | "d"];
+  return Number(m[1]) * unit;
+}
+
+// Pure: fold a /spend/logs array into one brain's totals. When cutoffMs is set, only rows
+// whose startTime is at/after it are counted (used by `bmux spend --since`).
+export function aggregateSpend(brain: string, rows: unknown, cutoffMs?: number): BrainSpend {
   if (!Array.isArray(rows)) return { brain, ok: false, requests: 0, tokens: 0, spend: 0, note: "unexpected response" };
-  let spend = 0, tokens = 0;
+  let spend = 0, tokens = 0, requests = 0;
   for (const r of rows) {
     const o = (r ?? {}) as Record<string, unknown>;
+    if (cutoffMs != null) {
+      const t = Date.parse(String(o.startTime ?? ""));
+      if (!Number.isFinite(t) || t < cutoffMs) continue;
+    }
     spend += toNum(o.spend);
     tokens += toNum(o.total_tokens);
+    requests++;
   }
-  return { brain, ok: true, requests: rows.length, tokens, spend };
+  return { brain, ok: true, requests, tokens, spend };
 }
 
 function usd(n: number): string {

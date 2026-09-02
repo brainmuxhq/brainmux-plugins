@@ -106,7 +106,9 @@
 
 **Yayın/sertleştirme:**
 - ✅ Multi-arch mirror: `ghcr.io/brainmuxhq/brainmux-litellm` (amd64+arm64), IMAGE_REF = manifest-list `sha256:693d839d…`.
-- ✅ Version **0.1.12** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.12).
+- ✅ Version **0.1.13** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.13).
+  (0.1.13: feedback backlog batch — `bmux spend --since 1h|30m|7d` (startTime pencere filtresi) ·
+   `bmux install-shim` (sürüm-agnostik `~/.local/bin/bmux` launcher, sort -V + CLAUDE_CONFIG_DIR → non-interactive shell'de çalışır).)
   (0.1.12: canlı doğrulama — `--allow-tools` permission-duvarını kaldırıyor (permission_denials=[], --yolo'suz brave
    yüklü+izinli) AMA ucuz model aracı atlayıp hafızadan uydurabiliyor → delege skill'e "aracı prompt'ta ZORLA +
    tool-call gerçekten oldu mu doğrula (--stream 🔧 / boş ↳)" notu.)

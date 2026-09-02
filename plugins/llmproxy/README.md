@@ -51,9 +51,10 @@ bmux config add-brain <name> <port> <model> [providerKey]
 bmux config remove-brain <name> | set-model <name> <model>
 bmux config add-key <ENV_VAR> [value] | list
 bmux test                                   smoke every brain via /v1/messages
-bmux spend                                  per-brain requests / tokens / spend
+bmux spend [--since 1h|30m|7d]              per-brain requests / tokens / spend (--since scopes a window)
 bmux models [query] | --use-cases | --json  browse the live OpenRouter catalog
 bmux statusline install [--force]           enable the Claude Code status line
+bmux install-shim [--force]                 put a version-agnostic bmux on ~/.local/bin (any shell)
 ```
 
 ## Pick a model (live)

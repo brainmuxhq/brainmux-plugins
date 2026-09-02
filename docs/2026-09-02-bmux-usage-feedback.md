@@ -15,19 +15,23 @@ the code; each item marked DONE (with version), DEFER (with reason), or BACKLOG.
   `--mcp --allow-tools brave` + cite, or verify), `--stream` for observability, and
   sequential/low-concurrency for quality.
 
+## Done — v0.1.13
+- **`bmux spend --since <window>`** (`1h`/`30m`/`7d`) — scope the roll-up to a recent window
+  (rows filtered by `startTime`), e.g. this session's cost.
+- **`bmux install-shim`** — write a version-agnostic POSIX-sh launcher to `~/.local/bin/bmux`
+  that resolves the highest installed llmproxy version at run time (honors `CLAUDE_CONFIG_DIR`),
+  so `bmux` survives updates and works from non-interactive shells. Fixes the "command not
+  found / path changed 0.1.5→0.1.10" friction.
+
 ## Deferred (with reason)
 - **spawn timeout / heartbeat** — a safe default risks killing legitimate long delegates;
   `--stream` already surfaces progress. Revisit as an opt-in `--timeout`.
 - **auto concurrency-cap** — separate `bmux` processes; a cross-process cap needs a
   lockfile/semaphore in `~/.brainmux` (over-engineering for a single-user CLI). Documented
   the sequential guidance instead.
-- **stable PATH shim (`~/.local/bin/bmux`)** — version-pathed plugin cache; a symlink goes
-  stale on update. Needs a version-agnostic launcher; Claude Code already puts the active bin
-  on PATH for interactive sessions. Revisit as `bmux install-shim`.
 
 ## Backlog (features)
 - **`--verify` / grounding-mode** — auto web-cross-check each factual claim.
-- **`bmux spend --since`** — per-session / per-delegate cost.
 - **retry / degrade-detection** — detect garbled (rate-limited) output and re-run.
 - **prompt-template library** — ready-made `audit` / `review` / `drift-scan` delegate tasks.
 - **`--json` strict schema** — guarantee `{brain, tokens, cost, result}` (today it passes the
