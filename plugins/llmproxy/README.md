@@ -75,6 +75,7 @@ bmux delegate coder --write -C ./scratch "implement the spec in SPEC.md"   # edi
 bmux delegate coder --stream "find and list every TODO in src/"           # live progress line
 bmux delegate coder --mcp "read the react docs via context7 and summarize hooks"  # opt-in MCP
 bmux delegate dsflash --allow-tools mcp__brave-search__brave_web_search "verify X, cite source"  # grounded, no --yolo
+bmux delegate deep --verify "which of these 5 regulations are still in force?"  # draft → web-check each claim
 ```
 Delegated brains run headless on the pay-as-you-go meter. Opus stays the orchestrator and
 **verifies** their output — see the `delegate` skill. `--stream` (or `-v`) shows a single

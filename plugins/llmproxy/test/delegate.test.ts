@@ -88,6 +88,14 @@ test("--allow-tools with only non-MCP tools does NOT auto-enable MCP", () => {
   assert.ok(buildClaudeArgs(opts).includes("--strict-mcp-config"));
 });
 
+test("--verify is off by default; the flag turns it on (doesn't leak into claude args)", () => {
+  assert.equal(parseDelegateArgs(["deep", "task"]).opts.verify, false);
+  const { opts } = parseDelegateArgs(["deep", "--verify", "check these facts"]);
+  assert.equal(opts.verify, true);
+  assert.equal(opts.task, "check these facts");
+  assert.ok(!buildClaudeArgs(opts).includes("--verify"), "--verify is a bmux-level flag, not a claude arg");
+});
+
 test("--stream builds stream-json + --verbose (not the plain output-format)", () => {
   const { opts } = parseDelegateArgs(["coder", "--stream", "do it"]);
   const args = buildClaudeArgs(opts);

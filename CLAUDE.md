@@ -106,7 +106,9 @@
 
 **Yayın/sertleştirme:**
 - ✅ Multi-arch mirror: `ghcr.io/brainmuxhq/brainmux-litellm` (amd64+arm64), IMAGE_REF = manifest-list `sha256:693d839d…`.
-- ✅ Version **0.1.14** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.14).
+- ✅ Version **0.1.15** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.15).
+  (0.1.15: `bmux delegate --verify` (opt-in) — iki-geçiş: taslak → grounded doğrulama (brave default, agent aracı seçer/sorabilir)
+   her iddiayı `✅ kaynak URL`/`⚠ kaynak yok` işaretler. Canlı doğrulandı (Node LTS nüansı yakalandı). ~2x maliyet, sadece kullanınca.)
   (0.1.14: `bmux delegate --json` katı şema — `{brain,ok,result,input_tokens,output_tokens,num_turns,duration_ms,cost_usd_estimate}` (claude zarfından reshape; cost "estimate" — opak model, `bmux spend` yetkili).)
   (0.1.13: feedback backlog batch — `bmux spend --since 1h|30m|7d` (startTime pencere filtresi) ·
    `bmux install-shim` (sürüm-agnostik `~/.local/bin/bmux` launcher, sort -V + CLAUDE_CONFIG_DIR → non-interactive shell'de çalışır).)

@@ -74,6 +74,18 @@ An `mcp__…` name in `--allow-tools` implies `--mcp` (the server must load to b
 `--allow-tools` also works for built-ins (e.g. `--allow-tools Bash` to let an analyze worker
 run a command). Prefer this narrow grant over `--yolo` for grounded/web tasks.
 
+## `--verify` — draft, then grounded fact-check
+`--verify` (opt-in) runs the task, then a **second grounded pass** that forces the grounding
+tool on each factual claim of the draft and marks it `✅ <claim> — <url>` or `⚠ <claim> — no
+source`. Output = draft + a verification section. Costs ~2 passes (only when you pass it).
+Default grounding tool is brave web-search; as the orchestrator you may instead point it at a
+direct URL fetch or context7 (library docs) for the task, or ask the user. Use it for
+factual/regulatory answers where a fabricated claim is costly.
+
+```sh
+bmux delegate deep --verify "which of these 5 regulations are still in force?"
+```
+
 ## Grounding — cheap brains invent facts
 A cheap brain with **no web access confidently fabricates** factual claims (regulation names,
 "X was repealed", library APIs). It is strong on *bounded, calibrated* work (one-file audit,

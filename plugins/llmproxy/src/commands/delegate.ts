@@ -15,13 +15,14 @@ export interface DelegateOpts {
   stream: boolean;
   mcp: boolean; // pass the host's MCP servers through to the worker (default off — see buildClaudeArgs)
   allowTools: string[]; // extra tools auto-allowed headless (e.g. an MCP tool) so it needn't fall back to --yolo
+  verify: boolean; // opt-in: after the draft, run a grounded pass that fact-checks each claim
   task: string;
 }
 
 export function parseDelegateArgs(argv: string[], stdin?: string): { brain: string; opts: DelegateOpts } {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], task: "" };
+  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, task: "" };
   const rest = argv.slice(1);
   const parts: string[] = []; // bare positional words → joined, so an unquoted task isn't silently truncated to its last word
   for (let i = 0; i < rest.length; i++) {
@@ -32,6 +33,7 @@ export function parseDelegateArgs(argv: string[], stdin?: string): { brain: stri
     else if (a === "--stream" || a === "-v" || a === "--verbose") opts.stream = true;
     else if (a === "--mcp" || a === "--with-mcp") opts.mcp = true;
     else if (a === "--allow-tools" || a === "--allowed-tools") { opts.allowTools = (rest[++i] ?? "").split(",").map((s) => s.trim()).filter(Boolean); }
+    else if (a === "--verify") opts.verify = true;
     else if (a === "-C") { opts.workdir = rest[++i] ?? "."; }
     else if (a === "-") { opts.task = stdin ?? ""; }
     else if (a === "--") { opts.task = rest.slice(i + 1).join(" "); break; }
@@ -247,6 +249,45 @@ function runStreamed(brain: string, opts: DelegateOpts, childEnv: NodeJS.Process
   });
 }
 
+// Default grounding tool for --verify. The orchestrator may override per task (fetch/context7);
+// the CLI default is open web search.
+const GROUNDING_TOOL = "mcp__brave-search__brave_web_search";
+
+function draftFromJson(raw: string): string | null {
+  try {
+    const o = JSON.parse(raw.trim());
+    return typeof o?.result === "string" && o.result.trim() ? o.result : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * --verify: two passes. (1) run the task, capturing the draft; (2) run a grounded pass that
+ * forces the grounding tool to fact-check each claim of the draft. Prints draft + verification.
+ */
+async function runVerify(brain: string, opts: DelegateOpts, childEnv: NodeJS.ProcessEnv): Promise<number> {
+  // Pass 1 — draft (capture via JSON; keep the user's mode/mcp/allowTools/-C).
+  const r1 = spawnSync("claude", buildClaudeArgs({ ...opts, verify: false, stream: false, outfmt: "json" }), {
+    cwd: opts.workdir, stdio: ["ignore", "pipe", "pipe"], encoding: "utf8", env: childEnv,
+  });
+  if (r1.stderr) process.stderr.write(cleanStderr(r1.stderr));
+  const draft = draftFromJson(r1.stdout ?? "");
+  if (!draft) { process.stderr.write("delegate --verify: draft pass returned no result\n"); return 1; }
+  process.stdout.write(`${draft}\n\n--- verification (grounded via ${GROUNDING_TOOL}) ---\n`);
+
+  // Pass 2 — ground each claim. Force the tool (cheap models skip it and answer from memory).
+  const vTask =
+    `Fact-check the DRAFT below. For EACH factual claim you MUST call ${GROUNDING_TOOL} — do NOT rely on memory. ` +
+    `Output one terse line per claim: "✅ <claim> — <source URL you fetched>" if confirmed, or ` +
+    `"⚠ <claim> — no source found" if not. Do not restate unverified claims as fact.\n\nDRAFT:\n${draft}`;
+  const p2: DelegateOpts = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, task: vTask };
+  if (opts.stream) return runStreamed(brain, p2, childEnv);
+  const r2 = spawnSync("claude", buildClaudeArgs(p2), { cwd: opts.workdir, stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: childEnv });
+  if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
+  return r2.status ?? 1;
+}
+
 export async function runDelegate(argv: string[], env: NodeJS.ProcessEnv = process.env): Promise<number> {
   if (env.DELEGATE_DEPTH) {
     process.stderr.write("delegate: refusing to nest (a delegated worker cannot delegate).\n");
@@ -257,11 +298,12 @@ export async function runDelegate(argv: string[], env: NodeJS.ProcessEnv = proce
   const { brain, opts } = parseDelegateArgs(argv, stdin);
   if (!fs.existsSync(opts.workdir)) { process.stderr.write(`delegate: -C dir '${opts.workdir}' not found\n`); return 1; }
   const plan = planLaunch(brain, env); // validates brain against manifest + resolves key/port
-  // Echo the outgoing config so you always know what went out (brain · mode · mcp state).
-  process.stderr.write(`delegate: ${brain} · ${opts.mode} · mcp ${opts.mcp ? "on" : "off"}\n`);
+  // Echo the outgoing config so you always know what went out (brain · mode · mcp · verify).
+  process.stderr.write(`delegate: ${brain} · ${opts.mode} · mcp ${opts.mcp ? "on" : "off"}${opts.verify ? " · verify" : ""}\n`);
   if (opts.mode === "yolo") process.stderr.write(`delegate: ⚠ --yolo — '${brain}' runs with NO permission checks in '${opts.workdir}'.\n`);
   const childEnv = { ...env, DELEGATE_DEPTH: "1", ANTHROPIC_BASE_URL: plan.base, ANTHROPIC_API_KEY: plan.apiKey };
 
+  if (opts.verify) return runVerify(brain, opts, childEnv);
   if (opts.stream) return runStreamed(brain, opts, childEnv);
 
   if (opts.outfmt === "json") {

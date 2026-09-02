@@ -11787,7 +11787,7 @@ var GUARD = "You are a DELEGATED worker brain invoked by an orchestrator. Do EXA
 function parseDelegateArgs(argv, stdin) {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], task: "" };
+  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, task: "" };
   const rest = argv.slice(1);
   const parts = [];
   for (let i = 0; i < rest.length; i++) {
@@ -11799,7 +11799,8 @@ function parseDelegateArgs(argv, stdin) {
     else if (a === "--mcp" || a === "--with-mcp") opts.mcp = true;
     else if (a === "--allow-tools" || a === "--allowed-tools") {
       opts.allowTools = (rest[++i] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-    } else if (a === "-C") {
+    } else if (a === "--verify") opts.verify = true;
+    else if (a === "-C") {
       opts.workdir = rest[++i] ?? ".";
     } else if (a === "-") {
       opts.task = stdin ?? "";
@@ -11974,6 +11975,42 @@ function runStreamed(brain, opts, childEnv) {
     });
   });
 }
+var GROUNDING_TOOL = "mcp__brave-search__brave_web_search";
+function draftFromJson(raw) {
+  try {
+    const o = JSON.parse(raw.trim());
+    return typeof o?.result === "string" && o.result.trim() ? o.result : null;
+  } catch {
+    return null;
+  }
+}
+async function runVerify(brain, opts, childEnv) {
+  const r1 = spawnSync3("claude", buildClaudeArgs({ ...opts, verify: false, stream: false, outfmt: "json" }), {
+    cwd: opts.workdir,
+    stdio: ["ignore", "pipe", "pipe"],
+    encoding: "utf8",
+    env: childEnv
+  });
+  if (r1.stderr) process.stderr.write(cleanStderr(r1.stderr));
+  const draft = draftFromJson(r1.stdout ?? "");
+  if (!draft) {
+    process.stderr.write("delegate --verify: draft pass returned no result\n");
+    return 1;
+  }
+  process.stdout.write(`${draft}
+
+--- verification (grounded via ${GROUNDING_TOOL}) ---
+`);
+  const vTask = `Fact-check the DRAFT below. For EACH factual claim you MUST call ${GROUNDING_TOOL} \u2014 do NOT rely on memory. Output one terse line per claim: "\u2705 <claim> \u2014 <source URL you fetched>" if confirmed, or "\u26A0 <claim> \u2014 no source found" if not. Do not restate unverified claims as fact.
+
+DRAFT:
+${draft}`;
+  const p2 = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, task: vTask };
+  if (opts.stream) return runStreamed(brain, p2, childEnv);
+  const r2 = spawnSync3("claude", buildClaudeArgs(p2), { cwd: opts.workdir, stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: childEnv });
+  if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
+  return r2.status ?? 1;
+}
 async function runDelegate(argv, env = process.env) {
   if (env.DELEGATE_DEPTH) {
     process.stderr.write("delegate: refusing to nest (a delegated worker cannot delegate).\n");
@@ -11988,11 +12025,12 @@ async function runDelegate(argv, env = process.env) {
     return 1;
   }
   const plan = planLaunch(brain, env);
-  process.stderr.write(`delegate: ${brain} \xB7 ${opts.mode} \xB7 mcp ${opts.mcp ? "on" : "off"}
+  process.stderr.write(`delegate: ${brain} \xB7 ${opts.mode} \xB7 mcp ${opts.mcp ? "on" : "off"}${opts.verify ? " \xB7 verify" : ""}
 `);
   if (opts.mode === "yolo") process.stderr.write(`delegate: \u26A0 --yolo \u2014 '${brain}' runs with NO permission checks in '${opts.workdir}'.
 `);
   const childEnv = { ...env, DELEGATE_DEPTH: "1", ANTHROPIC_BASE_URL: plan.base, ANTHROPIC_API_KEY: plan.apiKey };
+  if (opts.verify) return runVerify(brain, opts, childEnv);
   if (opts.stream) return runStreamed(brain, opts, childEnv);
   if (opts.outfmt === "json") {
     const r2 = spawnSync3("claude", buildClaudeArgs(opts), {
@@ -12615,10 +12653,11 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
   bmux up | down | restart        manage the brain stack (regenerates from brains.yaml)
   bmux ps | logs [svc] | health   inspect the stack
   bmux <brain> [claude args...]   launch Claude Code on a brain (e.g. bmux chat)
-  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--allow-tools t1,t2] "<task>"
+  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--allow-tools t1,t2] [--verify] "<task>"
                                   (--stream shows a live progress line: \u23F3 brain \xB7 5/34 \xB7 <step>)
                                   (--mcp passes host MCP servers; --allow-tools pre-allows tools headless \u2014 e.g.
                                    --allow-tools mcp__brave-search__brave_web_search for grounded web search, no --yolo)
+                                  (--verify: draft, then a grounded pass web-checks each claim \u2192 \u2705/\u26A0 with sources)
   bmux config add-brain <name> <port> <model> [providerKey]
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list

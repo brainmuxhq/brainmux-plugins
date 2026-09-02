@@ -36,8 +36,14 @@ the code; each item marked DONE (with version), DEFER (with reason), or BACKLOG.
   (reshaped from the worker's `claude --output-format json`; cost is labeled an estimate since
   an opaque brain model can't be priced reliably — `bmux spend` is authoritative).
 
+## Done — v0.1.15
+- **`--verify` / grounding-mode** — opt-in two-pass: draft the task, then a grounded pass that
+  forces the grounding tool (default `brave_web_search`) to web-check each claim → `✅/⚠` with
+  sources. Works as a manual flag or agent-shaped from NL; the grounding tool is agent-decided
+  per task (brave / direct fetch / context7) and may be confirmed with the user. ~2x cost, only
+  when used. Verified live (caught a "Node 26 lands Oct 2026" nuance with real source URLs).
+
 ## Backlog (features)
-- **`--verify` / grounding-mode** — auto web-cross-check each factual claim.
 - **retry / degrade-detection** — detect garbled (rate-limited) output and re-run.
 - **prompt-template library** — ready-made `audit` / `review` / `drift-scan` delegate tasks.
 - **brain `reliability: memory|grounded` label** — surface which brains have web grounding.
