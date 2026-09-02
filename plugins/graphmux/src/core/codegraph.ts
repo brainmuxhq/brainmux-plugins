@@ -77,7 +77,7 @@ function have(cmd: string): boolean {
   return spawnSync(cmd, ["--version"], { stdio: "ignore" }).status === 0;
 }
 
-// Download (curl), VERIFY the SHA256 against the pinned value, then extract (tar/unzip).
+// Download (curl), VERIFY the SHA256 against the pinned value, then extract (tar).
 // Shelling to system tools is install-time only and consistent with how llmproxy shells to
 // docker/claude — the bundle itself stays dependency-free. Returns the resolved binary path.
 export function install(paths: Paths, log: (s: string) => void = () => {}): string {
@@ -86,7 +86,9 @@ export function install(paths: Paths, log: (s: string) => void = () => {}): stri
   const dest = binPath(cacheDir, key);
   if (fs.existsSync(dest)) return dest;
 
+  // Check BOTH tools before the ~60MB download, so a missing extractor fails fast (not after the fetch).
   if (!have("curl")) throw new Error("graphmux: `curl` not found — needed to download the CodeGraph binary");
+  if (!have("tar")) throw new Error("graphmux: `tar` not found — needed to extract the CodeGraph binary");
   fs.mkdirSync(cacheDir, { recursive: true });
   const archive = path.join(cacheDir, assetName(key));
 
@@ -108,14 +110,12 @@ export function install(paths: Paths, log: (s: string) => void = () => {}): stri
   }
   log(`✓ sha256 ${CODEGRAPH_SHA256[key].slice(0, 12)}… verified`);
 
-  if (key.startsWith("win32-")) {
-    if (spawnSync("unzip", ["-oq", archive, "-d", cacheDir], { stdio: "inherit" }).status !== 0) {
-      throw new Error("graphmux: unzip failed (is `unzip` installed?)");
-    }
-  } else {
-    if (spawnSync("tar", ["xzf", archive, "-C", cacheDir], { stdio: "inherit" }).status !== 0) {
-      throw new Error("graphmux: tar extract failed");
-    }
+  // Extract with tar on every platform: GNU tar handles .tar.gz (Linux); bsdtar (macOS + Windows 10+)
+  // auto-detects .zip — so no separate `unzip` dependency. Each platform only ever gets its own asset
+  // type and its tar handles it.
+  const tarArgs = key.startsWith("win32-") ? ["-xf", archive, "-C", cacheDir] : ["xzf", archive, "-C", cacheDir];
+  if (spawnSync("tar", tarArgs, { stdio: "inherit" }).status !== 0) {
+    throw new Error(`graphmux: extract failed (tar) for ${assetName(key)}`);
   }
   fs.rmSync(archive, { force: true });
   if (!fs.existsSync(dest)) throw new Error(`graphmux: extracted but binary not found at ${dest}`);

@@ -79,6 +79,7 @@ function install(paths, log = () => {
   const dest = binPath(cacheDir, key);
   if (fs.existsSync(dest)) return dest;
   if (!have("curl")) throw new Error("graphmux: `curl` not found \u2014 needed to download the CodeGraph binary");
+  if (!have("tar")) throw new Error("graphmux: `tar` not found \u2014 needed to extract the CodeGraph binary");
   fs.mkdirSync(cacheDir, { recursive: true });
   const archive = path2.join(cacheDir, assetName(key));
   const urls = [MIRROR_BASE ? assetUrl(key, "mirror") : "", assetUrl(key, "upstream")].filter(Boolean);
@@ -99,14 +100,9 @@ function install(paths, log = () => {
     throw new Error(`graphmux: SHA256 mismatch for ${assetName(key)} \u2014 refusing to use it`);
   }
   log(`\u2713 sha256 ${CODEGRAPH_SHA256[key].slice(0, 12)}\u2026 verified`);
-  if (key.startsWith("win32-")) {
-    if (spawnSync("unzip", ["-oq", archive, "-d", cacheDir], { stdio: "inherit" }).status !== 0) {
-      throw new Error("graphmux: unzip failed (is `unzip` installed?)");
-    }
-  } else {
-    if (spawnSync("tar", ["xzf", archive, "-C", cacheDir], { stdio: "inherit" }).status !== 0) {
-      throw new Error("graphmux: tar extract failed");
-    }
+  const tarArgs = key.startsWith("win32-") ? ["-xf", archive, "-C", cacheDir] : ["xzf", archive, "-C", cacheDir];
+  if (spawnSync("tar", tarArgs, { stdio: "inherit" }).status !== 0) {
+    throw new Error(`graphmux: extract failed (tar) for ${assetName(key)}`);
   }
   fs.rmSync(archive, { force: true });
   if (!fs.existsSync(dest)) throw new Error(`graphmux: extracted but binary not found at ${dest}`);
