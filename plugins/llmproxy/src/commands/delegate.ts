@@ -23,9 +23,10 @@ const MEMORY_TOOLS = [
   "mcp__graphmux__codegraph_files",
 ];
 const MEMORY_NUDGE =
-  "Before answering, GROUND yourself in the code graph: use the codegraph_* tools " +
-  "(codegraph_explore / codegraph_callers / codegraph_callees / codegraph_impact / codegraph_node) " +
-  "to find the real symbols, callers, and impact. Do NOT guess file paths or symbol names.";
+  "GROUND every claim in the code graph before answering. For blast-radius or \"what calls / what breaks\", " +
+  "call codegraph_impact (NOT the fuzzy explore) and list its FULL output verbatim — do not summarize or drop rows. " +
+  "Do NOT guess file paths or symbol names. Some wiring is INVISIBLE to the graph — verify THESE with grep instead: " +
+  "CommonJS `exports.X = () => {}` handlers, ORM calls (prisma.<model>), queue enqueue↔worker pairs, middleware chains.";
 
 export interface DelegateOpts {
   mode: "analyze" | "write" | "yolo";

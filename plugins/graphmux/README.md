@@ -21,9 +21,13 @@ own only the `gmux` control layer. **Telemetry is forced off** (`DO_NOT_TRACK=1`
 ```
 gmux install                 download + SHA256-verify the pinned CodeGraph binary, write the MCP config
 gmux index [path]            build/rebuild the code graph for a repo
-gmux status [path]           index status (files, nodes, edges, staleness)
-gmux sync [path]             sync changes since last index
-gmux -- <codegraph args>     raw passthrough (explore, callers, callees, impact, node, files, …)
+gmux status | sync [path]    index status / sync changes since last index
+gmux callers <sym>           who calls <sym>   (auto --limit 1000 — avoids the silent cap)
+gmux impact <sym>            blast radius of changing <sym>  (transitive, no cap — prefer for "what breaks")
+gmux node <sym>              one symbol's source + caller/callee trail  (auto --limit 1000)
+gmux explore "<query>"       relevant symbols + call paths + verbatim source, one shot
+gmux callees | files [args]  more graph queries
+gmux -- <codegraph args>     raw passthrough (no smart defaults — you manage --limit)
 ```
 
 ## Use it
@@ -39,9 +43,9 @@ graph tools, so the delegate queries the graph before acting.
 
 Manual grounding, no delegate:
 ```
-gmux -- explore "how does auth work"
-gmux -- callers getPort
-gmux -- impact getPort
+gmux explore "how does auth work"
+gmux callers getPort
+gmux impact getPort
 ```
 
 ## Known limits (dogfooded on a 26k-node repo)
@@ -49,8 +53,9 @@ gmux -- impact getPort
 It's a **static** call-graph — great for synchronous, lexically-visible calls; blind to some
 dynamic/framework wiring. Use it as a fast pre-scan a human/Opus verifies, not a blind source of truth.
 
-- **`callers` / `node` silently cap at `--limit 20`** (no "…N more"; JSON + the MCP tool inherit it).
-  Always pass `--limit 500`; for blast-radius use **`impact`** (no cap, transitive, more complete).
+- **CodeGraph silently caps `callers`/`node` at `--limit 20`.** The first-class `gmux callers`/`gmux node`
+  verbs inject `--limit 1000` for you; only raw `gmux -- callers …` and the delegate MCP tool still cap —
+  there pass `--limit`, or use **`impact`** (no cap, transitive, more complete).
 - **"No callers" ≠ dead code** — queue workers, Next.js entry points, event handlers and registry-lazy
   imports look call-less. Check for a framework entry before deleting.
 - **Ripgrep, don't trust the graph, for:** CommonJS `exports.X = () => {}` handlers, ORM calls

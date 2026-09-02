@@ -150,10 +150,27 @@ var VERB = {
   status: ["status"],
   sync: ["sync"]
 };
+var GRAPH_VERBS = /* @__PURE__ */ new Set([
+  "index",
+  "status",
+  "sync",
+  "callers",
+  "callees",
+  "node",
+  "impact",
+  "explore",
+  "files",
+  "query",
+  "context"
+]);
+var SMART_LIMITED = /* @__PURE__ */ new Set(["callers", "node"]);
+var DEFAULT_LIMIT = "1000";
 function runGraph(sub, argv, env = process.env) {
   const bin = resolveBinary(resolvePaths(env));
   const pre = VERB[sub] ?? [sub];
-  return runCodegraph(bin, [...pre, ...argv], env);
+  const hasLimit = argv.some((a) => a === "--limit" || a.startsWith("--limit="));
+  const extra = SMART_LIMITED.has(sub) && !hasLimit ? [...argv, "--limit", DEFAULT_LIMIT] : argv;
+  return runCodegraph(bin, [...pre, ...extra], env);
 }
 function runRaw(argv, env = process.env) {
   const bin = resolveBinary(resolvePaths(env));
@@ -166,13 +183,16 @@ var HELP = `gmux \u2014 brainmux/graphmux CLI (local codebase memory; vendors Co
   gmux install                    download + SHA256-verify the pinned CodeGraph binary (telemetry off),
                                   then write the "graphmux" MCP config for delegates / Claude Code
   gmux index [path]               build/rebuild the code graph for a repo
-  gmux status [path]              show index status (files, nodes, edges, staleness)
-  gmux sync [path]                sync changes since last index
-  gmux -- <codegraph args...>     raw passthrough to the vendored engine (explore, callers, impact, \u2026)
+  gmux status | sync [path]       index status / sync changes since last index
+  gmux callers <sym>              who calls <sym>  (auto --limit 1000 \u2014 avoids the silent cap)
+  gmux impact <sym>               blast radius of changing <sym>  (transitive, no cap \u2014 prefer for "what breaks")
+  gmux node <sym>                 one symbol's source + caller/callee trail  (auto --limit 1000)
+  gmux explore "<query>"          relevant symbols + call paths + verbatim source, one shot
+  gmux callees | files [args]     more graph queries
+  gmux -- <codegraph args...>     raw passthrough (no smart defaults) to the vendored engine
 
   then: bmux delegate <brain> --memory "<task>"   (llmproxy grounds the cheap brain on the graph)
 `;
-var PASSTHRU = /* @__PURE__ */ new Set(["index", "status", "sync"]);
 async function main(argv, env = process.env) {
   const cmd = argv[0];
   const rest = argv.slice(1);
@@ -183,7 +203,7 @@ async function main(argv, env = process.env) {
   try {
     if (cmd === "install") return runInstall(rest, env);
     if (cmd === "--") return runRaw(rest, env);
-    if (PASSTHRU.has(cmd)) return runGraph(cmd, rest, env);
+    if (GRAPH_VERBS.has(cmd)) return runGraph(cmd, rest, env);
     process.stderr.write(`gmux: unknown command '${cmd}'
 
 ${HELP}`);

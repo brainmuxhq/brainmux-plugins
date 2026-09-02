@@ -1,6 +1,6 @@
 {
   "name": "@brainmux/graphmux",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Local, deterministic codebase memory (call-graph MCP) for Claude Code and bmux delegates — thin wrapper over the vendored CodeGraph core.",
   "license": "MIT",
   "type": "module",

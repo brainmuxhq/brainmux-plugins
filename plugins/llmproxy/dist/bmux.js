@@ -11831,7 +11831,7 @@ var MEMORY_TOOLS = [
   "mcp__graphmux__codegraph_search",
   "mcp__graphmux__codegraph_files"
 ];
-var MEMORY_NUDGE = "Before answering, GROUND yourself in the code graph: use the codegraph_* tools (codegraph_explore / codegraph_callers / codegraph_callees / codegraph_impact / codegraph_node) to find the real symbols, callers, and impact. Do NOT guess file paths or symbol names.";
+var MEMORY_NUDGE = 'GROUND every claim in the code graph before answering. For blast-radius or "what calls / what breaks", call codegraph_impact (NOT the fuzzy explore) and list its FULL output verbatim \u2014 do not summarize or drop rows. Do NOT guess file paths or symbol names. Some wiring is INVISIBLE to the graph \u2014 verify THESE with grep instead: CommonJS `exports.X = () => {}` handlers, ORM calls (prisma.<model>), queue enqueue\u2194worker pairs, middleware chains.';
 function parseDelegateArgs(argv, stdin) {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");

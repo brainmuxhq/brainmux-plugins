@@ -27,11 +27,13 @@ ${CLAUDE_PLUGIN_ROOT}/bin/gmux -- <args>         # raw query: explore / callers 
 First use needs `gmux install` once (fetches the pinned binary; needs `curl` + `tar`).
 
 ## Answer code-structure questions directly
+First-class verbs (no `--` needed); `callers`/`node` auto-inject `--limit 1000` so the silent cap can't bite:
 ```sh
-gmux -- explore "how does auth work"      # relevant symbols + call paths + blast-radius + verbatim source, one shot
-gmux -- callers getPort --limit 500       # every function that calls getPort — ALWAYS pass a high --limit (see below)
-gmux -- impact getPort                    # what changing getPort affects (blast radius) — no cap, transitive; PREFER this
-gmux -- node runSpend --limit 500         # one symbol's source + caller/callee trail
+gmux explore "how does auth work"     # relevant symbols + call paths + verbatim source, one shot
+gmux callers getPort                   # who calls getPort  (auto --limit 1000)
+gmux impact getPort                    # blast radius of changing getPort  (transitive, no cap — PREFER for "what breaks")
+gmux node getPort                      # one symbol's source + caller/callee trail  (auto --limit 1000)
+gmux -- <raw codegraph args>           # escape hatch: raw passthrough, NO smart defaults (you manage --limit)
 ```
 Run these when the user asks "who calls X", "what breaks if I change Y", "trace this", "map the repo".
 Ground your own edits with `impact` before changing a widely-used symbol.
@@ -40,9 +42,10 @@ Ground your own edits with `impact` before changing a widely-used symbol.
 graphmux is a **static** call-graph: excellent for synchronous, lexically-visible calls; blind to
 some dynamic/framework wiring. Follow these or you'll get confidently-wrong answers:
 
-- **`callers`/`node` silently cap at `--limit 20`** (no "…N more" warning; JSON + the MCP tool inherit
-  the cap). A high-fan-in symbol under-counts badly → **always pass `--limit 500`**. For "what breaks
-  if I change X", use **`impact`** instead — it has no cap and is transitive (more complete than `callers`).
+- **CodeGraph silently caps `callers`/`node` at `--limit 20`** (no "…N more"; the MCP tool + `gmux -- callers`
+  inherit it). The first-class `gmux callers`/`gmux node` verbs now inject `--limit 1000` for you, so the
+  silent under-count is handled — but **the raw `gmux -- callers …` and the delegate MCP tool still cap**:
+  there, pass `--limit` or (better) use **`impact`** (no cap, transitive, more complete than `callers`).
 - **"No callers found" ≠ dead code.** Framework/queue entry points look call-less: queue workers,
   Next.js `getServerSideProps`/API routes/page default exports, inline event handlers, registry-lazy
   (`registerX('k', () => import())`). Never delete on "no callers" alone — check for a framework entry.

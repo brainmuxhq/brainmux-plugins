@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { fileURLToPath } from "node:url";
 import { runInstall } from "./commands/install.js";
-import { runGraph, runRaw } from "./commands/graph.js";
+import { runGraph, runRaw, GRAPH_VERBS } from "./commands/graph.js";
 import { CODEGRAPH_VERSION } from "./core/codegraph.js";
 
 const HELP = `gmux — brainmux/graphmux CLI (local codebase memory; vendors CodeGraph v${CODEGRAPH_VERSION})
@@ -9,14 +9,16 @@ const HELP = `gmux — brainmux/graphmux CLI (local codebase memory; vendors Cod
   gmux install                    download + SHA256-verify the pinned CodeGraph binary (telemetry off),
                                   then write the "graphmux" MCP config for delegates / Claude Code
   gmux index [path]               build/rebuild the code graph for a repo
-  gmux status [path]              show index status (files, nodes, edges, staleness)
-  gmux sync [path]                sync changes since last index
-  gmux -- <codegraph args...>     raw passthrough to the vendored engine (explore, callers, impact, …)
+  gmux status | sync [path]       index status / sync changes since last index
+  gmux callers <sym>              who calls <sym>  (auto --limit 1000 — avoids the silent cap)
+  gmux impact <sym>               blast radius of changing <sym>  (transitive, no cap — prefer for "what breaks")
+  gmux node <sym>                 one symbol's source + caller/callee trail  (auto --limit 1000)
+  gmux explore "<query>"          relevant symbols + call paths + verbatim source, one shot
+  gmux callees | files [args]     more graph queries
+  gmux -- <codegraph args...>     raw passthrough (no smart defaults) to the vendored engine
 
   then: bmux delegate <brain> --memory "<task>"   (llmproxy grounds the cheap brain on the graph)
 `;
-
-const PASSTHRU = new Set(["index", "status", "sync"]);
 
 export async function main(argv: string[], env: NodeJS.ProcessEnv = process.env): Promise<number> {
   const cmd = argv[0];
@@ -26,7 +28,7 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv = process.env)
   try {
     if (cmd === "install") return runInstall(rest, env);
     if (cmd === "--") return runRaw(rest, env);
-    if (PASSTHRU.has(cmd)) return runGraph(cmd, rest, env);
+    if (GRAPH_VERBS.has(cmd)) return runGraph(cmd, rest, env);
 
     process.stderr.write(`gmux: unknown command '${cmd}'\n\n${HELP}`);
     return 1;
