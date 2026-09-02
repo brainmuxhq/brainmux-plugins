@@ -80,6 +80,13 @@ clear spec) but must NOT be trusted as a fact-checker. For anything factual: eit
 yourself, or ground the worker with `--mcp --allow-tools mcp__brave-search__brave_web_search`
 and tell it to cite sources. Treat every unsourced factual claim as unverified.
 
+**Availability ≠ use.** Even with the tool allowed, a cheap model often skips it and answers
+from memory anyway (then invents a plausible-looking source URL — observed live). So in the
+task itself, *force* the tool: e.g. "You MUST call `brave_web_search` before answering. Do NOT
+answer from memory. Quote the exact text and the real URL you fetched." A URL in the answer is
+NOT proof it searched — cross-check that a tool call actually happened (`--stream` shows `🔧
+brave_web_search`; an empty `↳` summary means it never called a tool).
+
 ## Concurrency — sequential for quality
 Under heavy concurrency (many parallel `bmux delegate` on one brain) the model degrades and
 rate-limits — garbled/typo output. Run delegates **sequentially or at low concurrency** when

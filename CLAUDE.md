@@ -106,7 +106,10 @@
 
 **Yayın/sertleştirme:**
 - ✅ Multi-arch mirror: `ghcr.io/brainmuxhq/brainmux-litellm` (amd64+arm64), IMAGE_REF = manifest-list `sha256:693d839d…`.
-- ✅ Version **0.1.11** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.11).
+- ✅ Version **0.1.12** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.12).
+  (0.1.12: canlı doğrulama — `--allow-tools` permission-duvarını kaldırıyor (permission_denials=[], --yolo'suz brave
+   yüklü+izinli) AMA ucuz model aracı atlayıp hafızadan uydurabiliyor → delege skill'e "aracı prompt'ta ZORLA +
+   tool-call gerçekten oldu mu doğrula (--stream 🔧 / boş ↳)" notu.)
   (0.1.11: Riskmatik kullanım-geri-bildirimi batch — `bmux delegate --allow-tools <csv>` (headless MCP/tool grounding,
    --yolo'suz; `mcp__…` → --mcp otomatik) · stderr "connectors disabled" gürültüsü filtrelendi (stream+sync) ·
    delegate skill grounding/halüsinasyon + concurrency notları. Roadmap: `docs/2026-09-02-bmux-usage-feedback.md`.)
