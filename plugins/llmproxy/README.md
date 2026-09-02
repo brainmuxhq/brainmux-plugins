@@ -46,7 +46,7 @@ bmux init                                   scaffold ~/.brainmux
 bmux up | down | restart                    manage the stack (regenerates from brains.yaml)
 bmux ps | logs [brain] | health             inspect
 bmux chat | deep | coder [claude args...]   launch Claude Code on a brain (interactive)
-bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] "<task>"  headless one-shot
+bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--verify] [--memory] "<task>"  headless one-shot
 bmux config add-brain <name> <port> <model> [providerKey]
 bmux config remove-brain <name> | set-model <name> <model>
 bmux config add-key <ENV_VAR> [value] | list
@@ -79,7 +79,12 @@ bmux delegate dsflash --allow-tools mcp__brave-search__brave_web_search "verify 
 bmux delegate deep --verify "which of these 5 regulations are still in force?"  # draft → web-check each claim
 bmux delegate coder --template drift-scan -C .   # expand a saved template (built-in or your own)
 bmux delegate dsflash --retry 2 "..."            # auto-retry up to 2x on an empty/failed result
+bmux delegate coder --memory "update every caller of getPort"  # ground on the local code graph (needs graphmux: gmux install)
 ```
+
+`--memory` wires the [graphmux](../graphmux) plugin's local code-graph MCP (deterministic
+call-graph, no embeddings) so the brain queries real symbols/callers/impact instead of guessing.
+Isolated (`--mcp-config` + strict) so it doesn't pull host MCP servers. Install once: `gmux install`.
 Templates: built-ins `audit` · `drift-scan` · `review` · `todo-scan`; add your own with
 `bmux config add-template <name> "<prompt>"` (stored in `~/.brainmux/templates.yaml`), list with
 `bmux config list-templates`.

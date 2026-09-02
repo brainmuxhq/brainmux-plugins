@@ -18,6 +18,10 @@ dist/
 !plugins/llmproxy/dist/
 plugins/llmproxy/dist/*
 !plugins/llmproxy/dist/bmux.js
+# same for the graphmux plugin's shipped bundle
+!plugins/graphmux/dist/
+plugins/graphmux/dist/*
+!plugins/graphmux/dist/gmux.js
 build/
 *.tsbuildinfo
 .npm/

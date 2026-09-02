@@ -3,6 +3,14 @@
 > Global çalışma tarzı `~/.claude/CLAUDE.md`'de (test-önce, direkt/öz, over-engineering yok,
 > yama/paralel-katman yok). Bu dosya **brainmux'a özel** teknik kurallar + karar kaydıdır.
 
+## 🧠 EN BÜYÜK İLKE — brainmux'un işi TAM OLARAK bu
+**Olgun açık-kaynak çekirdekleri al → izole et (container + pin/mirror) → üstüne İNCE wrapper yaz (yalnız BİZİM özelleştirmelerimiz).**
+Çekirdeği **asla yeniden yazmayız.** Biz 2 kişiyiz (Ali + Claude); upstream'in ~100 maintainer'ı çekirdeği geliştirsin. Biz onların çekirdeğini **kendi ihtiyacımıza göre** paketler + özelleştiririz. **"Aynı çekirdek — bizim paketleme + wrapper."** brainmux'un tüm işi budur; her yeni plugin bu kalıptan doğar.
+- **Vendor + pin, FORK ETME.** Sürümü digest/SHA ile pinle + kendi GHCR'ımıza mirror'la → güncellemeleri **biz istediğimizde** alırız (upstream-ölüm sigortası + kontrollü update). MIT → fork yalnız gerçek özelleştirme ihtiyacı çıkarsa, ileride.
+- **Wrapper = ince kontrol katmanı** (kurulum/serve/config, telemetri-off default, bizim komut/araç adları, tuning). Çekirdek mantığı bizim kodumuz değildir.
+- **Örnekler:** `LiteLLM` (Anthropic↔OpenAI çeviri çekirdeği — container + digest-pin + GHCR mirror) · planlanan **kod-belleği** plugin'i (aday çekirdek `CodeGraph`, aynı kalıp).
+- Lisans/notice'ı koru. Detay: `~/.claude/projects/.../memory/vendoring-house-style.md`.
+
 ## Ne bu proje
 **brainmux** = LLM tooling markası + monorepo. Claude Code için plugin ailesi barındırır.
 - **İlk plugin: `llmproxy`** (paket: `llmproxy` / `@brainmux/llmproxy`, komut: `bmux`) —
@@ -31,8 +39,8 @@
 - **Routing = PORT.** Claude Code proxy'ye **opak/hash model id** yollar (test edildi 2026-09-01) → model-adına göre tek-instance routing İMKANSIZ. Beyin ayrımı port ile (bmux `ANTHROPIC_BASE_URL` set eder).
 - **Kontrol paneli:** Claude Code + `bmux` **birincil** (declarative, `brains.yaml`+`.env` SSOT). **LiteLLM UI = gözlem** (spend/log/param) — link ver, tekrar yazma. **Kendi web UI YAZMA.**
 - **Delege disiplini:** ucuz beyin çıktısını Opus **doğrular** (rubber-stamp yok). Task/Agent tool bu beyinlere erişemez (Opus'u miras alır) — sadece `bmux delegate`.
-- **Doğal dil çalıştırma (NL → komut):** kullanıcı bir `bmux`/brainmux işini doğal dille isterse Claude uygun komutu **kendisi Bash'le çalıştırır** (elle yazdırma) ve **ne çalıştırdığını tek satır bildirir** (şeffaflık — sonuç + varsa uyarı).
-  - **Güvenlik riski yoksa → doğrudan koş:** `statusline install`, `spend`, `up|down|restart|ps|health|logs`, `config list|set-model|add-brain|remove-brain`, `models`, `test`.
+- **Doğal dil çalıştırma (NL → komut):** kullanıcı bir `bmux`/`gmux`/brainmux işini doğal dille isterse Claude uygun komutu **kendisi Bash'le çalıştırır** (elle yazdırma) ve **ne çalıştırdığını tek satır bildirir** (şeffaflık — sonuç + varsa uyarı). Aynı politika **tüm brainmux plugin'lerine** uygulanır (llmproxy `bmux`, graphmux `gmux`, sonrakiler).
+  - **Güvenlik riski yoksa → doğrudan koş:** `statusline install`, `spend`, `up|down|restart|ps|health|logs`, `config list|set-model|add-brain|remove-brain`, `models`, `test`; **graphmux:** `gmux install` (SHA-doğrulamalı resmi binary, telemetri kapalı), `gmux index|status|sync`, `gmux -- <sorgu>` (explore/callers/impact).
   - **Riskli/geri-alınamaz/secret/dışa-dönük → önce komutu + etkisini açıkla, onay al:** `delegate --yolo`, `config add-key <değer>` (secret), `statusline install --force` (mevcut ayarı ezer), veri/beyin silen ya da dış servise yazan her iş.
   - **Emin değilsen çalıştırma:** komutu ve ne yapacağını açıkla, kullanıcıya bırak. (En azından komut hakkında bilgi ver.)
 
@@ -107,7 +115,14 @@
 
 **Yayın/sertleştirme:**
 - ✅ Multi-arch mirror: `ghcr.io/brainmuxhq/brainmux-litellm` (amd64+arm64), IMAGE_REF = manifest-list `sha256:693d839d…`.
-- ✅ Version **0.1.18** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.18).
+- ✅ **graphmux — 2. plugin (`@brainmux/graphmux`, komut `gmux`, v0.1.0).** Local kod-graph belleği: CodeGraph
+  çekirdeğini ev-stili vendor'lar (pin v1.6.0 + 6-platform SHA, telemetri `DO_NOT_TRACK` default kapalı, fork YOK),
+  ince wrapper (`gmux install/index/status/sync/--`). MCP server adı **`graphmux`** → `mcp__graphmux__codegraph_*`.
+  `plugins/graphmux/` (clean-arch cli→commands→core, llmproxy aynası), 10 unit + canlı e2e (install→index→callers/impact).
+  Spec `docs/specs/2026-09-02-graphmux-plugin-design.md`. Aday-seçim: Cognee elendi (LLM-extraction stokastik, arXiv 2601.08773),
+  Serena host-native (container'a kötü uyum) → CodeGraph (tek-binary, tree-sitter, auto-sync, MIT). NL-execution `gmux`'a genişledi + graphmux skill.
+- ✅ Version **0.1.19** (llmproxy: `bmux delegate --memory` — graphmux kod-graph MCP'sine grounded, izole `--mcp-config`+strict,
+  host MCP çekmez; ucuz beyin gerçek caller/impact sorar, uydurmaz. Canlı 2x doğrulandı. delegate skill + README güncel.)
   (0.1.18: TIGHT dsflash delege-review fix'leri (loose=%0 gerçek/uydurma vs tight=grounded deneyi) — spend toNum
    string-path `Number.isFinite` ("Infinity"/"1e999" → 0) · aggregateSpend `--since` numeric epoch startTime toleransı.)
   (0.1.17: `bmux delegate --retry [n]` — boş/hata sonuçta otomatik tekrar (net sinyal, fuzzy değil), opt-in+parametrik, non-stream yol.)

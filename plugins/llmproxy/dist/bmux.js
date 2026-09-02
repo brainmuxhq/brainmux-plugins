@@ -11822,10 +11822,20 @@ function saveUserTemplate(paths, name, prompt) {
 
 // src/commands/delegate.ts
 var GUARD = "You are a DELEGATED worker brain invoked by an orchestrator. Do EXACTLY the task, nothing more. Never delegate further. Be concise; return ONLY the result the orchestrator asked for (no preamble, no sign-off).";
+var MEMORY_TOOLS = [
+  "mcp__graphmux__codegraph_explore",
+  "mcp__graphmux__codegraph_callers",
+  "mcp__graphmux__codegraph_callees",
+  "mcp__graphmux__codegraph_impact",
+  "mcp__graphmux__codegraph_node",
+  "mcp__graphmux__codegraph_search",
+  "mcp__graphmux__codegraph_files"
+];
+var MEMORY_NUDGE = "Before answering, GROUND yourself in the code graph: use the codegraph_* tools (codegraph_explore / codegraph_callers / codegraph_callees / codegraph_impact / codegraph_node) to find the real symbols, callers, and impact. Do NOT guess file paths or symbol names.";
 function parseDelegateArgs(argv, stdin) {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", retry: 0, task: "" };
+  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", task: "" };
   const rest = argv.slice(1);
   const parts = [];
   for (let i = 0; i < rest.length; i++) {
@@ -11846,7 +11856,8 @@ function parseDelegateArgs(argv, stdin) {
         opts.retry = Number(nx);
         i++;
       } else opts.retry = 1;
-    } else if (a === "-C") {
+    } else if (a === "--memory") opts.memory = true;
+    else if (a === "-C") {
       opts.workdir = rest[++i] ?? ".";
     } else if (a === "-") {
       opts.task = stdin ?? "";
@@ -11870,6 +11881,7 @@ function buildClaudeArgs(opts) {
     if (opts.allowTools.length) args.push("--allowedTools", ...opts.allowTools);
   } else args.push("--dangerously-skip-permissions");
   if (!opts.mcp) args.push("--strict-mcp-config");
+  if (opts.memoryMcpConfig) args.push("--mcp-config", opts.memoryMcpConfig);
   return args;
 }
 function initProgress() {
@@ -12051,7 +12063,7 @@ async function runVerify(brain, opts, childEnv) {
 
 DRAFT:
 ${draft}`;
-  const p2 = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", retry: 0, task: vTask };
+  const p2 = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", task: vTask };
   if (opts.stream) return runStreamed(brain, p2, childEnv);
   const r2 = spawnSync3("claude", buildClaudeArgs(p2), { cwd: opts.workdir, stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: childEnv });
   if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
@@ -12097,8 +12109,22 @@ ${opts.task}` : tpl;
 `);
     return 1;
   }
+  if (opts.memory) {
+    const cfg = path4.join(resolvePaths(env).generatedDir, "graphmux-mcp.json");
+    if (!fs5.existsSync(cfg)) {
+      process.stderr.write(`delegate --memory: graphmux code-graph MCP not found at ${cfg}
+  install it: gmux install  (then: gmux index <repo>)
+`);
+      return 1;
+    }
+    opts.memoryMcpConfig = cfg;
+    opts.allowTools = [...opts.allowTools, ...MEMORY_TOOLS];
+    opts.task = `${opts.task}
+
+${MEMORY_NUDGE}`;
+  }
   const plan = planLaunch(brain, env);
-  process.stderr.write(`delegate: ${brain} \xB7 ${opts.mode} \xB7 mcp ${opts.mcp ? "on" : "off"}${opts.verify ? " \xB7 verify" : ""}${opts.retry > 0 ? ` \xB7 retry ${opts.retry}` : ""}
+  process.stderr.write(`delegate: ${brain} \xB7 ${opts.mode} \xB7 mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " \xB7 memory" : ""}${opts.verify ? " \xB7 verify" : ""}${opts.retry > 0 ? ` \xB7 retry ${opts.retry}` : ""}
 `);
   if (opts.mode === "yolo") process.stderr.write(`delegate: \u26A0 --yolo \u2014 '${brain}' runs with NO permission checks in '${opts.workdir}'.
 `);
@@ -12743,8 +12769,9 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
   bmux up | down | restart        manage the brain stack (regenerates from brains.yaml)
   bmux ps | logs [svc] | health   inspect the stack
   bmux <brain> [claude args...]   launch Claude Code on a brain (e.g. bmux chat)
-  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--allow-tools t1,t2] [--verify] "<task>"
+  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--allow-tools t1,t2] [--verify] [--memory] "<task>"
                                   (--stream shows a live progress line: \u23F3 brain \xB7 5/34 \xB7 <step>)
+                                  (--memory grounds the brain on the local code graph \u2014 needs graphmux: gmux install)
                                   (--mcp passes host MCP servers; --allow-tools pre-allows tools headless \u2014 e.g.
                                    --allow-tools mcp__brave-search__brave_web_search for grounded web search, no --yolo)
                                   (--verify: draft, then a grounded pass web-checks each claim \u2192 \u2705/\u26A0 with sources)

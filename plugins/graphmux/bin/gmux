@@ -1,0 +1,13 @@
+#!/usr/bin/env node
+// gmux — @brainmux/graphmux CLI entry. Loads the self-contained bundle and runs main().
+// dist/gmux.js is an esbuild bundle (no runtime deps — pure node built-ins) so it runs with
+// no node_modules present; the plugin works from a fresh marketplace checkout. The bundle only
+// self-runs when invoked directly (entry guard is false through this dynamic import), so we call
+// main() explicitly. During development run `npm run bundle` first.
+import("../dist/gmux.js").then(
+  (mod) => mod.main(process.argv.slice(2)).then((code) => process.exit(code)),
+  (err) => {
+    console.error("gmux: bundle missing? run `npm run bundle` in plugins/graphmux. ", err?.message ?? err);
+    process.exit(1);
+  },
+);

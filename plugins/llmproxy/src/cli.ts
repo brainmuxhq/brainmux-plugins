@@ -19,8 +19,9 @@ const HELP = `bmux — brainmux/llmproxy CLI
   bmux up | down | restart        manage the brain stack (regenerates from brains.yaml)
   bmux ps | logs [svc] | health   inspect the stack
   bmux <brain> [claude args...]   launch Claude Code on a brain (e.g. bmux chat)
-  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--allow-tools t1,t2] [--verify] "<task>"
+  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--allow-tools t1,t2] [--verify] [--memory] "<task>"
                                   (--stream shows a live progress line: ⏳ brain · 5/34 · <step>)
+                                  (--memory grounds the brain on the local code graph — needs graphmux: gmux install)
                                   (--mcp passes host MCP servers; --allow-tools pre-allows tools headless — e.g.
                                    --allow-tools mcp__brave-search__brave_web_search for grounded web search, no --yolo)
                                   (--verify: draft, then a grounded pass web-checks each claim → ✅/⚠ with sources)

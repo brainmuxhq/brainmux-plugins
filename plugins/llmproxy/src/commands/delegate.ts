@@ -10,6 +10,23 @@ const GUARD =
   "nothing more. Never delegate further. Be concise; return ONLY the result the " +
   "orchestrator asked for (no preamble, no sign-off).";
 
+// --memory: the read-only code-graph tools from the graphmux plugin's "graphmux" MCP server.
+// This list IS the cross-plugin contract (graphmux exposes them; we don't import its code) —
+// keep it identical to graphmux's core/mcp.ts GROUNDING_TOOLS.
+const MEMORY_TOOLS = [
+  "mcp__graphmux__codegraph_explore",
+  "mcp__graphmux__codegraph_callers",
+  "mcp__graphmux__codegraph_callees",
+  "mcp__graphmux__codegraph_impact",
+  "mcp__graphmux__codegraph_node",
+  "mcp__graphmux__codegraph_search",
+  "mcp__graphmux__codegraph_files",
+];
+const MEMORY_NUDGE =
+  "Before answering, GROUND yourself in the code graph: use the codegraph_* tools " +
+  "(codegraph_explore / codegraph_callers / codegraph_callees / codegraph_impact / codegraph_node) " +
+  "to find the real symbols, callers, and impact. Do NOT guess file paths or symbol names.";
+
 export interface DelegateOpts {
   mode: "analyze" | "write" | "yolo";
   workdir: string;
@@ -20,13 +37,15 @@ export interface DelegateOpts {
   verify: boolean; // opt-in: after the draft, run a grounded pass that fact-checks each claim
   template: string; // named task template (built-in or ~/.brainmux/templates.yaml); resolved in runDelegate
   retry: number; // max auto-retries on an empty/failed result (0 = off); non-stream path only
+  memory: boolean; // opt-in: ground the worker on graphmux's local code-graph MCP (deterministic, no hallucination)
+  memoryMcpConfig: string; // resolved path to graphmux's mcp.json (set in runDelegate when memory is on)
   task: string;
 }
 
 export function parseDelegateArgs(argv: string[], stdin?: string): { brain: string; opts: DelegateOpts } {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", retry: 0, task: "" };
+  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", task: "" };
   const rest = argv.slice(1);
   const parts: string[] = []; // bare positional words → joined, so an unquoted task isn't silently truncated to its last word
   for (let i = 0; i < rest.length; i++) {
@@ -40,6 +59,7 @@ export function parseDelegateArgs(argv: string[], stdin?: string): { brain: stri
     else if (a === "--verify") opts.verify = true;
     else if (a === "--template") { opts.template = rest[++i] ?? ""; }
     else if (a === "--retry") { const nx = rest[i + 1]; if (nx && /^\d+$/.test(nx)) { opts.retry = Number(nx); i++; } else opts.retry = 1; }
+    else if (a === "--memory") opts.memory = true;
     else if (a === "-C") { opts.workdir = rest[++i] ?? "."; }
     else if (a === "-") { opts.task = stdin ?? ""; }
     else if (a === "--") { opts.task = rest.slice(i + 1).join(" "); break; }
@@ -68,6 +88,9 @@ export function buildClaudeArgs(opts: DelegateOpts): string[] {
   // them cost ~75k input tokens/call and zero benefit here, so drop them by default;
   // --mcp passes the host config through for the rare task that genuinely needs one.
   if (!opts.mcp) args.push("--strict-mcp-config");
+  // --memory: load ONLY graphmux's local code-graph MCP (isolated via --mcp-config; with the
+  // strict flag above, nothing else loads → deterministic grounding, token-lean).
+  if (opts.memoryMcpConfig) args.push("--mcp-config", opts.memoryMcpConfig);
   return args;
 }
 
@@ -288,7 +311,7 @@ async function runVerify(brain: string, opts: DelegateOpts, childEnv: NodeJS.Pro
     `Fact-check the DRAFT below. For EACH factual claim you MUST call ${GROUNDING_TOOL} — do NOT rely on memory. ` +
     `Output one terse line per claim: "✅ <claim> — <source URL you fetched>" if confirmed, or ` +
     `"⚠ <claim> — no source found" if not. Do not restate unverified claims as fact.\n\nDRAFT:\n${draft}`;
-  const p2: DelegateOpts = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", retry: 0, task: vTask };
+  const p2: DelegateOpts = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", task: vTask };
   if (opts.stream) return runStreamed(brain, p2, childEnv);
   const r2 = spawnSync("claude", buildClaudeArgs(p2), { cwd: opts.workdir, stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: childEnv });
   if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
@@ -332,9 +355,22 @@ export async function runDelegate(argv: string[], env: NodeJS.ProcessEnv = proce
     opts.task = opts.task ? `${tpl}\n\n${opts.task}` : tpl;
   }
   if (!fs.existsSync(opts.workdir)) { process.stderr.write(`delegate: -C dir '${opts.workdir}' not found\n`); return 1; }
+  // --memory: wire the graphmux code-graph MCP (zero code coupling — we only know its config
+  // path + tool names, the documented contract). Isolated via --mcp-config, so it doesn't pull
+  // host MCP servers; grounds the cheap brain on the real call-graph instead of guessing.
+  if (opts.memory) {
+    const cfg = path.join(resolvePaths(env).generatedDir, "graphmux-mcp.json");
+    if (!fs.existsSync(cfg)) {
+      process.stderr.write(`delegate --memory: graphmux code-graph MCP not found at ${cfg}\n  install it: gmux install  (then: gmux index <repo>)\n`);
+      return 1;
+    }
+    opts.memoryMcpConfig = cfg;
+    opts.allowTools = [...opts.allowTools, ...MEMORY_TOOLS];
+    opts.task = `${opts.task}\n\n${MEMORY_NUDGE}`;
+  }
   const plan = planLaunch(brain, env); // validates brain against manifest + resolves key/port
-  // Echo the outgoing config so you always know what went out (brain · mode · mcp · verify · retry).
-  process.stderr.write(`delegate: ${brain} · ${opts.mode} · mcp ${opts.mcp ? "on" : "off"}${opts.verify ? " · verify" : ""}${opts.retry > 0 ? ` · retry ${opts.retry}` : ""}\n`);
+  // Echo the outgoing config so you always know what went out (brain · mode · mcp · memory · verify · retry).
+  process.stderr.write(`delegate: ${brain} · ${opts.mode} · mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " · memory" : ""}${opts.verify ? " · verify" : ""}${opts.retry > 0 ? ` · retry ${opts.retry}` : ""}\n`);
   if (opts.mode === "yolo") process.stderr.write(`delegate: ⚠ --yolo — '${brain}' runs with NO permission checks in '${opts.workdir}'.\n`);
   const childEnv = { ...env, DELEGATE_DEPTH: "1", ANTHROPIC_BASE_URL: plan.base, ANTHROPIC_API_KEY: plan.apiKey };
 

@@ -109,6 +109,18 @@ factual/regulatory answers where a fabricated claim is costly.
 bmux delegate deep --verify "which of these 5 regulations are still in force?"
 ```
 
+## `--memory` — ground on the local CODE graph (not the web)
+`--verify` grounds on the *web*; `--memory` grounds on the *codebase*. It wires the
+[graphmux](../../../graphmux) plugin's local code-graph MCP (deterministic call-graph — callers,
+callees, impact, verbatim source; no embeddings) into the worker, isolated (`--mcp-config` +
+strict, so no host MCP noise). Use it whenever the task reasons about code structure — refactors,
+"update every caller of X", impact analysis — so the cheap brain queries real symbols instead of
+guessing file paths/names. Needs graphmux once: `gmux install` (then `gmux index <repo>`).
+
+```sh
+bmux delegate coder --memory -C ./myrepo "update every caller of getPort to pass a string"
+```
+
 ## Grounding — cheap brains invent facts
 A cheap brain with **no web access confidently fabricates** factual claims (regulation names,
 "X was repealed", library APIs). It is strong on *bounded, calibrated* work (one-file audit,

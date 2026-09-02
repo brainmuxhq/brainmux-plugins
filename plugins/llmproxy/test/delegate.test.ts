@@ -116,6 +116,26 @@ test("--verify is off by default; the flag turns it on (doesn't leak into claude
   assert.ok(!buildClaudeArgs(opts).includes("--verify"), "--verify is a bmux-level flag, not a claude arg");
 });
 
+test("--memory is off by default; the flag turns it on (bmux-level, not a bare claude arg)", () => {
+  assert.equal(parseDelegateArgs(["coder", "task"]).opts.memory, false);
+  const { opts } = parseDelegateArgs(["coder", "--memory", "update callers of getPort"]);
+  assert.equal(opts.memory, true);
+  assert.equal(opts.task, "update callers of getPort");
+  // memory wiring (mcp-config path + tools) is resolved in runDelegate; the flag alone adds nothing to claude args
+  assert.ok(!buildClaudeArgs(opts).includes("--mcp-config"), "no config until runDelegate resolves graphmux's path");
+});
+
+test("buildClaudeArgs: a resolved memoryMcpConfig loads ONLY that MCP (--mcp-config + strict)", () => {
+  const { opts } = parseDelegateArgs(["coder", "--memory", "do it"]);
+  opts.memoryMcpConfig = "/home/u/.brainmux/generated/graphmux-mcp.json"; // what runDelegate sets
+  const args = buildClaudeArgs(opts);
+  assert.deepEqual(
+    args.slice(args.indexOf("--mcp-config"), args.indexOf("--mcp-config") + 2),
+    ["--mcp-config", "/home/u/.brainmux/generated/graphmux-mcp.json"],
+  );
+  assert.ok(args.includes("--strict-mcp-config"), "memory stays isolated — no host MCP");
+});
+
 test("--stream builds stream-json + --verbose (not the plain output-format)", () => {
   const { opts } = parseDelegateArgs(["coder", "--stream", "do it"]);
   const args = buildClaudeArgs(opts);

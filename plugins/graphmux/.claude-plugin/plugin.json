@@ -1,0 +1,13 @@
+{
+  "name": "graphmux",
+  "version": "0.1.0",
+  "description": "Local, deterministic codebase memory (call-graph MCP) for Claude Code and bmux delegates — thin wrapper over the vendored CodeGraph core.",
+  "author": {
+    "name": "brainmux",
+    "url": "https://github.com/brainmuxhq/brainmux"
+  },
+  "homepage": "https://brainmux.com",
+  "repository": "https://github.com/brainmuxhq/brainmux",
+  "license": "MIT",
+  "keywords": ["code-graph", "mcp", "claude-code", "codebase-memory", "tree-sitter", "grounding", "delegate"]
+}
