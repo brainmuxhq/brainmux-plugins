@@ -34,3 +34,6 @@ yarn-error.log*
 *.swp
 .idea/
 .vscode/
+
+# local-only working / strategy docs (not committed — esp. commercial strategy in a public repo)
+docs/private/
