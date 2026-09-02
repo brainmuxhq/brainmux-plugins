@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 
-const title = "brainmux — LLM tooling for Claude Code";
+const title = "brainmux — işinizi yürüten 7/24 yapay zeka ekibi";
 const description =
-  "brainmux builds tools that route your work to the right model — so Claude Code spends your Opus quota on architecture and review, not busywork.";
+  "brainmux, işinizi yürüten 7/24 çalışan bir yapay zeka ekibidir. Ekip ve veritabanı sizin makinenizde bir kutu içinde çalışır; bulut yalnızca giriş ve aboneliği yönetir. Böylece veriniz dışarı çıkmaz.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://brainmux.com"),
@@ -12,9 +12,11 @@ export const metadata: Metadata = {
   description,
   applicationName: "brainmux",
   keywords: [
-    "brainmux", "llmproxy", "graphmux", "Claude Code", "OpenRouter", "LiteLLM", "LLM proxy",
-    "cheap LLM", "delegate", "Opus quota", "AI coding agent", "DeepSeek", "Qwen",
-    "code graph", "codebase memory", "CodeGraph", "MCP", "call graph", "tree-sitter",
+    "brainmux", "yapay zeka agent platformu", "yapay zeka ekibi", "iş otomasyonu",
+    "yerel çalışan yapay zeka", "veri gizliliği", "KVKK", "7/24 agent", "zamanlı görev",
+    "sosyal medya otomasyonu", "evrak otomasyonu", "e-posta yanıtlama",
+    "AI agent platform", "agent fleet", "local-first AI", "self-hosted agents",
+    "llmproxy", "graphmux", "Claude Code", "OpenRouter", "cheap LLM", "code graph",
   ],
   authors: [{ name: "brainmux", url: "https://github.com/brainmuxhq/brainmux-plugins" }],
   creator: "brainmux",
@@ -29,21 +31,22 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title,
-    description: "Run Claude Code on cheap brains. One OpenRouter key, thousands of models, your Opus quota untouched.",
+    description: "İşinizi yürüten 7/24 yapay zeka ekibi. Ekip ve veriniz sizin makinenizde bir kutu içinde çalışır — veriniz dışarı çıkmaz.",
     url: "https://brainmux.com",
     siteName: "brainmux",
+    locale: "tr_TR",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title,
-    description: "Run Claude Code on cheap brains.",
+    description: "İşinizi yürüten 7/24 yapay zeka ekibi — veriniz sizde kalır.",
   },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="tr">
       <body>{children}</body>
     </html>
   );

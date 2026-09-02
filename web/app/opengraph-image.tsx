@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "brainmux — LLM tooling for Claude Code";
+export const alt = "brainmux — işinizi yürüten 7/24 yapay zeka ekibi";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -27,11 +27,11 @@ export default function OpengraphImage() {
             <span style={{ color: "#E8B341" }}>mux</span>
           </div>
         </div>
-        <div style={{ display: "flex", fontSize: 76, fontWeight: 800, marginTop: 34, lineHeight: 1.05, letterSpacing: -2, maxWidth: 980 }}>
-          Make Claude Code punch above its quota.
+        <div style={{ display: "flex", fontSize: 72, fontWeight: 800, marginTop: 34, lineHeight: 1.05, letterSpacing: -2, maxWidth: 1000 }}>
+          İşinizi yürüten 7/24 yapay zeka ekibi.
         </div>
         <div style={{ display: "flex", fontSize: 30, color: "#A7B0C0", marginTop: 26 }}>
-          LLM tooling for Claude Code · run it on cheap brains
+          Veriniz sizin makinenizde kalır · siz onaylarsınız
         </div>
       </div>
     ),

@@ -1,7 +1,8 @@
 import { FAQ } from "./faq";
 
 // schema.org JSON-LD for SEO + GEO (AI answer engines): Organization + WebSite +
-// SoftwareApplication (llmproxy) + FAQPage (derived from the shared FAQ source).
+// SoftwareApplication (brainmux platform + open engines llmproxy, graphmux) +
+// FAQPage (derived from the shared FAQ source).
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
@@ -11,7 +12,7 @@ const jsonLd = {
       name: "brainmux",
       url: "https://brainmux.com",
       logo: "https://brainmux.com/icon.svg",
-      description: "LLM tooling for Claude Code.",
+      description: "İşinizi yürüten 7/24 yapay zeka ekibi platformu — ekip ve veriniz sizin makinenizde çalışır, veriniz dışarı çıkmaz.",
       sameAs: ["https://github.com/brainmuxhq/brainmux-plugins"],
     },
     {
@@ -19,7 +20,18 @@ const jsonLd = {
       "@id": "https://brainmux.com/#website",
       url: "https://brainmux.com",
       name: "brainmux",
+      inLanguage: "tr-TR",
       publisher: { "@id": "https://brainmux.com/#org" },
+    },
+    {
+      "@type": "SoftwareApplication",
+      name: "brainmux",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web, Docker (Linux, macOS, Windows)",
+      url: "https://brainmux.com/#platform",
+      description:
+        "İşinizi yürüten 7/24 yapay zeka ekibi. Görevleri kendi arasında paylaşır, zamanı gelince otomatik çalışır ve verdiğiniz işleri tamamlar. Ekip ve veritabanı sizin makinenizde bir kutu (container) içinde çalışır; bulut yalnızca giriş ve aboneliği yönetir — veriniz dışarı çıkmaz.",
+      author: { "@id": "https://brainmux.com/#org" },
     },
     {
       "@type": "SoftwareApplication",
@@ -29,7 +41,7 @@ const jsonLd = {
       softwareVersion: "0.1.19",
       url: "https://brainmux.com/#llmproxy",
       description:
-        "Run Claude Code on cheap OpenRouter models via local LiteLLM proxies and delegate grunt work to them, keeping your Opus quota for architecture and review.",
+        "Claude Code'u yerel LiteLLM proxy'leri üzerinden ucuz OpenRouter modellerinde çalıştırın ve yorucu işi onlara devredin; Opus kotanız mimari ve incelemeye kalsın.",
       license: "https://opensource.org/licenses/MIT",
       author: { "@id": "https://brainmux.com/#org" },
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
@@ -42,7 +54,7 @@ const jsonLd = {
       softwareVersion: "0.1.2",
       url: "https://brainmux.com/#graphmux",
       description:
-        "Give Claude Code and bmux delegates a local, deterministic code graph — callers, callees, impact and verbatim source — so agents ground on your codebase instead of guessing. Thin wrapper over the CodeGraph engine (tree-sitter, local SQLite, no embeddings).",
+        "Claude Code ve bmux agent'larına kodunuzun yerel, kesin haritasını verir — çağıranlar, çağrılanlar, etki ve birebir kaynak — böylece agent'lar tahmin yürütmek yerine gerçek yapıya bakar. CodeGraph motorunun ince sarmalı (tree-sitter, yerel SQLite, embedding yok).",
       license: "https://opensource.org/licenses/MIT",
       author: { "@id": "https://brainmux.com/#org" },
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },

@@ -1,5 +1,5 @@
-// Single source of truth for FAQ content — feeds the visible FAQ section,
-// the FAQPage JSON-LD (SEO), and /llms.txt (GEO). Edit here only.
+// FAQ içeriği tek kaynak (SSoT) — görünür SSS bölümünü, FAQPage JSON-LD'yi (SEO)
+// ve /llms.txt'yi (GEO) besler. Yalnızca burayı düzenle.
 export interface Faq {
   q: string;
   a: string;
@@ -7,43 +7,39 @@ export interface Faq {
 
 export const FAQ: Faq[] = [
   {
-    q: "What is brainmux?",
-    a: "brainmux is LLM tooling for Claude Code. Its first tool, llmproxy, lets you run Claude Code on cheap alternate LLM models and delegate grunt work to them — so your Opus subscription quota goes to architecture and review, not busywork.",
+    q: "brainmux nedir?",
+    a: "brainmux, işinizi yürüten 7/24 çalışan bir yapay zeka ekibidir. İş verirsiniz; ekip planlar, görevleri kendi arasında paylaşır, zamanı gelince otomatik çalışır ve tamamlar — kendi verilerinize dayanarak. Ekip ve veritabanı sizin makinenizde bir kutu (container) içinde çalışır; bulut yalnızca giriş ve aboneliği yönetir. Böylece veriniz dışarı çıkmaz.",
   },
   {
-    q: "What is llmproxy?",
-    a: "llmproxy is a Claude Code plugin (CLI: bmux) that routes Claude Code to cheap OpenRouter models via local LiteLLM proxies. One OpenRouter key reaches thousands of models across providers like DeepSeek, Qwen, GLM, GPT and Gemini.",
+    q: "Verim dışarı çıkar mı? Güvenli mi?",
+    a: "Kendi makinenizde seçeneğinde hayır. Ekip ve veritabanı sizin makinenizde çalışır; veriniz ne bize gelir ne bizde işlenir — tek komutla kurar, verinizi içe aktarırsınız. Yalnızca seçtiğiniz modele göre prompt gider (kendi yerel modeliniz → hiçbir yere çıkmaz). Dışarıya giden her çıktıyı da siz onaylarsınız.",
   },
   {
-    q: "What is graphmux?",
-    a: "graphmux is the second brainmux plugin (CLI: gmux). It gives Claude Code and bmux delegates a local, deterministic code graph — real callers, callees, impact and verbatim source — so agents ground on your actual codebase instead of guessing. It's a thin wrapper over the vendored CodeGraph engine (tree-sitter to a local SQLite graph): no embeddings, no cloud.",
+    q: "Ekip nasıl çalışır?",
+    a: "Bir görev ya da bir zaman planı (örn. her sabah 09:00) verirsiniz. Bir gözetmen agent işi sınırlı görevlere böler ve diğer agent'lara paslar; her agent harekete geçmeden önce verinize dayanır, gözetmen sonucu denetler. Zamanlı görevlerde ekip siz yokken çalışır ve size rapor verir.",
   },
   {
-    q: "Does graphmux send my code anywhere?",
-    a: "No. graphmux indexes your repo into a local SQLite graph on your own machine — no embeddings API, no cloud upload, and the vendored engine's telemetry is forced off by default. Install it with `/plugin install graphmux@brainmux`, then `gmux install` and `gmux index`.",
+    q: "Modeli kim seçer? (kendi modelinizi getirin)",
+    a: "Siz seçersiniz. Üç yol var: kendi yerel modelinizi çalıştırın (ör. Ollama), kendi uzak modelinizi bağlayın (kendi anahtarınızla) ya da bizim model havuzumuzu kullanın. Kararı siz verirsiniz.",
   },
   {
-    q: "How does graphmux stop cheap brains from hallucinating?",
-    a: "Run `bmux delegate <brain> --memory \"<task>\"`. It wires graphmux's code-graph MCP into the cheap brain (isolated — no host MCP noise), so the brain looks up real callers, callees and impact before it acts, instead of inventing file paths or symbol names.",
+    q: "Kendi makinemde mi, sizde mi çalışır?",
+    a: "İkisi de olur. Kendi makinenizde: veri hiç çıkmaz, tek komutla kurulur, tarayıcıdan açılır. Bizde (kolay): kurulum yok, aç kullan. Giriş ve fatura her iki durumda da buluttan yönetilir; iş verisi bizde tuttuğunuzda faturadan ayrı bir yerde durur.",
   },
   {
-    q: "Does it use my Anthropic or Opus quota?",
-    a: "No. The cheap brains run pay-as-you-go on OpenRouter, on a separate meter that never touches your Anthropic subscription quota. Opus stays the orchestrator; the cheap brains do the volume.",
+    q: "Anthropic ya da Opus kotamı harcar mı?",
+    a: "Hayır. Ekibin agent'ları OpenRouter modellerinde kullandıkça-öde çalışır; bu, Anthropic abonelik kotanıza hiç dokunmayan ayrı bir sayaçtır. Daha güçlü bir model gözetir, ucuz beyinler hacimli işi yapar — rutin iş için pahalı token ödemezsiniz.",
   },
   {
-    q: "What models can I use?",
-    a: "Any model on OpenRouter — DeepSeek, Qwen, GLM, Kimi, GPT, Gemini and hundreds more — with a single key. `bmux models` browses the live catalog by price, context and use-case, so you never guess a stale model slug.",
+    q: "Ne işler yapar? Modüller neler?",
+    a: "Evrak & doküman, sosyal medya (tüm platformlar), e-posta ve kod & terminal modülleriyle başlar — ve sürekli yeni modül eklenir. Modüler yapı sayesinde aklınıza gelen her iş tipi tak-çıkar eklenir. Siz isteyince ya da zamanlı çalışır; dışarıya giden her çıktıyı siz onaylarsınız.",
   },
   {
-    q: "How much does it cost?",
-    a: "llmproxy is free and MIT-licensed. You only pay OpenRouter's pay-as-you-go per-token price for the models you actually use — usually cents. Your Anthropic subscription quota is untouched.",
+    q: "llmproxy ve graphmux nedir?",
+    a: "Ekibin üstünde çalıştığı açık kaynak motorlar — Claude Code için ücretsiz eklenti olarak da var. llmproxy (komut: bmux) Claude Code'u ucuz modellerde çalıştırır ve yorucu işi onlara devreder. graphmux (komut: gmux) agent'lara kodunuzun yerel, kesin haritasını verir; böylece tahmin yürütmek yerine gerçek yapıya bakarlar. Her biri olgun bir açık çekirdeğin (LiteLLM, CodeGraph) ince, sürüm-sabitli sarmalıdır.",
   },
   {
-    q: "How do I install it?",
-    a: "In Claude Code, run `/plugin marketplace add brainmuxhq/brainmux-plugins` then `/plugin install llmproxy@brainmux`. Then `bmux init`, add your OpenRouter key (`bmux config add-key OPENROUTER_API_KEY`), `bmux up`, and `bmux test`.",
-  },
-  {
-    q: "Do I need Docker?",
-    a: "Yes. Each brain runs as a local LiteLLM Docker container isolated by port, with one shared Postgres. brainmux generates the whole Docker Compose stack from a single brains.yaml file.",
+    q: "Nasıl başlarım?",
+    a: "Barındırılan platform için app.brainmux.com adresinden uygulamayı açın. Açık motorları tek başına denemek için Claude Code'da `/plugin marketplace add brainmuxhq/brainmux-plugins`, ardından `/plugin install llmproxy@brainmux` (ve `graphmux@brainmux`); sonra `bmux init`, OpenRouter anahtarınızı ekleyin, `bmux up`, `bmux test`.",
   },
 ];

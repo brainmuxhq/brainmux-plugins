@@ -2,7 +2,7 @@
   --ink: #0B0E14; --ink-2: #121722; --ink-3: #161C28;
   --line: #232A38; --line-2: #2E3749;
   --fg: #D9E0EA; --fg-dim: #A7B0C0; --muted: #7E889A;
-  --amber: #E8B341; --amber-dim: #B98C2f; --teal: #4FD1C5;
+  --amber: #E8B341; --amber-dim: #B98C2f; --teal: #4FD1C5; --iris: #8B8CF9;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   --maxw: 1080px;
@@ -45,6 +45,9 @@ header { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(10px); bac
 .btn-ghost { border-color: var(--line-2); color: var(--fg); }
 .btn-ghost:hover { border-color: var(--amber-dim); }
 .mux svg { width: 100%; height: auto; display: block; }
+.stat { margin-top: 26px; display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; background: var(--ink-2); font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.stat-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--amber); }
+.stat-dot[data-up="1"] { background: var(--teal); }
 
 section { padding: 66px 0; border-top: 1px solid var(--line); }
 .sec-head { max-width: 62ch; margin-bottom: 38px; }
@@ -111,9 +114,54 @@ footer { border-top: 1px solid var(--line); padding: 40px 0 60px; }
 .answer { font-size: clamp(19px, 2.4vw, 24px); color: var(--fg); max-width: 62ch; line-height: 1.55; margin: 0; }
 .answer strong { color: var(--amber); font-weight: 700; }
 
-/* FAQ */
-.faq { display: grid; gap: 0; }
-.qa { padding: 22px 0; border-top: 1px solid var(--line); }
-.qa:first-child { border-top: none; }
-.qa h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-.qa p { color: var(--fg-dim); margin: 0; max-width: 70ch; }
+/* FAQ — accordion (collapse) */
+.faq { display: grid; gap: 0; border-top: 1px solid var(--line); }
+.qa { border-bottom: 1px solid var(--line); }
+.qa > summary { list-style: none; cursor: pointer; padding: 20px 42px 20px 2px; position: relative; font-size: 17px; font-weight: 650; color: var(--fg); }
+.qa > summary::-webkit-details-marker { display: none; }
+.qa > summary::after { content: "+"; position: absolute; right: 8px; top: 18px; font-family: var(--mono); font-size: 22px; font-weight: 400; color: var(--teal); line-height: 1; }
+.qa[open] > summary::after { content: "\2212"; }
+.qa > summary:hover { color: var(--amber); }
+.qa > p { color: var(--fg-dim); margin: 0; padding: 0 42px 22px 2px; max-width: 74ch; }
+
+/* mimari akış diyagramı (.arch*) */
+.arch-ico { width: 22px; height: 22px; flex: none; }
+.arch-ico.sm { width: 16px; height: 16px; }
+.arch-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 14px 16px; background: var(--ink-2); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 22px; }
+.arch-leg { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.arch-leg b { color: var(--fg); font-weight: 600; }
+.arch-flow { display: flex; flex-direction: column; align-items: center; }
+.arch-node { width: 100%; background: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; padding: 15px 18px; }
+.arch-top { display: flex; align-items: center; gap: 11px; }
+.arch-lab { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.arch-big { font-size: 16px; font-weight: 650; }
+.arch-sub { color: var(--fg-dim); font-size: 13px; margin-top: 6px; }
+.arch-sub b, .arch-where b, .arch-foot b { color: var(--fg); }
+.arch-node.control { border-color: color-mix(in oklab, var(--amber) 42%, var(--line)); background: linear-gradient(180deg, rgba(232,179,65,.06), transparent), var(--ink-2); }
+.arch-node.control .arch-ico, .arch-node.control .arch-big { color: var(--amber); }
+.arch-arrow { color: var(--muted); font-family: var(--mono); font-size: 18px; padding: 9px 0; text-align: center; }
+.arch-cap { font-size: 11px; letter-spacing: .06em; color: var(--fg-dim); }
+.arch-split { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.arch-tier { border: 1px solid var(--line); border-radius: 16px; padding: 16px; background: var(--ink-2); display: flex; flex-direction: column; gap: 13px; }
+.arch-tier.local { border-color: color-mix(in oklab, var(--teal) 42%, var(--line)); }
+.arch-tier.managed { border-color: color-mix(in oklab, var(--amber) 30%, var(--line)); }
+.arch-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.arch-name { font-family: var(--mono); font-weight: 700; font-size: 15px; }
+.arch-tier.local .arch-name { color: var(--teal); }
+.arch-tier.managed .arch-name { color: var(--amber); }
+.arch-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--muted); white-space: nowrap; }
+.arch-tag.hot { color: var(--teal); border-color: color-mix(in oklab, var(--teal) 45%, var(--line)); }
+.arch-where { font-size: 12.5px; color: var(--fg-dim); }
+.arch-cframe { position: relative; border: 1.5px dashed var(--line-2); border-radius: 12px; padding: 15px 12px 11px; display: flex; flex-direction: column; gap: 7px; }
+.arch-cbadge { position: absolute; top: -10px; left: 12px; display: flex; align-items: center; gap: 6px; background: var(--ink-2); padding: 0 8px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.arch-comp { display: flex; align-items: center; gap: 11px; padding: 8px; border-radius: 9px; background: var(--ink); border: 1px solid var(--line); }
+.arch-comp.solo { background: transparent; border-style: dashed; }
+.arch-txt { display: flex; flex-direction: column; line-height: 1.35; }
+.arch-nm { font-size: 13.5px; font-weight: 600; color: var(--fg); }
+.arch-nt { color: var(--muted); font-size: 12px; }
+.arch-foot { font-size: 12px; color: var(--fg-dim); border-top: 1px dashed var(--line); padding-top: 9px; }
+.arch-bridge { width: 100%; margin-top: 16px; background: linear-gradient(180deg, rgba(139,140,249,.06), transparent), var(--ink-2); border: 1px solid color-mix(in oklab, var(--iris) 34%, var(--line)); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.arch-brow { display: flex; align-items: flex-start; gap: 12px; }
+.arch-bt { font-weight: 650; font-size: 14px; color: var(--fg); }
+.arch-brow p { margin: 2px 0 0; color: var(--fg-dim); font-size: 13px; }
+@media (max-width: 860px) { .arch-split { grid-template-columns: 1fr; } }

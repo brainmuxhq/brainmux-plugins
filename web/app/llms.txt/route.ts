@@ -1,68 +1,72 @@
 import { FAQ } from "../faq";
 
-// /llms.txt — a plain-text brief for AI answer engines (GEO). Derived from the same
-// FAQ source as the page + JSON-LD.
+// /llms.txt — yapay zeka yanıt motorları için düz-metin özet (GEO). Sayfa ve JSON-LD
+// ile aynı FAQ kaynağından türetilir.
 export const dynamic = "force-static";
 
 export function GET() {
-  const faq = FAQ.map((f) => `Q: ${f.q}\nA: ${f.a}`).join("\n\n");
+  const faq = FAQ.map((f) => `S: ${f.q}\nC: ${f.a}`).join("\n\n");
 
   const body = `# brainmux
 
-> LLM tooling for Claude Code. Run Claude Code on cheap alternate LLM models and
-> delegate grunt work to them, keeping your Opus quota for architecture and review.
+> İşinizi yürüten 7/24 yapay zeka ekibi. Ekip ve veritabanı sizin makinenizde bir kutu
+> (container) içinde çalışır; bulut yalnızca giriş ve aboneliği yönetir. Böylece veriniz
+> dışarı çıkmaz.
 
-## What it is
-brainmux is a brand of tools for Claude Code. Its first tool, llmproxy (CLI: bmux),
-routes Claude Code to cheap OpenRouter models through local LiteLLM proxies — one
-proxy ("brain") per model, isolated by port. A single brains.yaml is the source of
-truth; bmux generates the Docker Compose stack from it. Its second tool, graphmux
-(CLI: gmux), gives agents a local, deterministic code graph (callers, callees, impact,
-verbatim source) so they ground on your codebase instead of guessing — a thin wrapper
-over the CodeGraph engine (tree-sitter to a local SQLite graph; no embeddings, no
-cloud, telemetry off). Each tool wraps a mature open-source core (LiteLLM, CodeGraph)
-in a thin, version-pinned layer.
+## Ne yapar
+brainmux, 7/24 çalışan bir yapay zeka ekibidir. İş verirsiniz (bir görev ya da zamanlanmış
+bir plan); bir gözetmen agent işi böler ve ucuz agent'lara paslar, her biri harekete
+geçmeden önce verinize dayanır, gözetmen sonucu denetler. Ekip ve veritabanı sizin
+makinenizde bir kutu içinde çalışır — veriniz dışarı çıkmaz. İki seçenek vardır: verinin
+hiç çıkmadığı "kendi makinenizde" ya da kurulum istemeyen "bizde". Giriş ve fatura her
+ikisinde de buluttandır. Modeli siz seçersiniz: kendi yerel modeliniz, kendi uzak modeliniz
+ya da bizim havuzumuz.
 
-## Key facts
-- One OpenRouter key reaches thousands of models (DeepSeek, Qwen, GLM, Kimi, GPT, Gemini, and more).
-- The brains run pay-as-you-go on OpenRouter and never touch your Anthropic subscription quota.
-- Opus stays the orchestrator; cheap brains do the volume (bulk edits, detection sweeps); Opus reviews and fixes.
-- Free and MIT-licensed. Requires Docker and an OpenRouter API key.
+## Önemli noktalar
+- Kendi makinenizde seçeneğinde veri makinede kalır; ne bize gelir ne bizde işlenir.
+- Bulut yalnızca kimlik + abonelik/faturadır; iş verisi bulutta tutulmaz (bizde seçeneğinde faturadan ayrı bir yerde durur).
+- Model sizin: kendi yerel modelinizi çalıştırın, kendi uzak modelinizi bağlayın ya da bizim havuzumuzu kullanın.
+- İşçiler ucuz OpenRouter modellerinde ayrı sayaçta çalışır — Anthropic abonelik kotanıza dokunulmaz.
+- Ekip siz isteyince ya da zamanlı (cron) çalışır; dışarıya giden her çıktıyı siz onaylarsınız.
+- Ekibin üstünde çalıştığı motorlar (llmproxy, graphmux) açık kaynak ve MIT lisanslı, tek başına da kullanılır.
 
-## Install (in Claude Code)
+## Modüller
+Evrak & doküman · sosyal medya (tüm platformlar) · e-posta · kod & terminal — ve sürekli yeni modül.
+
+## Açık motorları kur (Claude Code içinde)
 /plugin marketplace add brainmuxhq/brainmux-plugins
 /plugin install llmproxy@brainmux
 
-## Quickstart (terminal)
+## Hızlı başlangıç (terminal)
 bmux init
-bmux config add-key OPENROUTER_API_KEY   # hidden prompt; key not echoed
+bmux config add-key OPENROUTER_API_KEY   # gizli istem; anahtar ekrana yazılmaz
 bmux up
 bmux test
 
-## Commands
+## Komutlar
 bmux init | up | down | restart | ps | logs [brain] | health
-bmux <brain> [claude args]        # launch Claude Code on a brain (chat/deep/coder)
-bmux delegate <brain> "<task>"    # headless grunt work; Opus verifies
+bmux <brain> [claude args]        # bir beyinde Claude Code başlat (chat/deep/coder)
+bmux delegate <brain> "<görev>"   # headless yorucu iş; Opus doğrular
 bmux config add-brain | remove-brain | set-model | add-key | list
-bmux models [query] | --use-cases | --json   # live OpenRouter catalog
-bmux spend                        # per-brain requests/tokens/spend
-bmux test                         # smoke every brain via /v1/messages
+bmux models [sorgu] | --use-cases | --json   # canlı OpenRouter kataloğu
+bmux spend                        # beyin başına istek/token/harcama
+bmux test                         # her beyni /v1/messages ile dener
 
-## graphmux (CLI: gmux)
-- Local, deterministic code graph for Claude Code and bmux delegates — no embeddings, no cloud, telemetry off.
-- Install: /plugin install graphmux@brainmux
-- gmux install                 # download + SHA256-verify the pinned CodeGraph binary, write the MCP config
-- gmux index [path]            # build/rebuild the code graph for a repo
-- gmux status | sync [path]    # index stats / sync changes
-- gmux -- explore | callers | callees | impact | node   # query the graph
-- bmux delegate <brain> --memory "<task>"   # ground a cheap brain on the code graph (stops hallucination)
+## graphmux (komut: gmux)
+- Claude Code ve bmux agent'ları için yerel, kesin kod grafiği — embedding yok, bulut yok, telemetri kapalı.
+- Kur: /plugin install graphmux@brainmux
+- gmux install                 # sabitlenmiş CodeGraph ikilisini indir + SHA256 doğrula, MCP yapılandırmasını yaz
+- gmux index [yol]             # bir depo için kod grafiğini oluştur/yenile
+- gmux status | sync [yol]     # grafik istatistikleri / değişiklikleri eşitle
+- gmux -- explore | callers | callees | impact | node   # grafiği sorgula
+- bmux delegate <brain> --memory "<görev>"   # ucuz beyni kod grafiğine dayandır (halüsinasyonu keser)
 
-## Links
+## Bağlantılar
 - GitHub: https://github.com/brainmuxhq/brainmux-plugins
 - Site: https://brainmux.com
-- Engines: LiteLLM (MIT) + CodeGraph (MIT)
+- Motorlar: LiteLLM (MIT) + CodeGraph (MIT)
 
-## FAQ
+## SSS
 ${faq}
 `;
 
