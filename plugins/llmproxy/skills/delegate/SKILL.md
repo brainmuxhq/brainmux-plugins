@@ -46,7 +46,8 @@ Modes: default = **analyze** (READ-ONLY: Read/Grep/Glob, no edits/shell — safe
 detection sweeps) · `--write` (lets it EDIT files, shell still blocked) · `--yolo`
 (no permission checks — risky, only in a throwaway dir/worktree).
 
-Options: `-C <dir>` run in a subdir/worktree · `--json` machine-readable output ·
+Options: `-C <dir>` run in a subdir/worktree · `--json` stable envelope
+`{brain, ok, result, input_tokens, output_tokens, num_turns, duration_ms, cost_usd_estimate}` ·
 `--stream` (aka `-v`) show a live progress indicator · `--mcp` (alias `--with-mcp`) give the
 worker the host's MCP servers (off by default).
 

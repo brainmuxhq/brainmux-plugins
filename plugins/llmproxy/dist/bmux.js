@@ -11897,6 +11897,25 @@ function summaryLine(p) {
   const ed = p.edits ? ` \xB7 ${p.edits} edit${p.edits === 1 ? "" : "s"}` : "";
   return `   \u21B3 ${p.touched.length} file${p.touched.length === 1 ? "" : "s"}: ${shown}${more}${ed}`;
 }
+function reshapeDelegateJson(brain, raw) {
+  let o;
+  try {
+    o = JSON.parse(raw.trim());
+  } catch {
+    return JSON.stringify({ brain, ok: false, error: "worker did not return JSON", raw: raw.trim().slice(0, 500) });
+  }
+  const u = o && o.usage || {};
+  return JSON.stringify({
+    brain,
+    ok: o?.is_error === false || o?.subtype === "success",
+    result: typeof o?.result === "string" ? o.result : "",
+    input_tokens: typeof u.input_tokens === "number" ? u.input_tokens : null,
+    output_tokens: typeof u.output_tokens === "number" ? u.output_tokens : null,
+    num_turns: typeof o?.num_turns === "number" ? o.num_turns : null,
+    duration_ms: typeof o?.duration_ms === "number" ? o.duration_ms : null,
+    cost_usd_estimate: typeof o?.total_cost_usd === "number" ? o.total_cost_usd : null
+  });
+}
 var CONNECTOR_NOISE = /connectors are disabled because ANTHROPIC_API_KEY/;
 function cleanStderr(s) {
   return s.split("\n").filter((l) => !CONNECTOR_NOISE.test(l)).join("\n");
@@ -11975,6 +11994,17 @@ async function runDelegate(argv, env = process.env) {
 `);
   const childEnv = { ...env, DELEGATE_DEPTH: "1", ANTHROPIC_BASE_URL: plan.base, ANTHROPIC_API_KEY: plan.apiKey };
   if (opts.stream) return runStreamed(brain, opts, childEnv);
+  if (opts.outfmt === "json") {
+    const r2 = spawnSync3("claude", buildClaudeArgs(opts), {
+      cwd: opts.workdir,
+      stdio: wantsStdin ? ["inherit", "pipe", "pipe"] : ["ignore", "pipe", "pipe"],
+      encoding: "utf8",
+      env: childEnv
+    });
+    if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
+    process.stdout.write(reshapeDelegateJson(brain, r2.stdout ?? "") + "\n");
+    return r2.status ?? 1;
+  }
   const r = spawnSync3("claude", buildClaudeArgs(opts), {
     cwd: opts.workdir,
     stdio: wantsStdin ? ["inherit", "inherit", "pipe"] : ["ignore", "inherit", "pipe"],

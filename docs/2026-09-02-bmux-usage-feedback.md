@@ -30,12 +30,16 @@ the code; each item marked DONE (with version), DEFER (with reason), or BACKLOG.
   lockfile/semaphore in `~/.brainmux` (over-engineering for a single-user CLI). Documented
   the sequential guidance instead.
 
+## Done — v0.1.14
+- **`--json` strict schema** — `bmux delegate --json` now emits a stable brainmux envelope
+  `{brain, ok, result, input_tokens, output_tokens, num_turns, duration_ms, cost_usd_estimate}`
+  (reshaped from the worker's `claude --output-format json`; cost is labeled an estimate since
+  an opaque brain model can't be priced reliably — `bmux spend` is authoritative).
+
 ## Backlog (features)
 - **`--verify` / grounding-mode** — auto web-cross-check each factual claim.
 - **retry / degrade-detection** — detect garbled (rate-limited) output and re-run.
 - **prompt-template library** — ready-made `audit` / `review` / `drift-scan` delegate tasks.
-- **`--json` strict schema** — guarantee `{brain, tokens, cost, result}` (today it passes the
-  worker's own JSON envelope through).
 - **brain `reliability: memory|grounded` label** — surface which brains have web grounding.
 
 ## Keep (working well)

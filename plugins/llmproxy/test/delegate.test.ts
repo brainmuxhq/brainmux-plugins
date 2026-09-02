@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseDelegateArgs, buildClaudeArgs, initProgress, foldEvent, parseStreamLine, statusLine, doneLine, summaryLine } from "../src/commands/delegate.js";
+import { parseDelegateArgs, buildClaudeArgs, initProgress, foldEvent, parseStreamLine, statusLine, doneLine, summaryLine, reshapeDelegateJson } from "../src/commands/delegate.js";
 
 test("default mode = analyze, read-only tools", () => {
   const { brain, opts } = parseDelegateArgs(["coder", "find the bug"]);
@@ -169,6 +169,22 @@ test("foldEvent: host noise (hooks, init, rate-limit) never touches progress", (
   foldEvent(p, { type: "system", subtype: "init" });
   foldEvent(p, { type: "rate_limit_event" });
   assert.equal(JSON.stringify(p), before);
+});
+
+test("reshapeDelegateJson: claude's envelope → stable brainmux schema", () => {
+  const raw = JSON.stringify({ type: "result", subtype: "success", is_error: false, result: "found 3 TODOs", num_turns: 4, duration_ms: 8200, total_cost_usd: 0.0021, usage: { input_tokens: 33000, output_tokens: 120 } });
+  const o = JSON.parse(reshapeDelegateJson("dsflash", raw));
+  assert.deepEqual(o, {
+    brain: "dsflash", ok: true, result: "found 3 TODOs",
+    input_tokens: 33000, output_tokens: 120, num_turns: 4, duration_ms: 8200, cost_usd_estimate: 0.0021,
+  });
+});
+
+test("reshapeDelegateJson: non-JSON worker output → ok:false with raw snippet", () => {
+  const o = JSON.parse(reshapeDelegateJson("chat", "oops not json"));
+  assert.equal(o.ok, false);
+  assert.equal(o.brain, "chat");
+  assert.ok(o.error && o.raw.includes("oops"));
 });
 
 test("parseStreamLine: blank / non-JSON lines drop to null; valid JSON parses", () => {

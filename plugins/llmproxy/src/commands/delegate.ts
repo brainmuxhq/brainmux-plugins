@@ -165,6 +165,32 @@ export function summaryLine(p: Progress): string | null {
   return `   ↳ ${p.touched.length} file${p.touched.length === 1 ? "" : "s"}: ${shown}${more}${ed}`;
 }
 
+/**
+ * Reshape the worker's raw `claude --output-format json` envelope into a stable brainmux
+ * schema an orchestrator/script can rely on: { brain, ok, result, tokens, turns, cost }.
+ * cost is an ESTIMATE — the worker's Claude Code prices an opaque brain model with its own
+ * catalog, so it's directional only; `bmux spend` is authoritative.
+ */
+export function reshapeDelegateJson(brain: string, raw: string): string {
+  let o: any;
+  try {
+    o = JSON.parse(raw.trim());
+  } catch {
+    return JSON.stringify({ brain, ok: false, error: "worker did not return JSON", raw: raw.trim().slice(0, 500) });
+  }
+  const u = (o && o.usage) || {};
+  return JSON.stringify({
+    brain,
+    ok: o?.is_error === false || o?.subtype === "success",
+    result: typeof o?.result === "string" ? o.result : "",
+    input_tokens: typeof u.input_tokens === "number" ? u.input_tokens : null,
+    output_tokens: typeof u.output_tokens === "number" ? u.output_tokens : null,
+    num_turns: typeof o?.num_turns === "number" ? o.num_turns : null,
+    duration_ms: typeof o?.duration_ms === "number" ? o.duration_ms : null,
+    cost_usd_estimate: typeof o?.total_cost_usd === "number" ? o.total_cost_usd : null,
+  });
+}
+
 // --- run -------------------------------------------------------------------
 
 // The child `claude` prints this once per call because we set ANTHROPIC_API_KEY — pure noise
@@ -238,6 +264,20 @@ export async function runDelegate(argv: string[], env: NodeJS.ProcessEnv = proce
 
   if (opts.stream) return runStreamed(brain, opts, childEnv);
 
+  if (opts.outfmt === "json") {
+    // Capture the worker's JSON, then emit our stable schema on stdout.
+    const r = spawnSync("claude", buildClaudeArgs(opts), {
+      cwd: opts.workdir,
+      stdio: wantsStdin ? ["inherit", "pipe", "pipe"] : ["ignore", "pipe", "pipe"],
+      encoding: "utf8",
+      env: childEnv,
+    });
+    if (r.stderr) process.stderr.write(cleanStderr(r.stderr));
+    process.stdout.write(reshapeDelegateJson(brain, r.stdout ?? "") + "\n");
+    return r.status ?? 1;
+  }
+
+  // text: stream the worker's stdout straight through (stderr filtered).
   const r = spawnSync("claude", buildClaudeArgs(opts), {
     cwd: opts.workdir,
     stdio: wantsStdin ? ["inherit", "inherit", "pipe"] : ["ignore", "inherit", "pipe"],
