@@ -45,7 +45,7 @@ Each section is its own focused component. `/docs` later = new route under `app/
 - **Hero:** headline "Run Claude Code on cheap brains." · sub "brainmux routes Claude Code to cheap
   OpenRouter models and delegates the grunt work to them — so your Opus quota goes to architecture
   and review, not busywork." · install block:
-  `/plugin marketplace add brainmuxhq/brainmux` then `/plugin install llmproxy@brainmux` · buttons: **GitHub** (repo), **Get started** (→ Quickstart).
+  `/plugin marketplace add brainmuxhq/brainmux-plugins` then `/plugin install llmproxy@brainmux` · buttons: **GitHub** (repo), **Get started** (→ Quickstart).
 - **Value props** (3 cards): "One key, thousands of models — a single OpenRouter key reaches
   DeepSeek, Qwen, GLM, GPT, Gemini and more." · "Separate meter — the brains run pay-as-you-go on
   OpenRouter and never touch your Anthropic subscription quota." · "Opus stays the orchestrator —
@@ -59,14 +59,14 @@ Each section is its own focused component. `/docs` later = new route under `app/
   **Observability** (per-brain LiteLLM UI for spend, logs, params).
 - **Quickstart** (terminal block):
   ```
-  /plugin marketplace add brainmuxhq/brainmux
+  /plugin marketplace add brainmuxhq/brainmux-plugins
   /plugin install llmproxy@brainmux
   bmux init
   bmux config add-key OPENROUTER_API_KEY   # hidden prompt — key not echoed
   bmux up
   bmux test
   ```
-- **Footer:** GitHub (brainmuxhq/brainmux) · brainmux.com · "Engine: LiteLLM (MIT)" · "MIT licensed" · requires Docker + an OpenRouter key.
+- **Footer:** GitHub (brainmuxhq/brainmux-plugins) · brainmux.com · "Engine: LiteLLM (MIT)" · "MIT licensed" · requires Docker + an OpenRouter key.
 
 ## 6. Metadata / SEO
 

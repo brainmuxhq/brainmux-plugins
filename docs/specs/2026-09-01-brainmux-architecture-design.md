@@ -25,9 +25,9 @@ first-class, low-friction workflow.
 
 ## 3. Distribution
 
-- **Marketplace monorepo:** `brainmuxhq/brainmux` (marketplace name `brainmux`),
+- **Marketplace monorepo:** `brainmuxhq/brainmux-plugins` (marketplace name `brainmux`),
   npm workspaces, home to a family of `@brainmux/*` plugins. brainmux is the first.
-- **Plugin:** installed via `/plugin marketplace add brainmuxhq/brainmux` →
+- **Plugin:** installed via `/plugin marketplace add brainmuxhq/brainmux-plugins` →
   `/plugin install brainmux`. Bundles the CLI + skills + slash commands.
 - **npm (optional):** `@brainmux/llmproxy` for users who want `bmux` outside Claude Code.
 - The Node CLI lives inside the plugin (`${CLAUDE_PLUGIN_ROOT}/bin/bmux`); Node is present

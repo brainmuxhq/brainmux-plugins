@@ -15,12 +15,12 @@ your Anthropic quota.
 ## Install
 
 ```
-/plugin marketplace add brainmuxhq/brainmux
+/plugin marketplace add brainmuxhq/brainmux-plugins
 /plugin install llmproxy@brainmux
 /reload-plugins
 ```
 
-`brainmuxhq/brainmux` is the repo **source** (owner/repo); `brainmux` is the marketplace
+`brainmuxhq/brainmux-plugins` is the repo **source** (owner/repo); `brainmux` is the marketplace
 **name** — that's why the plugin id is `llmproxy@brainmux`.
 
 ## Quickstart

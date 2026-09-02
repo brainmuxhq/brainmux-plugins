@@ -19,7 +19,7 @@
   review + fix'te kullanılır.
   (Not: public ad `llmproxy` — "claude" adı PUBLIC üründe kullanılmaz → Anthropic marka riski.
   Prototip `claude-proxy` klasörü migration sonrası silindi.)
-- **Repo:** `brainmuxhq/brainmux` (monorepo). **Marketplace:** `/plugin marketplace add brainmuxhq/brainmux`.
+- **Repo:** `brainmuxhq/brainmux-plugins` (monorepo). **Marketplace:** `/plugin marketplace add brainmuxhq/brainmux-plugins`.
 - **Değer:** darboğaz Anthropic kotası (Pro 5x). Proxy beyinleri OpenRouter'da ayrı sayaçta
   çalışır → abonelik kotasına dokunmaz.
 
@@ -76,9 +76,9 @@
 
 > Yeni oturum bunu okusun. (Bu CLAUDE.md üst dizinden otomatik yüklenir.)
 
-**BİTTİ — main'de (`brainmuxhq/brainmux`), user-doğrulandı:**
+**BİTTİ — main'de (`brainmuxhq/brainmux-plugins`), user-doğrulandı:**
 - Migration + control-plane tamam. Plugin marketplace'ten kurulur:
-  `/plugin marketplace add brainmuxhq/brainmux` → `/plugin install llmproxy@brainmux`.
+  `/plugin marketplace add brainmuxhq/brainmux-plugins` → `/plugin install llmproxy@brainmux`.
 - `bmux` CLI (Node/TS; ship = self-contained esbuild bundle `dist/bmux.js`, runtime dep yok):
   init · up/down/restart · ps/logs/health · chat|deep|coder (launch) · delegate · config · spend · models · test.
 - SSOT: `brains.yaml` (zod) → generate → compose + per-brain config + init sql (golden-parity).

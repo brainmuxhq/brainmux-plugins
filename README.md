@@ -24,13 +24,13 @@ it in a thin control layer — same core, our packaging.
 ## Install
 
 ```
-/plugin marketplace add brainmuxhq/brainmux
+/plugin marketplace add brainmuxhq/brainmux-plugins
 /plugin install llmproxy@brainmux
 /plugin install graphmux@brainmux
 /reload-plugins
 ```
 
-`brainmuxhq/brainmux` is the repo **source** (GitHub owner/repo); `brainmux` is the marketplace
+`brainmuxhq/brainmux-plugins` is the repo **source** (GitHub owner/repo); `brainmux` is the marketplace
 **name** — hence the plugin ids `llmproxy@brainmux` / `graphmux@brainmux`. See each plugin's README
 ([llmproxy](plugins/llmproxy/README.md) · [graphmux](plugins/graphmux/README.md)) for setup + usage.
 

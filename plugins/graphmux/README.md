@@ -12,7 +12,7 @@ own only the `gmux` control layer. **Telemetry is forced off** (`DO_NOT_TRACK=1`
 ## Install (Claude Code plugin)
 
 ```
-/plugin marketplace add brainmuxhq/brainmux
+/plugin marketplace add brainmuxhq/brainmux-plugins
 /plugin install graphmux@brainmux
 ```
 

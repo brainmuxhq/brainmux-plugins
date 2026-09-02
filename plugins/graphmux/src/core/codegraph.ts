@@ -25,7 +25,7 @@ export const CODEGRAPH_SHA256: Record<string, string> = {
 // upstream-death insurance + controlled updates; fallback = upstream. Empty mirror ⇒ upstream only.
 // Note the two URL shapes: mirror release tag is `codegraph-v<ver>` (assets directly under it),
 // upstream release tag is `v<ver>` — assetUrl() builds each correctly.
-const MIRROR_BASE = `https://github.com/brainmuxhq/brainmux/releases/download/codegraph-v${CODEGRAPH_VERSION}`;
+const MIRROR_BASE = `https://github.com/brainmuxhq/brainmux-plugins/releases/download/codegraph-v${CODEGRAPH_VERSION}`;
 const UPSTREAM_BASE = "https://github.com/colbymchenry/codegraph/releases/download";
 
 // Telemetry OFF by default — brainmux is local-first; nothing phones home unless the user opts in.

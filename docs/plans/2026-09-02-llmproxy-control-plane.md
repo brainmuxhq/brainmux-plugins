@@ -415,4 +415,4 @@ git commit -m "chore: retire claude-proxy prototype + residue, update handoff"
 **Consistency:** the CLI is invoked as `${CLAUDE_PLUGIN_ROOT}/bin/bmux` in both skills and the command (Global Constraint). `bmux delegate` (not `bin/delegate`) used in the delegate skill. `dist-check` script name identical in Task 1 and Task 6. delegate skill deleted from `~/.claude` (Task 2) and verified single-copy — matches the "no parallel layer" constraint.
 
 ## Post-plan (after all tasks + final whole-branch review)
-Merge `feat/llmproxy-migration` → `main` and push so `/plugin marketplace add brainmuxhq/brainmux` resolves. Then Plan 3: the OpenRouter model-picker + `openrouter.yaml` SSOT.
+Merge `feat/llmproxy-migration` → `main` and push so `/plugin marketplace add brainmuxhq/brainmux-plugins` resolves. Then Plan 3: the OpenRouter model-picker + `openrouter.yaml` SSOT.

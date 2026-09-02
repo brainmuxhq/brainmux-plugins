@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- **Branding (SSOT = repo `CLAUDE.md`, supersedes the design spec's WeCodeApps naming):** org `brainmuxhq`, marketplace repo `brainmuxhq/brainmux`, npm scope `@brainmux/*`, plugin name `llmproxy`, package `@brainmux/llmproxy`, CLI command `bmux`, domain `brainmux.com`. The string `WeCodeApps`/`wecodeapps`/`azorlu80` must NOT appear in any shipped artifact after Task 1.
+- **Branding (SSOT = repo `CLAUDE.md`, supersedes the design spec's WeCodeApps naming):** org `brainmuxhq`, marketplace repo `brainmuxhq/brainmux-plugins`, npm scope `@brainmux/*`, plugin name `llmproxy`, package `@brainmux/llmproxy`, CLI command `bmux`, domain `brainmux.com`. The string `WeCodeApps`/`wecodeapps`/`azorlu80` must NOT appear in any shipped artifact after Task 1.
 - **Node:** `>=18`, `"type": "module"` (ESM `import`, no `require`). TypeScript compiled with `tsc` to `dist/`.
 - **Secrets never in `brains.yaml`.** Master keys + provider keys + salt + Postgres password live only in `~/.brainmux/.env` (chmod 600). `.env` is never committed; `.env.example` (template, placeholder values) is.
 - **Routing is by PORT, never by model name.** Every generated LiteLLM config uses `model_name: "*"` and `drop_params: true`.
@@ -65,9 +65,9 @@ All paths relative to repo root `~/Development/Projects/brainmux/` unless noted.
 
 - [ ] **Step 1: Retarget the spec's branding.** Apply these exact replacements in `docs/specs/2026-09-01-brainmux-architecture-design.md`:
   - Line 5: `first plugin under the **WeCodeApps** brand.` → `the first plugin in the **brainmux** monorepo.`
-  - Line 28: ``azorlu80/wecodeapps-plugins` (marketplace name `wecodeapps`),`` → ``brainmuxhq/brainmux` (marketplace name `brainmux`),``
+  - Line 28: ``azorlu80/wecodeapps-plugins` (marketplace name `wecodeapps`),`` → ``brainmuxhq/brainmux-plugins` (marketplace name `brainmux`),``
   - Line 29: `home to a family of `@wecodeapps/*` plugins.` → `home to a family of `@brainmux/*` plugins.`
-  - Line 30: `/plugin marketplace add azorlu80/wecodeapps-plugins` → `/plugin marketplace add brainmuxhq/brainmux`
+  - Line 30: `/plugin marketplace add azorlu80/wecodeapps-plugins` → `/plugin marketplace add brainmuxhq/brainmux-plugins`
   - Line 32: `@wecodeapps/brainmux` → `@brainmux/llmproxy`
   - Line 54: `wecodeapps-plugins/` → `brainmux/`
   - Line 60: `@wecodeapps/brainmux` → `@brainmux/llmproxy`

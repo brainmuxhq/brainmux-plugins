@@ -12,7 +12,7 @@ const jsonLd = {
       url: "https://brainmux.com",
       logo: "https://brainmux.com/icon.svg",
       description: "LLM tooling for Claude Code.",
-      sameAs: ["https://github.com/brainmuxhq/brainmux"],
+      sameAs: ["https://github.com/brainmuxhq/brainmux-plugins"],
     },
     {
       "@type": "WebSite",

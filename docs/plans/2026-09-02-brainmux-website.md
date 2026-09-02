@@ -14,7 +14,7 @@
 - Stack: Next.js App Router + **TypeScript strict** + Tailwind, in `web/`. `web/` is a standalone npm project (NOT part of the plugin workspace).
 - Copy is verbatim from spec §5; metadata/SEO from spec §6.
 - Deploy: Vercel, project root `web/`, domain `brainmux.com` (Cloudflare DNS → Vercel).
-- Install command shown on the site: `/plugin marketplace add brainmuxhq/brainmux` then `/plugin install llmproxy@brainmux`.
+- Install command shown on the site: `/plugin marketplace add brainmuxhq/brainmux-plugins` then `/plugin install llmproxy@brainmux`.
 
 ## File Structure
 

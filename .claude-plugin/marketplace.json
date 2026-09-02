@@ -3,7 +3,7 @@
   "name": "brainmux",
   "owner": {
     "name": "brainmux",
-    "url": "https://github.com/brainmuxhq/brainmux"
+    "url": "https://github.com/brainmuxhq/brainmux-plugins"
   },
   "description": "brainmux — Claude Code plugin marketplace (LLM tooling).",
   "version": "0.1.0",
@@ -21,7 +21,7 @@
       "name": "graphmux",
       "source": "./plugins/graphmux",
       "description": "Local, deterministic codebase memory (call-graph MCP) for Claude Code and bmux delegates — thin wrapper over the vendored CodeGraph core.",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "license": "MIT",
       "homepage": "https://brainmux.com",
       "keywords": ["code-graph", "mcp", "claude-code", "codebase-memory", "tree-sitter", "grounding", "delegate"]

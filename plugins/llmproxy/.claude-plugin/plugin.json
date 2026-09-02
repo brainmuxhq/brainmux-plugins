@@ -4,10 +4,10 @@
   "description": "Run Claude Code on cheap/alternate LLM brains and delegate grunt work to save your Opus quota.",
   "author": {
     "name": "brainmux",
-    "url": "https://github.com/brainmuxhq/brainmux"
+    "url": "https://github.com/brainmuxhq/brainmux-plugins"
   },
   "homepage": "https://brainmux.com",
-  "repository": "https://github.com/brainmuxhq/brainmux",
+  "repository": "https://github.com/brainmuxhq/brainmux-plugins",
   "license": "MIT",
   "keywords": ["llm", "proxy", "litellm", "claude-code", "delegate", "openrouter"]
 }

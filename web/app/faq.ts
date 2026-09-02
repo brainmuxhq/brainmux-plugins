@@ -40,7 +40,7 @@ export const FAQ: Faq[] = [
   },
   {
     q: "How do I install it?",
-    a: "In Claude Code, run `/plugin marketplace add brainmuxhq/brainmux` then `/plugin install llmproxy@brainmux`. Then `bmux init`, add your OpenRouter key (`bmux config add-key OPENROUTER_API_KEY`), `bmux up`, and `bmux test`.",
+    a: "In Claude Code, run `/plugin marketplace add brainmuxhq/brainmux-plugins` then `/plugin install llmproxy@brainmux`. Then `bmux init`, add your OpenRouter key (`bmux config add-key OPENROUTER_API_KEY`), `bmux up`, and `bmux test`.",
   },
   {
     q: "Do I need Docker?",

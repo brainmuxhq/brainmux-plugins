@@ -18,7 +18,7 @@ The skills/commands invoke `${CLAUDE_PLUGIN_ROOT}/bin/bmux`, which loads `dist/s
 - **Guard against drift (the anti-patchwork piece):** `src/` is the single source of truth; `dist/` is generated. Add:
   - `"prepare": "npm run build"` to `package.json` (rebuilds on `npm install`).
   - `"dist-check": "npm run build && git diff --exit-code -- dist"` — fails if committed `dist/` is stale vs `src/`. Run in CI and available locally. This keeps `dist/` honest so it never becomes a hand-edited patch.
-- **Merge:** after Plan 2 tasks + the final whole-branch review, merge `feat/llmproxy-migration` → `main` and push, so `/plugin marketplace add brainmuxhq/brainmux` resolves.
+- **Merge:** after Plan 2 tasks + the final whole-branch review, merge `feat/llmproxy-migration` → `main` and push, so `/plugin marketplace add brainmuxhq/brainmux-plugins` resolves.
 
 ## 3. `delegate` skill — move into the plugin (no parallel copy)
 

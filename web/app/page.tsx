@@ -16,7 +16,7 @@ export default function Home() {
             <a href="#products">Products</a>
             <a href="#llmproxy">llmproxy</a>
             <a href="#graphmux">graphmux</a>
-            <a href="https://github.com/brainmuxhq/brainmux" className="ghbtn" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+            <a href="https://github.com/brainmuxhq/brainmux-plugins" className="ghbtn" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
           </nav>
         </div>
       </header>
@@ -33,7 +33,7 @@ export default function Home() {
             </p>
             <div className="cta-row">
               <a className="btn btn-primary" href="#llmproxy">Explore llmproxy</a>
-              <a className="btn btn-ghost" href="https://github.com/brainmuxhq/brainmux" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+              <a className="btn btn-ghost" href="https://github.com/brainmuxhq/brainmux-plugins" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
             </div>
             <div className="mux" aria-hidden="true" style={{ marginTop: 26 }}>
               <svg viewBox="0 0 520 168" role="img" aria-label="Claude Code routed through bmux to chat, deep and coder brains">
@@ -129,7 +129,7 @@ export default function Home() {
             <div className="term" id="install">
               <div className="term-bar"><i /><i /><i /><span className="t">install · Claude Code</span></div>
               <div className="term-body">
-                <div className="row"><span className="prompt">&gt;</span><span>/plugin marketplace add brainmuxhq/brainmux</span><CopyButton text="/plugin marketplace add brainmuxhq/brainmux" /></div>
+                <div className="row"><span className="prompt">&gt;</span><span>/plugin marketplace add brainmuxhq/brainmux-plugins</span><CopyButton text="/plugin marketplace add brainmuxhq/brainmux-plugins" /></div>
                 <div className="row"><span className="out">✓ added marketplace: brainmux</span></div>
                 <div className="row"><span className="prompt">&gt;</span><span>/plugin install llmproxy@brainmux</span><CopyButton text="/plugin install llmproxy@brainmux" /></div>
                 <div className="row"><span className="ok">✓ installed llmproxy</span></div>
@@ -184,7 +184,7 @@ export default function Home() {
           <div className="term">
             <div className="term-bar"><i /><i /><i /><span className="t">terminal — ~/your-project</span></div>
             <div className="term-body">
-              <div className="row"><span className="prompt">&gt;</span><span>/plugin marketplace add brainmuxhq/brainmux</span></div>
+              <div className="row"><span className="prompt">&gt;</span><span>/plugin marketplace add brainmuxhq/brainmux-plugins</span></div>
               <div className="row"><span className="prompt">&gt;</span><span>/plugin install llmproxy@brainmux</span></div>
               <div className="row"><span className="prompt">$</span><span>bmux init</span></div>
               <div className="row"><span className="prompt">$</span><span>bmux config add-key OPENROUTER_API_KEY</span><span className="cmt">  # hidden prompt — key not echoed</span></div>
@@ -207,7 +207,7 @@ export default function Home() {
                 A thin wrapper over the vendored CodeGraph engine (tree-sitter → local SQLite): no embeddings, no
                 cloud, telemetry off.
               </p>
-              <div className="cta-row"><a className="btn btn-ghost" href="https://github.com/brainmuxhq/brainmux" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div>
+              <div className="cta-row"><a className="btn btn-ghost" href="https://github.com/brainmuxhq/brainmux-plugins" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div>
             </div>
             <div className="term">
               <div className="term-bar"><i /><i /><i /><span className="t">install · Claude Code</span></div>
@@ -247,7 +247,7 @@ export default function Home() {
           <span className="brand mono"><BrainmuxMark size={16} />brain<span className="accent">mux</span></span>
           <span>LLM tooling for Claude Code · Engines: LiteLLM · CodeGraph (MIT)</span>
           <span style={{ display: "flex", gap: 20 }}>
-            <a href="https://github.com/brainmuxhq/brainmux" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://github.com/brainmuxhq/brainmux-plugins" target="_blank" rel="noopener noreferrer">GitHub</a>
             <a href="/">brainmux.com</a>
             <span>MIT</span>
           </span>

@@ -38,7 +38,7 @@ test("assetUrl builds pinned upstream + mirror URLs (distinct tag shapes, no dou
   );
   assert.equal(
     assetUrl("darwin-arm64", "mirror"),
-    `https://github.com/brainmuxhq/brainmux/releases/download/codegraph-v${CODEGRAPH_VERSION}/codegraph-darwin-arm64.tar.gz`,
+    `https://github.com/brainmuxhq/brainmux-plugins/releases/download/codegraph-v${CODEGRAPH_VERSION}/codegraph-darwin-arm64.tar.gz`,
   );
   assert.ok(!assetUrl("linux-x64", "mirror").includes("/v" + CODEGRAPH_VERSION + "/codegraph-linux"), "no double-version path");
 });

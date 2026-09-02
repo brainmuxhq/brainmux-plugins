@@ -36,7 +36,7 @@ var CODEGRAPH_SHA256 = {
   "win32-x64": "cd76c3c3391f2d40abef12b142151950b6d77abc2d8429e648f89eaa90f5b68a",
   "win32-arm64": "3ca980010bd718a6b5e75be1145806ae6491afb1a59a2cec6cee4bf5c39f1b3a"
 };
-var MIRROR_BASE = `https://github.com/brainmuxhq/brainmux/releases/download/codegraph-v${CODEGRAPH_VERSION}`;
+var MIRROR_BASE = `https://github.com/brainmuxhq/brainmux-plugins/releases/download/codegraph-v${CODEGRAPH_VERSION}`;
 var UPSTREAM_BASE = "https://github.com/colbymchenry/codegraph/releases/download";
 var TELEMETRY_OFF = {
   DO_NOT_TRACK: "1",

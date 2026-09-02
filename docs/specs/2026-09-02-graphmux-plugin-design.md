@@ -36,7 +36,7 @@ The #1 principle's intent = **vendor the core, pin it, mirror it, controlled upd
 
 Therefore the correct isolation unit here is the **pinned binary**, not a container:
 - The binary *is* the reproducible artifact — a container around it adds no reproducibility and breaks the simple stdio/per-project model (per-workdir bind-mounts + forcing HTTP transport).
-- We still get every property the principle wants: **pin** (exact version + SHA256), **mirror** (copy release assets to our own `brainmuxhq/brainmux` releases for upstream-death insurance), **controlled update** (bump the pinned version when *we* choose), **thin wrapper** (`gmux`), **no fork**.
+- We still get every property the principle wants: **pin** (exact version + SHA256), **mirror** (copy release assets to our own `brainmuxhq/brainmux-plugins` releases for upstream-death insurance), **controlled update** (bump the pinned version when *we* choose), **thin wrapper** (`gmux`), **no fork**.
 
 > **Decision needing sign-off:** container vs pinned-binary. Recommendation: **pinned-binary** (rationale above). If uniform-container is preferred for ops symmetry, note the cost: per-workdir mount management + HTTP-transport wiring + no reproducibility gain. Container remains possible; not recommended for this tool.
 
@@ -44,7 +44,7 @@ Pin constants live in `plugins/graphmux/src/core/codegraph.ts` beside the downlo
 ```ts
 export const CODEGRAPH_VERSION = "1.6.0";
 export const CODEGRAPH_SHA256 = { "linux-x64": "de3391f79ed42622d937e6cd5b7642a7ea8bb7d1473607e80b879ba73ef216b0", /* darwin-arm64, darwin-x64, linux-arm64, win32-x64, win32-arm64 … */ };
-// primary: our mirror (brainmuxhq/brainmux releases); fallback: upstream colbymchenry/codegraph
+// primary: our mirror (brainmuxhq/brainmux-plugins releases); fallback: upstream colbymchenry/codegraph
 ```
 
 ## 4. The wrapper — `gmux` (thin control layer, our code)

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     "cheap LLM", "delegate", "Opus quota", "AI coding agent", "DeepSeek", "Qwen",
     "code graph", "codebase memory", "CodeGraph", "MCP", "call graph", "tree-sitter",
   ],
-  authors: [{ name: "brainmux", url: "https://github.com/brainmuxhq/brainmux" }],
+  authors: [{ name: "brainmux", url: "https://github.com/brainmuxhq/brainmux-plugins" }],
   creator: "brainmux",
   publisher: "brainmux",
   category: "technology",

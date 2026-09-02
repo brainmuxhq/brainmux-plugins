@@ -30,7 +30,7 @@ in a thin, version-pinned layer.
 - Free and MIT-licensed. Requires Docker and an OpenRouter API key.
 
 ## Install (in Claude Code)
-/plugin marketplace add brainmuxhq/brainmux
+/plugin marketplace add brainmuxhq/brainmux-plugins
 /plugin install llmproxy@brainmux
 
 ## Quickstart (terminal)
@@ -58,7 +58,7 @@ bmux test                         # smoke every brain via /v1/messages
 - bmux delegate <brain> --memory "<task>"   # ground a cheap brain on the code graph (stops hallucination)
 
 ## Links
-- GitHub: https://github.com/brainmuxhq/brainmux
+- GitHub: https://github.com/brainmuxhq/brainmux-plugins
 - Site: https://brainmux.com
 - Engines: LiteLLM (MIT) + CodeGraph (MIT)
 
