@@ -71,6 +71,23 @@ test("default drops host MCP (--strict-mcp-config); --mcp keeps it", () => {
   assert.ok(!on.includes("--strict-mcp-config"), "--mcp must let the worker inherit host MCP");
 });
 
+test("--allow-tools appends to the analyze allowlist (headless grounding without --yolo)", () => {
+  const { opts } = parseDelegateArgs(["dsflash", "--allow-tools", "mcp__brave-search__brave_web_search,Bash", "search"]);
+  assert.deepEqual(opts.allowTools, ["mcp__brave-search__brave_web_search", "Bash"]);
+  const args = buildClaudeArgs(opts);
+  const allow = args.slice(args.indexOf("--allowedTools") + 1);
+  assert.ok(allow.includes("Read") && allow.includes("mcp__brave-search__brave_web_search") && allow.includes("Bash"));
+  // an mcp__ tool implies --mcp, so the worker actually loads that server
+  assert.equal(opts.mcp, true);
+  assert.ok(!args.includes("--strict-mcp-config"));
+});
+
+test("--allow-tools with only non-MCP tools does NOT auto-enable MCP", () => {
+  const { opts } = parseDelegateArgs(["coder", "--allow-tools", "Bash", "run it"]);
+  assert.equal(opts.mcp, false);
+  assert.ok(buildClaudeArgs(opts).includes("--strict-mcp-config"));
+});
+
 test("--stream builds stream-json + --verbose (not the plain output-format)", () => {
   const { opts } = parseDelegateArgs(["coder", "--stream", "do it"]);
   const args = buildClaudeArgs(opts);

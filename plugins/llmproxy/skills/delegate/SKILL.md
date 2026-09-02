@@ -53,13 +53,37 @@ worker the host's MCP servers (off by default).
 Every call echoes its config to stderr so you know what went out:
 `delegate: coder · analyze · mcp off`.
 
-## MCP servers (`--mcp`, default OFF)
+## MCP servers (`--mcp`, default OFF) + `--allow-tools`
 A delegated worker does NOT get the host's MCP servers unless you pass `--mcp`. This is
 deliberate: loading them (Vercel/GSC/Chrome/render/…) adds ~35k+ input tokens per call and
 a grunt task never uses them — measured 30 tools / ~33k tokens without vs 147 tools / ~69k
 with. Keep the default for bulk/detection/refactor work. Add `--mcp` only when the task
 genuinely needs one (e.g. `context7` for live docs, `brave` for web search) — then it pays
 the token cost just for that call.
+
+**`--mcp` alone is not enough headless.** In analyze/write mode the worker still needs
+*permission* to call a tool, and a headless `claude -p` can't answer a permission prompt —
+so `--mcp` loads brave but the search is blocked. Use `--allow-tools <csv>` to pre-allow the
+exact tools so it runs without a prompt (and without `--yolo`, which opens everything):
+
+```sh
+bmux delegate dsflash --allow-tools mcp__brave-search__brave_web_search "verify: is X still in force? cite the source"
+```
+An `mcp__…` name in `--allow-tools` implies `--mcp` (the server must load to be callable).
+`--allow-tools` also works for built-ins (e.g. `--allow-tools Bash` to let an analyze worker
+run a command). Prefer this narrow grant over `--yolo` for grounded/web tasks.
+
+## Grounding — cheap brains invent facts
+A cheap brain with **no web access confidently fabricates** factual claims (regulation names,
+"X was repealed", library APIs). It is strong on *bounded, calibrated* work (one-file audit,
+clear spec) but must NOT be trusted as a fact-checker. For anything factual: either verify it
+yourself, or ground the worker with `--mcp --allow-tools mcp__brave-search__brave_web_search`
+and tell it to cite sources. Treat every unsourced factual claim as unverified.
+
+## Concurrency — sequential for quality
+Under heavy concurrency (many parallel `bmux delegate` on one brain) the model degrades and
+rate-limits — garbled/typo output. Run delegates **sequentially or at low concurrency** when
+output quality matters; reserve fan-out for cheap, independent detection passes you'll verify anyway.
 
 ## Progress indicator (`--stream`) — for a human at a terminal
 Add `--stream` (aka `-v`) for a single, self-rewriting progress line while the worker runs:

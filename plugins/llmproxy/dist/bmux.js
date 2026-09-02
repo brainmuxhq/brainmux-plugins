@@ -11787,7 +11787,7 @@ var GUARD = "You are a DELEGATED worker brain invoked by an orchestrator. Do EXA
 function parseDelegateArgs(argv, stdin) {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, task: "" };
+  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], task: "" };
   const rest = argv.slice(1);
   const parts = [];
   for (let i = 0; i < rest.length; i++) {
@@ -11797,7 +11797,9 @@ function parseDelegateArgs(argv, stdin) {
     else if (a === "--json") opts.outfmt = "json";
     else if (a === "--stream" || a === "-v" || a === "--verbose") opts.stream = true;
     else if (a === "--mcp" || a === "--with-mcp") opts.mcp = true;
-    else if (a === "-C") {
+    else if (a === "--allow-tools" || a === "--allowed-tools") {
+      opts.allowTools = (rest[++i] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    } else if (a === "-C") {
       opts.workdir = rest[++i] ?? ".";
     } else if (a === "-") {
       opts.task = stdin ?? "";
@@ -11807,6 +11809,7 @@ function parseDelegateArgs(argv, stdin) {
     } else if (a.startsWith("-")) throw new Error(`delegate: unknown option '${a}'`);
     else parts.push(a);
   }
+  if (opts.allowTools.some((t) => t.startsWith("mcp__"))) opts.mcp = true;
   if (!opts.task) opts.task = parts.join(" ");
   if (!opts.task) throw new Error("delegate: no task given");
   return { brain, opts };
@@ -11814,9 +11817,11 @@ function parseDelegateArgs(argv, stdin) {
 function buildClaudeArgs(opts) {
   const fmt = opts.stream ? ["--output-format", "stream-json", "--verbose"] : ["--output-format", opts.outfmt];
   const args = ["-p", opts.task, ...fmt, "--append-system-prompt", GUARD];
-  if (opts.mode === "analyze") args.push("--permission-mode", "default", "--allowedTools", "Read", "Grep", "Glob");
-  else if (opts.mode === "write") args.push("--permission-mode", "acceptEdits");
-  else args.push("--dangerously-skip-permissions");
+  if (opts.mode === "analyze") args.push("--permission-mode", "default", "--allowedTools", "Read", "Grep", "Glob", ...opts.allowTools);
+  else if (opts.mode === "write") {
+    args.push("--permission-mode", "acceptEdits");
+    if (opts.allowTools.length) args.push("--allowedTools", ...opts.allowTools);
+  } else args.push("--dangerously-skip-permissions");
   if (!opts.mcp) args.push("--strict-mcp-config");
   return args;
 }
@@ -11892,11 +11897,25 @@ function summaryLine(p) {
   const ed = p.edits ? ` \xB7 ${p.edits} edit${p.edits === 1 ? "" : "s"}` : "";
   return `   \u21B3 ${p.touched.length} file${p.touched.length === 1 ? "" : "s"}: ${shown}${more}${ed}`;
 }
+var CONNECTOR_NOISE = /connectors are disabled because ANTHROPIC_API_KEY/;
+function cleanStderr(s) {
+  return s.split("\n").filter((l) => !CONNECTOR_NOISE.test(l)).join("\n");
+}
 function runStreamed(brain, opts, childEnv) {
   const tty = !!process.stderr.isTTY;
-  const child = spawn("claude", buildClaudeArgs(opts), { cwd: opts.workdir, stdio: ["ignore", "pipe", "inherit"], env: childEnv });
+  const child = spawn("claude", buildClaudeArgs(opts), { cwd: opts.workdir, stdio: ["ignore", "pipe", "pipe"], env: childEnv });
   const p = initProgress();
   let buf = "";
+  let ebuf = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk) => {
+    ebuf += chunk;
+    for (let nl = ebuf.indexOf("\n"); nl >= 0; nl = ebuf.indexOf("\n")) {
+      const line = ebuf.slice(0, nl);
+      ebuf = ebuf.slice(nl + 1);
+      if (!CONNECTOR_NOISE.test(line)) process.stderr.write(line + "\n");
+    }
+  });
   const render = () => {
     if (tty) process.stderr.write("\r\x1B[K" + statusLine(brain, p));
   };
@@ -11924,6 +11943,7 @@ function runStreamed(brain, opts, childEnv) {
         const ev = parseStreamLine(buf);
         if (ev) foldEvent(p, ev);
       }
+      if (ebuf.trim() && !CONNECTOR_NOISE.test(ebuf)) process.stderr.write(ebuf + "\n");
       if (tty) process.stderr.write("\r\x1B[K");
       process.stderr.write(`${doneLine(brain, p)}
 `);
@@ -11957,9 +11977,11 @@ async function runDelegate(argv, env = process.env) {
   if (opts.stream) return runStreamed(brain, opts, childEnv);
   const r = spawnSync3("claude", buildClaudeArgs(opts), {
     cwd: opts.workdir,
-    stdio: wantsStdin ? ["inherit", "inherit", "inherit"] : ["ignore", "inherit", "inherit"],
+    stdio: wantsStdin ? ["inherit", "inherit", "pipe"] : ["ignore", "inherit", "pipe"],
+    encoding: "utf8",
     env: childEnv
   });
+  if (r.stderr) process.stderr.write(cleanStderr(r.stderr));
   return r.status ?? 1;
 }
 
@@ -12508,9 +12530,10 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
   bmux up | down | restart        manage the brain stack (regenerates from brains.yaml)
   bmux ps | logs [svc] | health   inspect the stack
   bmux <brain> [claude args...]   launch Claude Code on a brain (e.g. bmux chat)
-  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] "<task>"
+  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--allow-tools t1,t2] "<task>"
                                   (--stream shows a live progress line: \u23F3 brain \xB7 5/34 \xB7 <step>)
-                                  (--mcp passes host MCP servers to the worker; default off = cheaper)
+                                  (--mcp passes host MCP servers; --allow-tools pre-allows tools headless \u2014 e.g.
+                                   --allow-tools mcp__brave-search__brave_web_search for grounded web search, no --yolo)
   bmux config add-brain <name> <port> <model> [providerKey]
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list

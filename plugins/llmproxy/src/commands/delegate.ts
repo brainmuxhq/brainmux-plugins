@@ -14,13 +14,14 @@ export interface DelegateOpts {
   outfmt: "text" | "json";
   stream: boolean;
   mcp: boolean; // pass the host's MCP servers through to the worker (default off — see buildClaudeArgs)
+  allowTools: string[]; // extra tools auto-allowed headless (e.g. an MCP tool) so it needn't fall back to --yolo
   task: string;
 }
 
 export function parseDelegateArgs(argv: string[], stdin?: string): { brain: string; opts: DelegateOpts } {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, task: "" };
+  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], task: "" };
   const rest = argv.slice(1);
   const parts: string[] = []; // bare positional words → joined, so an unquoted task isn't silently truncated to its last word
   for (let i = 0; i < rest.length; i++) {
@@ -30,12 +31,15 @@ export function parseDelegateArgs(argv: string[], stdin?: string): { brain: stri
     else if (a === "--json") opts.outfmt = "json";
     else if (a === "--stream" || a === "-v" || a === "--verbose") opts.stream = true;
     else if (a === "--mcp" || a === "--with-mcp") opts.mcp = true;
+    else if (a === "--allow-tools" || a === "--allowed-tools") { opts.allowTools = (rest[++i] ?? "").split(",").map((s) => s.trim()).filter(Boolean); }
     else if (a === "-C") { opts.workdir = rest[++i] ?? "."; }
     else if (a === "-") { opts.task = stdin ?? ""; }
     else if (a === "--") { opts.task = rest.slice(i + 1).join(" "); break; }
     else if (a.startsWith("-")) throw new Error(`delegate: unknown option '${a}'`);
     else parts.push(a);
   }
+  // Allowing an MCP tool is pointless unless the MCP servers are actually loaded, so imply --mcp.
+  if (opts.allowTools.some((t) => t.startsWith("mcp__"))) opts.mcp = true;
   // Brain validity is the manifest's call (SSOT = brains.yaml); runDelegate/planLaunch
   // validate it against the live config. Here we only require a task.
   if (!opts.task) opts.task = parts.join(" ");
@@ -48,8 +52,8 @@ export function buildClaudeArgs(opts: DelegateOpts): string[] {
   // progress line; otherwise we take the plain final result the orchestrator consumes.
   const fmt = opts.stream ? ["--output-format", "stream-json", "--verbose"] : ["--output-format", opts.outfmt];
   const args = ["-p", opts.task, ...fmt, "--append-system-prompt", GUARD];
-  if (opts.mode === "analyze") args.push("--permission-mode", "default", "--allowedTools", "Read", "Grep", "Glob");
-  else if (opts.mode === "write") args.push("--permission-mode", "acceptEdits");
+  if (opts.mode === "analyze") args.push("--permission-mode", "default", "--allowedTools", "Read", "Grep", "Glob", ...opts.allowTools);
+  else if (opts.mode === "write") { args.push("--permission-mode", "acceptEdits"); if (opts.allowTools.length) args.push("--allowedTools", ...opts.allowTools); }
   else args.push("--dangerously-skip-permissions");
   // A grunt worker doesn't need the host's MCP servers (Vercel/GSC/Chrome/…). Loading
   // them cost ~75k input tokens/call and zero benefit here, so drop them by default;
@@ -163,11 +167,28 @@ export function summaryLine(p: Progress): string | null {
 
 // --- run -------------------------------------------------------------------
 
+// The child `claude` prints this once per call because we set ANTHROPIC_API_KEY — pure noise
+// for a delegate; drop just that line and pass everything else on the child's stderr through.
+const CONNECTOR_NOISE = /connectors are disabled because ANTHROPIC_API_KEY/;
+function cleanStderr(s: string): string {
+  return s.split("\n").filter((l) => !CONNECTOR_NOISE.test(l)).join("\n");
+}
+
 function runStreamed(brain: string, opts: DelegateOpts, childEnv: NodeJS.ProcessEnv): Promise<number> {
   const tty = !!process.stderr.isTTY;
-  const child = spawn("claude", buildClaudeArgs(opts), { cwd: opts.workdir, stdio: ["ignore", "pipe", "inherit"], env: childEnv });
+  const child = spawn("claude", buildClaudeArgs(opts), { cwd: opts.workdir, stdio: ["ignore", "pipe", "pipe"], env: childEnv });
   const p = initProgress();
   let buf = "";
+  let ebuf = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk: string) => {
+    ebuf += chunk;
+    for (let nl = ebuf.indexOf("\n"); nl >= 0; nl = ebuf.indexOf("\n")) {
+      const line = ebuf.slice(0, nl);
+      ebuf = ebuf.slice(nl + 1);
+      if (!CONNECTOR_NOISE.test(line)) process.stderr.write(line + "\n");
+    }
+  });
   // One rewriting status line on stderr (TTY only — a buffered consumer gets no per-step spam).
   const render = () => { if (tty) process.stderr.write("\r\x1b[K" + statusLine(brain, p)); };
   const snap = () => `${p.steps}|${p.todoDone}/${p.todoTotal}|${p.current}`;
@@ -189,6 +210,7 @@ function runStreamed(brain: string, opts: DelegateOpts, childEnv: NodeJS.Process
     child.on("error", (e) => { process.stderr.write(`delegate: ${e.message}\n`); resolve(1); });
     child.on("close", (code) => {
       if (buf.trim()) { const ev = parseStreamLine(buf); if (ev) foldEvent(p, ev); }
+      if (ebuf.trim() && !CONNECTOR_NOISE.test(ebuf)) process.stderr.write(ebuf + "\n"); // flush trailing partial stderr line
       if (tty) process.stderr.write("\r\x1b[K"); // wipe the live line
       process.stderr.write(`${doneLine(brain, p)}\n`);
       const sum = summaryLine(p);
@@ -218,8 +240,10 @@ export async function runDelegate(argv: string[], env: NodeJS.ProcessEnv = proce
 
   const r = spawnSync("claude", buildClaudeArgs(opts), {
     cwd: opts.workdir,
-    stdio: wantsStdin ? ["inherit", "inherit", "inherit"] : ["ignore", "inherit", "inherit"],
+    stdio: wantsStdin ? ["inherit", "inherit", "pipe"] : ["ignore", "inherit", "pipe"],
+    encoding: "utf8",
     env: childEnv,
   });
+  if (r.stderr) process.stderr.write(cleanStderr(r.stderr));
   return r.status ?? 1;
 }

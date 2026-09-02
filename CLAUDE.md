@@ -106,7 +106,10 @@
 
 **Yayın/sertleştirme:**
 - ✅ Multi-arch mirror: `ghcr.io/brainmuxhq/brainmux-litellm` (amd64+arm64), IMAGE_REF = manifest-list `sha256:693d839d…`.
-- ✅ Version **0.1.10** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.10).
+- ✅ Version **0.1.11** (plugin.json + marketplace plugin entry + package.json; release zinciri 0.1.0→0.1.11).
+  (0.1.11: Riskmatik kullanım-geri-bildirimi batch — `bmux delegate --allow-tools <csv>` (headless MCP/tool grounding,
+   --yolo'suz; `mcp__…` → --mcp otomatik) · stderr "connectors disabled" gürültüsü filtrelendi (stream+sync) ·
+   delegate skill grounding/halüsinasyon + concurrency notları. Roadmap: `docs/2026-09-02-bmux-usage-feedback.md`.)
   (0.1.10: 7-boyut askeri review fix'leri — model zod regex (config.yaml YAML-injection kapatıldı) ·
    statusline macOS `stat -f %m` fallback + `CLAUDE_CONFIG_DIR`/`XDG_CACHE_HOME` + atomik cache · spend all-unreachable
    exit 1 · cli non-Error catch · config set-model arg doğrulama. allowedTools "bug"u verify'da elendi — comma/space ikisi de geçerli.)
