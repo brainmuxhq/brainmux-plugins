@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // web/ bağımsız bir uygulama — kökü kendisidir (üstteki plugins lockfile'ı karıştırmasın).
+  outputFileTracingRoot: process.cwd(),
   async headers() {
     return [
       {
