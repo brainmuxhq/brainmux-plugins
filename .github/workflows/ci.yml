@@ -6,6 +6,16 @@ on:
   pull_request:
 
 jobs:
+  # Fails if a plugin's version drifts across marketplace.json / package.json / plugin.json.
+  version-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node scripts/version-sync-guard.mjs
+
   llmproxy:
     runs-on: ubuntu-latest
     steps:

@@ -7,6 +7,9 @@
   "workspaces": [
     "plugins/*"
   ],
+  "scripts": {
+    "guard": "node scripts/version-sync-guard.mjs"
+  },
   "engines": {
     "node": ">=18"
   },
