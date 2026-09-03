@@ -40,7 +40,7 @@
 - **Kontrol paneli:** Claude Code + `bmux` **birincil** (declarative, `brains.yaml`+`.env` SSOT). **LiteLLM UI = gözlem** (spend/log/param) — link ver, tekrar yazma. **Kendi web UI YAZMA.**
 - **Delege disiplini:** ucuz beyin çıktısını Opus **doğrular** (rubber-stamp yok). Task/Agent tool bu beyinlere erişemez (Opus'u miras alır) — sadece `bmux delegate`.
 - **Doğal dil çalıştırma (NL → komut):** kullanıcı bir `bmux`/`gmux`/brainmux işini doğal dille isterse Claude uygun komutu **kendisi Bash'le çalıştırır** (elle yazdırma) ve **ne çalıştırdığını tek satır bildirir** (şeffaflık — sonuç + varsa uyarı). Aynı politika **tüm brainmux plugin'lerine** uygulanır (llmproxy `bmux`, graphmux `gmux`, sonrakiler).
-  - **Güvenlik riski yoksa → doğrudan koş:** `statusline install`, `spend`, `up|down|restart|ps|health|logs`, `config list|set-model|add-brain|remove-brain`, `models`, `test`; **graphmux:** `gmux install` (SHA-doğrulamalı resmi binary, telemetri kapalı), `gmux index|status|sync`, `gmux orphans` (read-only ölü-kod tarama), `gmux -- <sorgu>` (explore/callers/impact).
+  - **Güvenlik riski yoksa → doğrudan koş:** `statusline install`, `spend`, `up|down|restart|ps|health|logs`, `config list|set-model|add-brain|remove-brain`, `models`, `test`; **graphmux:** `gmux install` (SHA-doğrulamalı resmi binary, telemetri kapalı), `gmux index|status|sync`, `gmux orphans` (read-only ölü-kod tarama), `gmux drift <sym>` (read-only graph+kör-zon grep), `gmux -- <sorgu>` (explore/callers/impact).
   - **Riskli/geri-alınamaz/secret/dışa-dönük → önce komutu + etkisini açıkla, onay al:** `delegate --yolo`, `config add-key <değer>` (secret), `statusline install --force` (mevcut ayarı ezer), **graphmux `gmux hook install|uninstall`** (repo'nun git-hook'larını yazar/siler — davranış değiştirir), veri/beyin silen ya da dış servise yazan her iş.
   - **Emin değilsen çalıştırma:** komutu ve ne yapacağını açıkla, kullanıcıya bırak. (En azından komut hakkında bilgi ver.)
 
@@ -128,6 +128,13 @@
   `gmux orphans` artık **sorgu öncesi auto-sync** eder (agent tek komutla taze sonuç; `--no-sync` opt-out). (3) SKILL.md'nin
   yanlış "index auto-syncs on file changes" iddiası düzeltildi (CLI izlemez → sync/hook). Kanıt: doğal deney (silinen sembol
   sync'siz index'te kaldı). Kavram: `orphans` self-freshen, `hook` git-event-freshen, MCP-serve daemon ayrı.
+  **v0.2.2:** `gmux drift <sym|model>` — Flavor A: [graph] callers+impact (kesin) + [grep-unverified] graph-körü zonlar
+  (ORM/queue/CommonJS-handler/middleware/Next-entry), symbol-scoped grep (shell-less, node_modules hariç). Kör-zonlar
+  **config cascade** (core/zones.ts): default < ~/.brainmux/graphmux-zones.json < repo .graphmux/zones.json < --zone
+  (same-label override, enabled:false disable, şema-doğrulamalı, `--list-zones` introspection). SKILL: AI repo stack'ini
+  tespit edip zon enjekte etsin (drizzle/bullmq vb.) — "eklentiyi kullanan AI adapte etsin" (Ali). 36 unit + dogfood.
+  Ali'nin dogfood spec'i: Flavor B (tree-sitter framework-farkında resolver) sonraya. Not: shorthand get(Server|Static)Props
+  bug'ı test'le yakalandı → gerçek Next isimleri (getServerSideProps|getStaticProps|getStaticPaths|getInitialProps).
   Spec `docs/specs/2026-09-02-graphmux-plugin-design.md`. Aday-seçim: Cognee elendi (LLM-extraction stokastik, arXiv 2601.08773),
   Serena host-native (container'a kötü uyum) → CodeGraph (tek-binary, tree-sitter, auto-sync, MIT). NL-execution `gmux`'a genişledi + graphmux skill.
 - ✅ Version **0.1.19** (llmproxy: `bmux delegate --memory` — graphmux kod-graph MCP'sine grounded, izole `--mcp-config`+strict,

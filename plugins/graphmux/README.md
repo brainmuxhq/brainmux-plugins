@@ -33,6 +33,11 @@ gmux orphans [path] [opts]   bulk dead/orphan candidates: symbols with 0 incomin
 gmux hook install|uninstall|status [path]
                              git hook (post-commit/merge/checkout) that auto-syncs the index —
                              the CLI does NOT watch files, so this is the hands-off auto-reindex
+gmux drift <sym|model> [path]
+                             [graph] callers+impact (certain) + [grep-unverified] the graph-BLIND
+                             zones (ORM/queue/handler/middleware/Next), symbol-scoped. Zones are a
+                             config cascade (default < ~/.brainmux/graphmux-zones.json < repo
+                             .graphmux/zones.json < --zone label=regex); `--list-zones` shows them.
 gmux -- <codegraph args>     raw passthrough (no smart defaults — you manage --limit)
 ```
 

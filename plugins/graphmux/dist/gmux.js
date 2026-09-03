@@ -123,6 +123,10 @@ function syncIndex(projectPath, env = process.env) {
   } catch {
   }
 }
+function captureCodegraph(bin, args, env = process.env) {
+  const r = spawnSync(bin, args, { encoding: "utf8", env: { ...env, ...TELEMETRY_OFF } });
+  return { status: r.status ?? 1, stdout: r.stdout ?? "" };
+}
 
 // src/core/mcp.ts
 var MCP_SERVER_NAME = "graphmux";
@@ -462,6 +466,188 @@ function runHook(argv, _env = process.env) {
   return code;
 }
 
+// src/commands/drift.ts
+import path8 from "node:path";
+import { spawnSync as spawnSync3 } from "node:child_process";
+
+// src/core/zones.ts
+import fs5 from "node:fs";
+import path7 from "node:path";
+var DEFAULT_BLIND_ZONES = [
+  { label: "orm", re: "\\.(create|findUnique|findFirst|findMany|update|updateMany|delete|deleteMany|upsert)\\(", note: "ORM DB blast-radius \xE7a\u011Fr\u0131-graf\u0131nda yok" },
+  { label: "cjs-handler", re: "exports\\.[A-Za-z0-9_]+ *= *async", note: "CommonJS route handler graph'ta g\xF6r\xFCnmez" },
+  { label: "queue", re: "\\.(send|work)\\(", note: "enqueue\u2194worker kenar\u0131 kopuk" },
+  { label: "middleware", re: "app\\.use\\(", note: "middleware zinciri call-less" },
+  { label: "next-entry", re: "getServerSideProps|getStaticProps|getStaticPaths|getInitialProps", note: "Next entry-point call-less" }
+];
+function validateZone(raw) {
+  if (!raw || typeof raw !== "object") return { error: "zone is not an object" };
+  const o = raw;
+  if (typeof o.label !== "string" || !o.label.trim()) return { error: "zone missing non-empty 'label'" };
+  if (o.enabled === false) return { zone: { label: o.label, re: "", note: "", enabled: false } };
+  if (typeof o.re !== "string" || !o.re) return { error: `zone '${o.label}': missing 're'` };
+  try {
+    new RegExp(o.re);
+  } catch (e) {
+    return { error: `zone '${o.label}': invalid regex \u2014 ${e instanceof Error ? e.message : String(e)}` };
+  }
+  return { zone: { label: o.label, re: o.re, note: typeof o.note === "string" ? o.note : "", enabled: true } };
+}
+function resolveZones(layers) {
+  const byLabel = /* @__PURE__ */ new Map();
+  const warnings = [];
+  for (const layer of layers) {
+    for (const raw of layer.zones) {
+      const { zone, error } = validateZone(raw);
+      if (error) {
+        warnings.push(`[${layer.source}] ${error}`);
+        continue;
+      }
+      if (zone.enabled === false) {
+        byLabel.delete(zone.label);
+        continue;
+      }
+      byLabel.set(zone.label, { label: zone.label, re: zone.re, note: zone.note ?? "", source: layer.source });
+    }
+  }
+  return { zones: [...byLabel.values()], warnings };
+}
+function parseZoneFlags(argv) {
+  const out = [];
+  for (let i = 0; i < argv.length; i++) {
+    let spec;
+    if (argv[i].startsWith("--zone=")) spec = argv[i].slice("--zone=".length);
+    else if (argv[i] === "--zone") spec = argv[i + 1];
+    if (!spec) continue;
+    const eq = spec.indexOf("=");
+    if (eq <= 0) continue;
+    out.push({ label: spec.slice(0, eq).trim(), re: spec.slice(eq + 1).trim(), note: "--zone flag" });
+  }
+  return out;
+}
+function loadJsonZones(file) {
+  try {
+    const parsed = JSON.parse(fs5.readFileSync(file, "utf8"));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+function buildZoneLayers(homeDir, projectPath, cliZones) {
+  return [
+    { source: "default", zones: DEFAULT_BLIND_ZONES },
+    { source: "user:~/.brainmux/graphmux-zones.json", zones: loadJsonZones(path7.join(homeDir, "graphmux-zones.json")) },
+    { source: "repo:.graphmux/zones.json", zones: loadJsonZones(path7.join(projectPath, ".graphmux", "zones.json")) },
+    { source: "--zone", zones: cliZones }
+  ];
+}
+
+// src/commands/drift.ts
+function parseArgs2(argv, cwd = process.cwd()) {
+  const positional = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--zone") {
+      i++;
+      continue;
+    }
+    if (a.startsWith("-")) continue;
+    positional.push(a);
+  }
+  return {
+    symbol: positional[0] ?? "",
+    projectPath: path8.resolve(cwd, positional[1] ?? "."),
+    json: argv.includes("--json"),
+    noSync: argv.includes("--no-sync"),
+    listZones: argv.includes("--list-zones")
+  };
+}
+function filterBySymbol(lines, symbol) {
+  const s = symbol.toLowerCase();
+  return lines.filter((l) => l.toLowerCase().includes(s));
+}
+function grepZone(projectPath, pattern) {
+  const r = spawnSync3(
+    "grep",
+    [
+      "-rnE",
+      "--no-color",
+      "--include=*.ts",
+      "--include=*.tsx",
+      "--include=*.js",
+      "--include=*.jsx",
+      "--exclude-dir=node_modules",
+      "--exclude-dir=.next",
+      "--exclude-dir=dist",
+      "--exclude-dir=.git",
+      "-e",
+      pattern,
+      projectPath
+    ],
+    { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 }
+  );
+  if (r.status !== 0) return [];
+  return (r.stdout ?? "").trim().split("\n").filter(Boolean);
+}
+function collectDrift(projectPath, symbol, graph, zones) {
+  const found = zones.map((z) => ({ label: z.label, note: z.note, source: z.source, hits: filterBySymbol(grepZone(projectPath, z.re), symbol) })).filter((z) => z.hits.length > 0);
+  return { symbol, graph: graph.trim(), zones: found };
+}
+function render(r) {
+  const out = [`
+\u2550\u2550\u2550 [graph] ${r.symbol} \u2014 kesin (callers + impact) \u2550\u2550\u2550`];
+  out.push(r.graph || "  (grafta kay\u0131t yok)");
+  out.push(`
+\u2550\u2550\u2550 [grep-unverified] ${r.symbol} \u2014 graph-k\xF6r\xFC zonlar \xB7 DO\u011ERULA \u2550\u2550\u2550`);
+  if (r.zones.length === 0) {
+    out.push("  temiz (bu sembol\xFC i\xE7eren aktif k\xF6r-zon deseni yok).");
+  } else {
+    for (const z of r.zones) {
+      out.push(`
+[${z.label}] \u2014 ${z.note}`);
+      for (const h of z.hits) out.push("  " + h);
+    }
+  }
+  out.push("\n\u26A0 [grep-unverified] = aday, kesin de\u011Fil \u2014 graph bu wiring'i ba\u011Flayamaz, elle do\u011Frula.");
+  out.push("  zonlar: repo .graphmux/zones.json \xB7 ~/.brainmux/graphmux-zones.json \xB7 --zone label=regex  (gmux drift --list-zones)");
+  return out.join("\n") + "\n";
+}
+async function runDrift(argv, env = process.env) {
+  const { symbol, projectPath, json, noSync, listZones } = parseArgs2(argv);
+  const layers = buildZoneLayers(resolvePaths(env).home, projectPath, parseZoneFlags(argv));
+  const { zones, warnings } = resolveZones(layers);
+  for (const w of warnings) process.stderr.write(`gmux drift: zon atland\u0131 \u2014 ${w}
+`);
+  if (listZones) {
+    if (json) {
+      process.stdout.write(JSON.stringify(zones, null, 2) + "\n");
+      return 0;
+    }
+    process.stdout.write(`Aktif k\xF6r-zonlar (${zones.length}) \u2014 cascade: default < user < repo < --zone
+`);
+    for (const z of zones) process.stdout.write(`  ${z.label.padEnd(14)} [${z.source}]  ${z.re}
+`);
+    return 0;
+  }
+  if (!symbol) {
+    process.stderr.write("gmux drift <symbol|model> [path] [--zone label=regex] [--list-zones]\n");
+    return 1;
+  }
+  if (!noSync) syncIndex(projectPath);
+  let graph = "";
+  try {
+    const bin = resolveBinary(resolvePaths(env));
+    const callers = captureCodegraph(bin, ["callers", symbol, "--limit", "1000"]).stdout.trim();
+    const impact = captureCodegraph(bin, ["impact", symbol, "--limit", "1000"]).stdout.trim();
+    graph = [callers, impact].filter(Boolean).join("\n\n");
+  } catch {
+    graph = "";
+  }
+  const result = collectDrift(projectPath, symbol, graph, zones);
+  process.stdout.write(json ? JSON.stringify(result, null, 2) + "\n" : render(result));
+  return 0;
+}
+
 // src/cli.ts
 var HELP = `gmux \u2014 brainmux/graphmux CLI (local codebase memory; vendors CodeGraph v${CODEGRAPH_VERSION})
 
@@ -476,6 +662,8 @@ var HELP = `gmux \u2014 brainmux/graphmux CLI (local codebase memory; vendors Co
   gmux callees | files [args]     more graph queries
   gmux orphans [path] [opts]      bulk dead/orphan candidates (0 incoming calls/refs), framework
                                   roots excluded  \xB7  --exports --all --lang=ts,py --json  (Node >=22)
+  gmux drift <sym> [path]         graph impact + auto-grep the graph-blind zones (ORM/queue/handler/
+                                  middleware/Next) \u2192 [graph]=certain, [grep-unverified]=verify
   gmux hook install|uninstall|status [path]
                                   git hook that auto-syncs the index on commit/merge/checkout
                                   (the CLI does NOT watch files; this is the auto-reindex)
@@ -494,6 +682,7 @@ async function main(argv, env = process.env) {
     if (cmd === "install") return runInstall(rest, env);
     if (cmd === "hook") return runHook(rest, env);
     if (cmd === "orphans") return runOrphans(rest, env);
+    if (cmd === "drift") return runDrift(rest, env);
     if (cmd === "--") return runRaw(rest, env);
     if (GRAPH_VERBS.has(cmd)) return runGraph(cmd, rest, env);
     process.stderr.write(`gmux: unknown command '${cmd}'

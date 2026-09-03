@@ -23,6 +23,7 @@ ${CLAUDE_PLUGIN_ROOT}/bin/gmux index [path]      # build/rebuild the code graph 
 ${CLAUDE_PLUGIN_ROOT}/bin/gmux status [path]     # index stats + staleness
 ${CLAUDE_PLUGIN_ROOT}/bin/gmux sync [path]       # sync changes since last index (run after edits)
 ${CLAUDE_PLUGIN_ROOT}/bin/gmux orphans [path]    # dead/orphan candidates (--exports --all --lang --json; Node >=22)
+${CLAUDE_PLUGIN_ROOT}/bin/gmux drift <sym> [path]  # graph impact + graph-blind-zone grep (symbol-scoped)
 ${CLAUDE_PLUGIN_ROOT}/bin/gmux -- <args>         # raw query: explore / callers / callees / impact / node / files
 ```
 First use needs `gmux install` once (fetches the pinned binary; needs `curl` + `tar`).
@@ -38,6 +39,22 @@ gmux -- <raw codegraph args>           # escape hatch: raw passthrough, NO smart
 ```
 Run these when the user asks "who calls X", "what breaks if I change Y", "trace this", "map the repo".
 Ground your own edits with `impact` before changing a widely-used symbol.
+
+## drift — off-graph blast radius (adapt the blind zones to THIS repo)
+`gmux drift <symbol|model>` = **[graph]** callers+impact (certain) + **[grep-unverified]** the graph-BLIND
+zones (ORM / queue / CommonJS-handler / middleware / Next-entry), symbol-scoped. Catches drift the
+call-graph can't see — e.g. `gmux drift Profil` dumps every `prisma.profil.*` site (raw-lookup / dedup-bypass bugs).
+
+**The blind zones are a config cascade — YOU (the AI) adapt them to the repo's stack; don't assume the defaults fit.**
+Defaults assume prisma + pg-boss + Next-pages. A different stack → drift is blind where it matters. So:
+1. `gmux drift --list-zones` — see active zones + their source.
+2. Detect the stack (read package.json deps + grep): ORM (drizzle/typeorm/mongoose), queue (bullmq/bee), framework (Next app-router has no getServerSideProps).
+3. If it differs, INJECT repo zones — write `<repo>/.graphmux/zones.json` (team-shared, checked in), an array of `{"label","re","note"}`:
+   - drizzle ORM: `{"label":"orm","re":"db\\.(select|insert|update|delete)\\("}`
+   - bullmq queue: `{"label":"queue","re":"\\.add\\(|new Worker\\("}`
+   - turn off a default: `{"label":"next-entry","enabled":false}`
+   (Or ad-hoc `--zone label=regex`.) Precedence low→high: default < `~/.brainmux/graphmux-zones.json` < repo `.graphmux/zones.json` < `--zone`. Same label overrides; `enabled:false` removes.
+This makes drift stack-accurate with no plugin release — the repo owns its blind-zone rules.
 
 ## Limits — how to trust the answer (dogfooded on a 26k-node repo)
 graphmux is a **static** call-graph: excellent for synchronous, lexically-visible calls; blind to

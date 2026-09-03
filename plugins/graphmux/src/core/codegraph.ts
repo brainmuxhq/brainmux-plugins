@@ -145,3 +145,14 @@ export function syncIndex(projectPath: string, env: NodeJS.ProcessEnv = process.
     /* best-effort — the actual query reports a missing/broken index */
   }
 }
+
+// Run the engine and CAPTURE its stdout (vs runCodegraph which inherits). Used when a command
+// needs to relabel/merge the engine output (e.g. `gmux drift` wraps `impact`). Telemetry off.
+export function captureCodegraph(
+  bin: string,
+  args: string[],
+  env: NodeJS.ProcessEnv = process.env,
+): { status: number; stdout: string } {
+  const r = spawnSync(bin, args, { encoding: "utf8", env: { ...env, ...TELEMETRY_OFF } });
+  return { status: r.status ?? 1, stdout: r.stdout ?? "" };
+}
