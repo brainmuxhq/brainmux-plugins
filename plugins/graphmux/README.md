@@ -28,7 +28,11 @@ gmux node <sym>              one symbol's source + caller/callee trail  (auto --
 gmux explore "<query>"       relevant symbols + call paths + verbatim source, one shot
 gmux callees | files [args]  more graph queries
 gmux orphans [path] [opts]   bulk dead/orphan candidates: symbols with 0 incoming calls/refs,
-                             framework roots excluded  ·  --exports --all --lang=ts,py --json  (Node >=22)
+                             framework roots excluded  ·  auto-syncs first (--no-sync to skip)
+                             --exports --all --lang=ts,py --json  (Node >=22)
+gmux hook install|uninstall|status [path]
+                             git hook (post-commit/merge/checkout) that auto-syncs the index —
+                             the CLI does NOT watch files, so this is the hands-off auto-reindex
 gmux -- <codegraph args>     raw passthrough (no smart defaults — you manage --limit)
 ```
 
@@ -75,6 +79,9 @@ dynamic/framework wiring. Use it as a fast pre-scan a human/Opus verifies, not a
 - **State:** the binary is cached under `~/.brainmux/graphmux/<version>/`; the MCP config is
   written to `~/.brainmux/generated/graphmux-mcp.json`.
 - **Project index:** `gmux index` writes `.codegraph/` in your repo — add it to `.gitignore`.
+- **Freshness:** the CLI does **not** watch files — after edits it's stale until `gmux sync` (or `gmux index`).
+  `gmux orphans` auto-syncs first; other verbs read the index as-is. For hands-off freshness, `gmux hook install`
+  wires a git hook (post-commit/merge/checkout → `codegraph sync -q`) so the index self-updates on git events.
 - **Updates are deliberate:** the CodeGraph version + SHA are pinned in `src/core/codegraph.ts`;
   bump them together when we choose. No auto-upgrade, no fork.
 - **Requires:** `curl` + `tar` (macOS/Linux) to fetch/extract the pinned binary on first use.

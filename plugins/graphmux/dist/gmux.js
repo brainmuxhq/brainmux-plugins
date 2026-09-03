@@ -116,6 +116,13 @@ function runCodegraph(bin, args, env = process.env) {
   const r = spawnSync(bin, args, { stdio: "inherit", env: { ...env, ...TELEMETRY_OFF } });
   return r.status ?? 1;
 }
+function syncIndex(projectPath, env = process.env) {
+  try {
+    const bin = resolveBinary(resolvePaths(env));
+    spawnSync(bin, ["sync", "-q", projectPath], { stdio: "ignore", env: { ...env, ...TELEMETRY_OFF } });
+  } catch {
+  }
+}
 
 // src/core/mcp.ts
 var MCP_SERVER_NAME = "graphmux";
@@ -276,6 +283,7 @@ function parseArgs(argv, cwd = process.cwd()) {
   const json = argv.includes("--json");
   const all = argv.includes("--all");
   const exportsOnly = argv.includes("--exports");
+  const noSync = argv.includes("--no-sync");
   let langCsv;
   const eqForm = argv.find((a) => a.startsWith("--lang="));
   if (eqForm) langCsv = eqForm.slice("--lang=".length);
@@ -283,7 +291,7 @@ function parseArgs(argv, cwd = process.cwd()) {
   const langs = langCsv ? new Set(langCsv.split(",").map((s) => s.trim()).filter(Boolean)) : null;
   const positional = argv.find((a, i) => !a.startsWith("-") && argv[i - 1] !== "--lang");
   const projectPath = path5.resolve(cwd, positional ?? ".");
-  return { projectPath, json, options: { all, exportsOnly, langs } };
+  return { projectPath, json, noSync, options: { all, exportsOnly, langs } };
 }
 function filterOrphans(nodes, options) {
   let out = nodes;
@@ -322,7 +330,8 @@ function renderJson(kept) {
   ) + "\n";
 }
 async function runOrphans(argv, _env = process.env) {
-  const { projectPath, json, options } = parseArgs(argv);
+  const { projectPath, json, noSync, options } = parseArgs(argv);
+  if (!noSync) syncIndex(projectPath);
   let nodes;
   try {
     nodes = await queryOrphanNodes(projectPath);
@@ -345,6 +354,114 @@ async function runOrphans(argv, _env = process.env) {
   return 0;
 }
 
+// src/commands/hook.ts
+import fs4 from "node:fs";
+import path6 from "node:path";
+import { spawnSync as spawnSync2 } from "node:child_process";
+var HOOK_NAMES = ["post-commit", "post-merge", "post-checkout"];
+var BEGIN = "# >>> graphmux auto-sync >>>";
+var END = "# <<< graphmux auto-sync <<<";
+function hookBlock() {
+  return [
+    BEGIN,
+    "# managed by `gmux hook` \u2014 do not edit between the markers",
+    'bin=$(ls -d "$HOME"/.brainmux/graphmux/*/codegraph-*/bin/codegraph 2>/dev/null | sort -V | tail -1)',
+    '[ -x "$bin" ] && DO_NOT_TRACK=1 CODEGRAPH_TELEMETRY=0 "$bin" sync -q >/dev/null 2>&1 || true',
+    END
+  ].join("\n");
+}
+function escapeRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+var BLOCK_RE = new RegExp(`${escapeRe(BEGIN)}[\\s\\S]*?${escapeRe(END)}`);
+function applyBlock(existing, block) {
+  if (BLOCK_RE.test(existing)) return existing.replace(BLOCK_RE, block);
+  const trimmed = existing.trimEnd();
+  if (!trimmed) return `#!/bin/sh
+${block}
+`;
+  return `${trimmed}
+
+${block}
+`;
+}
+function stripBlock(existing) {
+  const re = new RegExp(`\\n*${escapeRe(BEGIN)}[\\s\\S]*?${escapeRe(END)}\\n*`, "g");
+  const out = existing.replace(re, "\n").trimEnd();
+  return out ? out + "\n" : "";
+}
+function hasBlock(existing) {
+  return BLOCK_RE.test(existing);
+}
+function resolveHooksDir(projectPath) {
+  const r = spawnSync2("git", ["-C", projectPath, "rev-parse", "--git-path", "hooks"], { encoding: "utf8" });
+  if (r.status !== 0) return null;
+  const rel = r.stdout.trim();
+  if (!rel) return null;
+  return path6.isAbsolute(rel) ? rel : path6.join(projectPath, rel);
+}
+function install2(hooksDir, log) {
+  fs4.mkdirSync(hooksDir, { recursive: true });
+  const block = hookBlock();
+  for (const name of HOOK_NAMES) {
+    const file = path6.join(hooksDir, name);
+    const existing = fs4.existsSync(file) ? fs4.readFileSync(file, "utf8") : "";
+    fs4.writeFileSync(file, applyBlock(existing, block));
+    fs4.chmodSync(file, 493);
+    log(`  \u2713 ${name}`);
+  }
+  return 0;
+}
+function uninstall(hooksDir, log) {
+  for (const name of HOOK_NAMES) {
+    const file = path6.join(hooksDir, name);
+    if (!fs4.existsSync(file)) continue;
+    const existing = fs4.readFileSync(file, "utf8");
+    if (!hasBlock(existing)) continue;
+    const next = stripBlock(existing);
+    if (next.trim() === "" || next.trim() === "#!/bin/sh") fs4.rmSync(file, { force: true });
+    else fs4.writeFileSync(file, next);
+    log(`  \u2713 ${name} temizlendi`);
+  }
+  return 0;
+}
+function status(hooksDir, log) {
+  for (const name of HOOK_NAMES) {
+    const file = path6.join(hooksDir, name);
+    const on = fs4.existsSync(file) && hasBlock(fs4.readFileSync(file, "utf8"));
+    log(`  ${on ? "\u2713 kurulu" : "\xB7 yok    "}  ${name}`);
+  }
+  return 0;
+}
+function runHook(argv, _env = process.env) {
+  const sub = argv[0];
+  if (!sub || !["install", "uninstall", "status"].includes(sub)) {
+    process.stderr.write("gmux hook <install|uninstall|status> [path]\n");
+    return 1;
+  }
+  const projectPath = path6.resolve(argv.slice(1).find((a) => !a.startsWith("-")) ?? ".");
+  const hooksDir = resolveHooksDir(projectPath);
+  if (!hooksDir) {
+    process.stderr.write(`gmux hook: '${projectPath}' is not a git repo (or git not found)
+`);
+    return 1;
+  }
+  const log = (s) => process.stdout.write(s + "\n");
+  if (sub === "status") {
+    log(`graphmux auto-sync hooks \xB7 ${hooksDir}`);
+    return status(hooksDir, log);
+  }
+  if (sub === "uninstall") {
+    log(`graphmux auto-sync \u2014 kald\u0131r\u0131l\u0131yor (${hooksDir})`);
+    return uninstall(hooksDir, log);
+  }
+  log(`graphmux auto-sync \u2014 git hook kuruluyor (${hooksDir})`);
+  const code = install2(hooksDir, log);
+  log("  \u2192 her commit/merge/checkout'ta index otomatik senkron (codegraph sync -q).");
+  log("  not: repo bir kez indexlenmeli \u2014 `gmux index` (yoksa hook sessizce atlar).");
+  return code;
+}
+
 // src/cli.ts
 var HELP = `gmux \u2014 brainmux/graphmux CLI (local codebase memory; vendors CodeGraph v${CODEGRAPH_VERSION})
 
@@ -359,6 +476,9 @@ var HELP = `gmux \u2014 brainmux/graphmux CLI (local codebase memory; vendors Co
   gmux callees | files [args]     more graph queries
   gmux orphans [path] [opts]      bulk dead/orphan candidates (0 incoming calls/refs), framework
                                   roots excluded  \xB7  --exports --all --lang=ts,py --json  (Node >=22)
+  gmux hook install|uninstall|status [path]
+                                  git hook that auto-syncs the index on commit/merge/checkout
+                                  (the CLI does NOT watch files; this is the auto-reindex)
   gmux -- <codegraph args...>     raw passthrough (no smart defaults) to the vendored engine
 
   then: bmux delegate <brain> --memory "<task>"   (llmproxy grounds the cheap brain on the graph)
@@ -372,6 +492,7 @@ async function main(argv, env = process.env) {
   }
   try {
     if (cmd === "install") return runInstall(rest, env);
+    if (cmd === "hook") return runHook(rest, env);
     if (cmd === "orphans") return runOrphans(rest, env);
     if (cmd === "--") return runRaw(rest, env);
     if (GRAPH_VERBS.has(cmd)) return runGraph(cmd, rest, env);

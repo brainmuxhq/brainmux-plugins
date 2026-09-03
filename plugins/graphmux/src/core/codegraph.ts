@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
-import type { Paths } from "./paths.js";
+import { resolvePaths, type Paths } from "./paths.js";
 
 // ── Vendored core (brainmux house-style) ────────────────────────────────────────
 // We do NOT reimplement code intelligence. We pin the exact upstream CodeGraph release
@@ -132,4 +132,16 @@ export function resolveBinary(paths: Paths, log?: (s: string) => void): string {
 export function runCodegraph(bin: string, args: string[], env: NodeJS.ProcessEnv = process.env): number {
   const r = spawnSync(bin, args, { stdio: "inherit", env: { ...env, ...TELEMETRY_OFF } });
   return r.status ?? 1;
+}
+
+// Best-effort delta re-index (quiet) so a following query sees current code — lets a command
+// self-freshen instead of relying on the caller to remember `gmux sync`. Failure is swallowed:
+// a missing index surfaces later as the read layer's IndexNotFoundError, not a sync crash.
+export function syncIndex(projectPath: string, env: NodeJS.ProcessEnv = process.env): void {
+  try {
+    const bin = resolveBinary(resolvePaths(env));
+    spawnSync(bin, ["sync", "-q", projectPath], { stdio: "ignore", env: { ...env, ...TELEMETRY_OFF } });
+  } catch {
+    /* best-effort — the actual query reports a missing/broken index */
+  }
 }

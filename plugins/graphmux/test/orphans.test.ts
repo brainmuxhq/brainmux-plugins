@@ -108,8 +108,11 @@ test("parseArgs reads flags, --lang= and --lang x, positional path, default cwd"
   assert.deepEqual(parseArgs([], cwd), {
     projectPath: "/repo",
     json: false,
+    noSync: false,
     options: { all: false, exportsOnly: false, langs: null },
   });
+
+  assert.equal(parseArgs(["--no-sync"], cwd).noSync, true);
 
   const a = parseArgs(["--json", "--all", "--exports", "--lang=ts,py"], cwd);
   assert.equal(a.json, true);

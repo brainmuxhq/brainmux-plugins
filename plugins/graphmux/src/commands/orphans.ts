@@ -5,6 +5,7 @@ import {
   SqliteUnavailableError,
   type GraphNode,
 } from "../core/graph-db.js";
+import { syncIndex } from "../core/codegraph.js";
 
 // `gmux orphans` — bulk dead/orphan symbol detection from the local CodeGraph index. Lists
 // function/method/component/class symbols with NO incoming call/reference edge, minus framework
@@ -45,6 +46,7 @@ export interface OrphanOptions {
 export interface ParsedArgs {
   projectPath: string;
   json: boolean;
+  noSync: boolean;
   options: OrphanOptions;
 }
 
@@ -52,6 +54,7 @@ export function parseArgs(argv: string[], cwd: string = process.cwd()): ParsedAr
   const json = argv.includes("--json");
   const all = argv.includes("--all");
   const exportsOnly = argv.includes("--exports");
+  const noSync = argv.includes("--no-sync");
 
   let langCsv: string | undefined;
   const eqForm = argv.find((a) => a.startsWith("--lang="));
@@ -65,7 +68,7 @@ export function parseArgs(argv: string[], cwd: string = process.cwd()): ParsedAr
   const positional = argv.find((a, i) => !a.startsWith("-") && argv[i - 1] !== "--lang");
   const projectPath = path.resolve(cwd, positional ?? ".");
 
-  return { projectPath, json, options: { all, exportsOnly, langs } };
+  return { projectPath, json, noSync, options: { all, exportsOnly, langs } };
 }
 
 // Pure filter (unit-testable, no IO). Returns the kept candidates + how many roots were dropped.
@@ -118,7 +121,11 @@ function renderJson(kept: GraphNode[]): string {
 }
 
 export async function runOrphans(argv: string[], _env: NodeJS.ProcessEnv = process.env): Promise<number> {
-  const { projectPath, json, options } = parseArgs(argv);
+  const { projectPath, json, noSync, options } = parseArgs(argv);
+
+  // Self-freshen: delta-reindex before reading so an agent gets current results from one command,
+  // without having to remember `gmux sync` first. `--no-sync` skips it (reads the index as-is).
+  if (!noSync) syncIndex(projectPath);
 
   let nodes: GraphNode[];
   try {

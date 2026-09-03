@@ -21,7 +21,8 @@ one line of what you ran. These are safe → run directly:
 ${CLAUDE_PLUGIN_ROOT}/bin/gmux install          # download + SHA256-verify the pinned binary, write the MCP config (telemetry off)
 ${CLAUDE_PLUGIN_ROOT}/bin/gmux index [path]      # build/rebuild the code graph for a repo
 ${CLAUDE_PLUGIN_ROOT}/bin/gmux status [path]     # index stats + staleness
-${CLAUDE_PLUGIN_ROOT}/bin/gmux sync [path]       # sync changes since last index
+${CLAUDE_PLUGIN_ROOT}/bin/gmux sync [path]       # sync changes since last index (run after edits)
+${CLAUDE_PLUGIN_ROOT}/bin/gmux orphans [path]    # dead/orphan candidates (--exports --all --lang --json; Node >=22)
 ${CLAUDE_PLUGIN_ROOT}/bin/gmux -- <args>         # raw query: explore / callers / callees / impact / node / files
 ```
 First use needs `gmux install` once (fetches the pinned binary; needs `curl` + `tar`).
@@ -74,5 +75,8 @@ and list its output verbatim — do not use explore."* Then Opus verifies (the g
 - **State:** binary cached under `~/.brainmux/graphmux/<version>/`; MCP config at
   `~/.brainmux/generated/graphmux-mcp.json` (server name `graphmux`).
 - **Project index:** `gmux index` writes `.codegraph/` in the repo — suggest adding it to `.gitignore`.
-- **Freshness:** the index auto-syncs on file changes; after a big change, `gmux status` shows staleness.
+- **Freshness (the CLI does NOT watch files):** after edits the index is stale until you run `gmux sync`
+  (or `gmux index`). `gmux status` reports the last-index state and can lag uncommitted edits. For hands-off
+  freshness, `gmux hook install [path]` wires a git hook that runs `codegraph sync -q` on every
+  commit/merge/checkout — so the index self-updates on git events (not per-save).
 - **Updates are pinned:** the CodeGraph version + SHA live in the plugin; we bump them deliberately (no auto-upgrade, no fork).

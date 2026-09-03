@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { runInstall } from "./commands/install.js";
 import { runGraph, runRaw, GRAPH_VERBS } from "./commands/graph.js";
 import { runOrphans } from "./commands/orphans.js";
+import { runHook } from "./commands/hook.js";
 import { CODEGRAPH_VERSION } from "./core/codegraph.js";
 
 const HELP = `gmux — brainmux/graphmux CLI (local codebase memory; vendors CodeGraph v${CODEGRAPH_VERSION})
@@ -18,6 +19,9 @@ const HELP = `gmux — brainmux/graphmux CLI (local codebase memory; vendors Cod
   gmux callees | files [args]     more graph queries
   gmux orphans [path] [opts]      bulk dead/orphan candidates (0 incoming calls/refs), framework
                                   roots excluded  ·  --exports --all --lang=ts,py --json  (Node >=22)
+  gmux hook install|uninstall|status [path]
+                                  git hook that auto-syncs the index on commit/merge/checkout
+                                  (the CLI does NOT watch files; this is the auto-reindex)
   gmux -- <codegraph args...>     raw passthrough (no smart defaults) to the vendored engine
 
   then: bmux delegate <brain> --memory "<task>"   (llmproxy grounds the cheap brain on the graph)
@@ -30,6 +34,7 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv = process.env)
 
   try {
     if (cmd === "install") return runInstall(rest, env);
+    if (cmd === "hook") return runHook(rest, env);
     if (cmd === "orphans") return runOrphans(rest, env);
     if (cmd === "--") return runRaw(rest, env);
     if (GRAPH_VERBS.has(cmd)) return runGraph(cmd, rest, env);
