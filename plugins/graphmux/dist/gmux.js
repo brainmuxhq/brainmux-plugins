@@ -571,7 +571,7 @@ function grepZone(projectPath, pattern) {
     "grep",
     [
       "-rnE",
-      "--no-color",
+      "--color=never",
       "--include=*.ts",
       "--include=*.tsx",
       "--include=*.js",

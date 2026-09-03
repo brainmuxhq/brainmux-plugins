@@ -48,7 +48,7 @@ export function filterBySymbol(lines: string[], symbol: string): string[] {
 function grepZone(projectPath: string, pattern: string): string[] {
   const r = spawnSync(
     "grep",
-    ["-rnE", "--no-color", "--include=*.ts", "--include=*.tsx", "--include=*.js", "--include=*.jsx",
+    ["-rnE", "--color=never", "--include=*.ts", "--include=*.tsx", "--include=*.js", "--include=*.jsx",
       "--exclude-dir=node_modules", "--exclude-dir=.next", "--exclude-dir=dist", "--exclude-dir=.git",
       "-e", pattern, projectPath],
     { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 },
