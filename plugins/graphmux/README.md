@@ -27,6 +27,8 @@ gmux impact <sym>            blast radius of changing <sym>  (transitive, no cap
 gmux node <sym>              one symbol's source + caller/callee trail  (auto --limit 1000)
 gmux explore "<query>"       relevant symbols + call paths + verbatim source, one shot
 gmux callees | files [args]  more graph queries
+gmux orphans [path] [opts]   bulk dead/orphan candidates: symbols with 0 incoming calls/refs,
+                             framework roots excluded  ·  --exports --all --lang=ts,py --json  (Node >=22)
 gmux -- <codegraph args>     raw passthrough (no smart defaults — you manage --limit)
 ```
 
@@ -46,6 +48,8 @@ Manual grounding, no delegate:
 gmux explore "how does auth work"
 gmux callers getPort
 gmux impact getPort
+gmux orphans                 # dead-code candidates across the repo (verify before deleting)
+gmux orphans --exports       # exported symbols with no in-repo caller (unused public surface)
 ```
 
 ## Known limits (dogfooded on a 26k-node repo)
@@ -58,6 +62,9 @@ dynamic/framework wiring. Use it as a fast pre-scan a human/Opus verifies, not a
   there pass `--limit`, or use **`impact`** (no cap, transitive, more complete).
 - **"No callers" ≠ dead code** — queue workers, Next.js entry points, event handlers and registry-lazy
   imports look call-less. Check for a framework entry before deleting.
+- **`gmux orphans` = candidates, not proof** — it drops the framework entry points above by heuristic,
+  but member-access (`obj.method`), same-file JSX and dynamic dispatch still hide real callers. Treat the
+  list as a pre-scan; verify (e.g. `gmux node <sym>`) before deleting. `--all` shows the unfiltered set.
 - **Ripgrep, don't trust the graph, for:** CommonJS `exports.X = () => {}` handlers, ORM calls
   (`prisma.<model>.…`), queue enqueue↔worker pairs, middleware chains (`app.use(...spread)`).
 - **Generic/same-named symbols collide** — run `gmux -- node <sym>` first to see the definition count.

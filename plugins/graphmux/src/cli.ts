@@ -2,6 +2,7 @@
 import { fileURLToPath } from "node:url";
 import { runInstall } from "./commands/install.js";
 import { runGraph, runRaw, GRAPH_VERBS } from "./commands/graph.js";
+import { runOrphans } from "./commands/orphans.js";
 import { CODEGRAPH_VERSION } from "./core/codegraph.js";
 
 const HELP = `gmux — brainmux/graphmux CLI (local codebase memory; vendors CodeGraph v${CODEGRAPH_VERSION})
@@ -15,6 +16,8 @@ const HELP = `gmux — brainmux/graphmux CLI (local codebase memory; vendors Cod
   gmux node <sym>                 one symbol's source + caller/callee trail  (auto --limit 1000)
   gmux explore "<query>"          relevant symbols + call paths + verbatim source, one shot
   gmux callees | files [args]     more graph queries
+  gmux orphans [path] [opts]      bulk dead/orphan candidates (0 incoming calls/refs), framework
+                                  roots excluded  ·  --exports --all --lang=ts,py --json  (Node >=22)
   gmux -- <codegraph args...>     raw passthrough (no smart defaults) to the vendored engine
 
   then: bmux delegate <brain> --memory "<task>"   (llmproxy grounds the cheap brain on the graph)
@@ -27,6 +30,7 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv = process.env)
 
   try {
     if (cmd === "install") return runInstall(rest, env);
+    if (cmd === "orphans") return runOrphans(rest, env);
     if (cmd === "--") return runRaw(rest, env);
     if (GRAPH_VERBS.has(cmd)) return runGraph(cmd, rest, env);
 

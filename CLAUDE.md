@@ -40,7 +40,7 @@
 - **Kontrol paneli:** Claude Code + `bmux` **birincil** (declarative, `brains.yaml`+`.env` SSOT). **LiteLLM UI = gözlem** (spend/log/param) — link ver, tekrar yazma. **Kendi web UI YAZMA.**
 - **Delege disiplini:** ucuz beyin çıktısını Opus **doğrular** (rubber-stamp yok). Task/Agent tool bu beyinlere erişemez (Opus'u miras alır) — sadece `bmux delegate`.
 - **Doğal dil çalıştırma (NL → komut):** kullanıcı bir `bmux`/`gmux`/brainmux işini doğal dille isterse Claude uygun komutu **kendisi Bash'le çalıştırır** (elle yazdırma) ve **ne çalıştırdığını tek satır bildirir** (şeffaflık — sonuç + varsa uyarı). Aynı politika **tüm brainmux plugin'lerine** uygulanır (llmproxy `bmux`, graphmux `gmux`, sonrakiler).
-  - **Güvenlik riski yoksa → doğrudan koş:** `statusline install`, `spend`, `up|down|restart|ps|health|logs`, `config list|set-model|add-brain|remove-brain`, `models`, `test`; **graphmux:** `gmux install` (SHA-doğrulamalı resmi binary, telemetri kapalı), `gmux index|status|sync`, `gmux -- <sorgu>` (explore/callers/impact).
+  - **Güvenlik riski yoksa → doğrudan koş:** `statusline install`, `spend`, `up|down|restart|ps|health|logs`, `config list|set-model|add-brain|remove-brain`, `models`, `test`; **graphmux:** `gmux install` (SHA-doğrulamalı resmi binary, telemetri kapalı), `gmux index|status|sync`, `gmux orphans` (read-only ölü-kod tarama), `gmux -- <sorgu>` (explore/callers/impact).
   - **Riskli/geri-alınamaz/secret/dışa-dönük → önce komutu + etkisini açıkla, onay al:** `delegate --yolo`, `config add-key <değer>` (secret), `statusline install --force` (mevcut ayarı ezer), veri/beyin silen ya da dış servise yazan her iş.
   - **Emin değilsen çalıştırma:** komutu ve ne yapacağını açıkla, kullanıcıya bırak. (En azından komut hakkında bilgi ver.)
 
@@ -119,6 +119,10 @@
   çekirdeğini ev-stili vendor'lar (pin v1.6.0 + 6-platform SHA, telemetri `DO_NOT_TRACK` default kapalı, fork YOK),
   ince wrapper (`gmux install/index/status/sync/--`). MCP server adı **`graphmux`** → `mcp__graphmux__codegraph_*`.
   `plugins/graphmux/` (clean-arch cli→commands→core, llmproxy aynası), 10 unit + canlı e2e (install→index→callers/impact).
+  **v0.2.0:** `gmux orphans` — bulk ölü/orphan tespiti (index'i `node:sqlite` ile okur, harici dep yok; function/method/
+  component/class, gelen calls/references=0, Next/test/config/scripts/index root'ları heuristikle elenir; `--exports/--all/
+  --lang/--json`). Veri katmanı `core/graph-db.ts` (audit/unused-exports yeniden kullanır). "Aday, kesin değil" (member-access/
+  dynamic görünmez). 18 unit + brainmux repo'sunda dogfood. @types/node ^24 (node:sqlite tipleri; engines >=18, runtime guard).
   Spec `docs/specs/2026-09-02-graphmux-plugin-design.md`. Aday-seçim: Cognee elendi (LLM-extraction stokastik, arXiv 2601.08773),
   Serena host-native (container'a kötü uyum) → CodeGraph (tek-binary, tree-sitter, auto-sync, MIT). NL-execution `gmux`'a genişledi + graphmux skill.
 - ✅ Version **0.1.19** (llmproxy: `bmux delegate --memory` — graphmux kod-graph MCP'sine grounded, izole `--mcp-config`+strict,

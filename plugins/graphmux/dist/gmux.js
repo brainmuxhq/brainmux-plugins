@@ -177,6 +177,174 @@ function runRaw(argv, env = process.env) {
   return runCodegraph(bin, argv, env);
 }
 
+// src/commands/orphans.ts
+import path5 from "node:path";
+
+// src/core/graph-db.ts
+import fs3 from "node:fs";
+import path4 from "node:path";
+var IndexNotFoundError = class extends Error {
+  constructor(dbPath) {
+    super(`index not found at ${dbPath}`);
+    this.dbPath = dbPath;
+    this.name = "IndexNotFoundError";
+  }
+};
+var SqliteUnavailableError = class extends Error {
+  constructor() {
+    super("node:sqlite unavailable (needs Node >= 22)");
+    this.name = "SqliteUnavailableError";
+  }
+};
+function indexDbPath(projectPath) {
+  return path4.join(projectPath, ".codegraph", "codegraph.db");
+}
+var USAGE_EDGE_KINDS = ["calls", "references"];
+var ORPHAN_SYMBOL_KINDS = ["function", "method", "component", "class"];
+function coerceNode(row) {
+  return {
+    file: String(row.file ?? ""),
+    line: Number(row.line ?? 0),
+    name: String(row.name ?? ""),
+    kind: String(row.kind ?? ""),
+    exported: Number(row.exported ?? 0) === 1,
+    language: String(row.language ?? "")
+  };
+}
+async function queryOrphanNodes(projectPath) {
+  const dbPath = indexDbPath(projectPath);
+  if (!fs3.existsSync(dbPath)) throw new IndexNotFoundError(dbPath);
+  let DatabaseSync;
+  try {
+    ({ DatabaseSync } = await import("node:sqlite"));
+  } catch {
+    throw new SqliteUnavailableError();
+  }
+  const kindPlaceholders = ORPHAN_SYMBOL_KINDS.map(() => "?").join(",");
+  const usageList = USAGE_EDGE_KINDS.map((k) => `'${k}'`).join(",");
+  const sql = `SELECT n.file_path AS file, n.start_line AS line, n.name AS name, n.kind AS kind,
+            COALESCE(n.is_exported, 0) AS exported, n.language AS language
+     FROM nodes n
+     WHERE n.kind IN (${kindPlaceholders})
+       AND NOT EXISTS (
+         SELECT 1 FROM edges e WHERE e.target = n.id AND e.kind IN (${usageList})
+       )
+     ORDER BY n.file_path, n.start_line`;
+  const db = new DatabaseSync(dbPath, { readOnly: true });
+  try {
+    const rows = db.prepare(sql).all(...ORPHAN_SYMBOL_KINDS);
+    return rows.map(coerceNode);
+  } finally {
+    db.close();
+  }
+}
+
+// src/commands/orphans.ts
+function isEntrypointFile(file) {
+  const base = path5.basename(file).toLowerCase();
+  if (/^(page|layout|route|loading|error|not-found|global-error|template|default|middleware)\.[tj]sx?$/.test(base)) return true;
+  if (/^(robots|sitemap|opengraph-image|twitter-image|icon|apple-icon|manifest)\.[tj]sx?$/.test(base)) return true;
+  if (/\.config\.([tj]sx?|mjs|cjs)$/.test(base)) return true;
+  if (base.endsWith(".d.ts")) return true;
+  if (/\.(test|spec|stories)\.[tj]sx?$/.test(base)) return true;
+  if (base === "index.ts" || base === "index.tsx" || base === "index.js" || base === "index.jsx") return true;
+  if (/(^|\/)scripts\//.test(file)) return true;
+  if (base === "conftest.py" || base === "setup.py" || base === "__main__.py") return true;
+  if (base.startsWith("test_") && base.endsWith(".py")) return true;
+  if (base.endsWith("_test.py")) return true;
+  return false;
+}
+var FRAMEWORK_SYMBOLS = /* @__PURE__ */ new Set([
+  "GET",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+  "HEAD",
+  "OPTIONS",
+  "generateMetadata",
+  "generateStaticParams",
+  "generateViewport",
+  "metadata",
+  "viewport",
+  "default",
+  "robots",
+  "sitemap",
+  "middleware"
+]);
+function parseArgs(argv, cwd = process.cwd()) {
+  const json = argv.includes("--json");
+  const all = argv.includes("--all");
+  const exportsOnly = argv.includes("--exports");
+  let langCsv;
+  const eqForm = argv.find((a) => a.startsWith("--lang="));
+  if (eqForm) langCsv = eqForm.slice("--lang=".length);
+  else if (argv.includes("--lang")) langCsv = argv[argv.indexOf("--lang") + 1];
+  const langs = langCsv ? new Set(langCsv.split(",").map((s) => s.trim()).filter(Boolean)) : null;
+  const positional = argv.find((a, i) => !a.startsWith("-") && argv[i - 1] !== "--lang");
+  const projectPath = path5.resolve(cwd, positional ?? ".");
+  return { projectPath, json, options: { all, exportsOnly, langs } };
+}
+function filterOrphans(nodes, options) {
+  let out = nodes;
+  if (options.langs) out = out.filter((n) => options.langs.has(n.language));
+  if (options.exportsOnly) out = out.filter((n) => n.exported);
+  const beforeHeuristics = out.length;
+  if (!options.all) {
+    out = out.filter((n) => !isEntrypointFile(n.file) && !FRAMEWORK_SYMBOLS.has(n.name));
+  }
+  return { kept: out, excluded: beforeHeuristics - out.length };
+}
+function renderText(kept, excluded, options) {
+  const dropped = options.all ? "" : ` (${excluded} entrypoint/root elendi)`;
+  const label = options.exportsOnly ? "kullan\u0131lmayan export" : "orphan aday";
+  if (kept.length === 0) return `gmux orphans \u2192 0 ${label}${dropped}
+`;
+  const lines = kept.map(
+    (n) => `  ${n.file}:${n.line}  ${n.name}  ${n.kind}/${n.exported ? "export" : "yerel"} \u2014 0 \xE7a\u011F\u0131ran`
+  );
+  return `gmux orphans \u2192 ${kept.length} ${label}${dropped}
+
+` + lines.join("\n") + "\n\n  \u26A0 Aday listesi \u2014 S\u0130LMEDEN do\u011Frula. Dinamik dispatch, member-access (obj.method), same-file\n    JSX ve reflektif/framework kullan\u0131m\u0131 graph'ta g\xF6r\xFCnmez.\n    elenen root'lar: --all \xB7 sadece export: --exports \xB7 dil: --lang=ts,py \xB7 makine: --json\n";
+}
+function renderJson(kept) {
+  return JSON.stringify(
+    kept.map((n) => ({
+      file: n.file,
+      line: n.line,
+      symbol: n.name,
+      kind: n.kind,
+      exported: n.exported,
+      callers: 0
+    })),
+    null,
+    2
+  ) + "\n";
+}
+async function runOrphans(argv, _env = process.env) {
+  const { projectPath, json, options } = parseArgs(argv);
+  let nodes;
+  try {
+    nodes = await queryOrphanNodes(projectPath);
+  } catch (e) {
+    if (e instanceof IndexNotFoundError) {
+      const hint = projectPath === process.cwd() ? "" : ` ${projectPath}`;
+      process.stderr.write(`gmux orphans: no index at ${e.dbPath}
+  run: gmux index${hint}
+`);
+      return 1;
+    }
+    if (e instanceof SqliteUnavailableError) {
+      process.stderr.write("gmux orphans: needs Node >= 22 (built-in node:sqlite). Upgrade Node and retry.\n");
+      return 1;
+    }
+    throw e;
+  }
+  const { kept, excluded } = filterOrphans(nodes, options);
+  process.stdout.write(json ? renderJson(kept) : renderText(kept, excluded, options));
+  return 0;
+}
+
 // src/cli.ts
 var HELP = `gmux \u2014 brainmux/graphmux CLI (local codebase memory; vendors CodeGraph v${CODEGRAPH_VERSION})
 
@@ -189,6 +357,8 @@ var HELP = `gmux \u2014 brainmux/graphmux CLI (local codebase memory; vendors Co
   gmux node <sym>                 one symbol's source + caller/callee trail  (auto --limit 1000)
   gmux explore "<query>"          relevant symbols + call paths + verbatim source, one shot
   gmux callees | files [args]     more graph queries
+  gmux orphans [path] [opts]      bulk dead/orphan candidates (0 incoming calls/refs), framework
+                                  roots excluded  \xB7  --exports --all --lang=ts,py --json  (Node >=22)
   gmux -- <codegraph args...>     raw passthrough (no smart defaults) to the vendored engine
 
   then: bmux delegate <brain> --memory "<task>"   (llmproxy grounds the cheap brain on the graph)
@@ -202,6 +372,7 @@ async function main(argv, env = process.env) {
   }
   try {
     if (cmd === "install") return runInstall(rest, env);
+    if (cmd === "orphans") return runOrphans(rest, env);
     if (cmd === "--") return runRaw(rest, env);
     if (GRAPH_VERBS.has(cmd)) return runGraph(cmd, rest, env);
     process.stderr.write(`gmux: unknown command '${cmd}'
