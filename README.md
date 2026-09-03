@@ -16,7 +16,7 @@ models (a separate pay-as-you-go meter that never touches your Anthropic quota),
 | Plugin | What it does |
 |---|---|
 | [`llmproxy`](plugins/llmproxy/) | Run Claude Code on cheap/alternate LLM brains + delegate grunt work, managed by the `bmux` CLI + skills. |
-| [`graphmux`](plugins/graphmux/) | Give agents (and `bmux delegate --memory`) a local, deterministic code graph — callers, callees, impact — via the `gmux` CLI. Thin wrapper over CodeGraph. |
+| [`graphmux`](plugins/graphmux/) | Give agents (and `bmux delegate --memory`) a local, deterministic code graph via the `gmux` CLI — callers · impact · dead-code scan (`orphans`) · drift-scan (graph + blind-zone grep) · git-hook auto-reindex. Thin wrapper over CodeGraph. |
 
 Same house-style for both: vendor a mature open-source core (LiteLLM, CodeGraph), pin it, and wrap
 it in a thin control layer — same core, our packaging.

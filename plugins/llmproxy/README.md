@@ -1,4 +1,19 @@
-# @brainmux/llmproxy
+<p align="center">
+  <img src="../../brand/llmproxy.svg" width="84" height="84" alt="llmproxy" />
+</p>
+
+<h1 align="center">llmproxy</h1>
+
+<p align="center"><strong>Run Claude Code on cheap brains — your Opus quota goes to judgment, not grunt work.</strong></p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Claude%20Code-plugin-E8B341?style=flat-square" alt="Claude Code plugin" />
+  <img src="https://img.shields.io/badge/saves-Opus%20quota-4FD1C5?style=flat-square" alt="saves Opus quota" />
+  <img src="https://img.shields.io/badge/runs-Docker-3fb950?style=flat-square" alt="Docker" />
+  <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT" />
+</p>
+
+---
 
 Run [Claude Code](https://claude.com/claude-code) on cheap/alternate LLM **brains** (local
 [LiteLLM](https://docs.litellm.ai) gateways to [OpenRouter](https://openrouter.ai) models) and
@@ -132,4 +147,8 @@ Ground-truth billing (all brains combined) is your [OpenRouter dashboard](https:
 
 ---
 
-Brand: [brainmux.com](https://brainmux.com) · Engine: LiteLLM (MIT core, pinned + mirrored) · License: MIT
+<p align="center">
+  <img src="../../brand/brainmux.svg" width="26" height="26" alt="brainmux" /><br />
+  <sub>Part of <a href="https://brainmux.com"><strong>brainmux</strong></a> — LLM tooling for Claude Code.
+  Engine: <a href="https://docs.litellm.ai">LiteLLM</a> (MIT core, pinned + mirrored) · License: MIT</sub>
+</p>
