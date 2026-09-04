@@ -37,3 +37,6 @@ yarn-error.log*
 
 # local-only working / strategy docs (not committed — esp. commercial strategy in a public repo)
 docs/private/
+
+# graphmux local index (umbrella-root altında yönetilir)
+.codegraph/
