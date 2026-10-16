@@ -137,6 +137,14 @@
   bug'ı test'le yakalandı → gerçek Next isimleri (getServerSideProps|getStaticProps|getStaticPaths|getInitialProps).
   Spec `docs/specs/2026-09-02-graphmux-plugin-design.md`. Aday-seçim: Cognee elendi (LLM-extraction stokastik, arXiv 2601.08773),
   Serena host-native (container'a kötü uyum) → CodeGraph (tek-binary, tree-sitter, auto-sync, MIT). NL-execution `gmux`'a genişledi + graphmux skill.
+- ✅ Version **0.1.22** (llmproxy: direct brain **düşünme seviyesi** — `bmux delegate ev --thinking off|low|medium|deep`,
+  varsayılan `medium`, `brains.yaml`'da beyin başına `thinking:`; bayrak kazanır. Eşleme: off→`thinking:{type:disabled}`
+  (effort yok) · low 4096/effort low · medium 16384/medium · deep 32768/xhigh; `max_tokens ≥ bütçe+4096`. Mekanizma = yalnız
+  env (Claude Code 2.1.281'de sahte /v1/messages sunucusuyla kanıtlandı): `CLAUDE_CODE_MODEL_CAPABILITIES=<model>=thinking,
+  -adaptive_thinking,-rejects_disabled_thinking,-max_effort,±effort,±xhigh_effort` + `MAX_THINKING_TOKENS` +
+  `CLAUDE_CODE_EFFORT_LEVEL` (settings.json/--effort'u ezer → high/max asla gitmez). Bunsuz CC bilinmeyen modele
+  `adaptive` (bütçesiz) + settings effort'u (Ali'de xhigh) yolluyordu. `BMUX_CLAUDE_E2E=1` testi gerçek `claude`'u sahte
+  sunucuya koşturup gövdeyi doğrular — CC sürümü değişince koş.)
 - ✅ Version **0.1.21** (llmproxy: **direct brains** — `brains.yaml`'da `{ url, model, authTokenFile, maxOutputTokens? }`
   = Anthropic-uyumlu uç noktaya (ör. ev vLLM) LiteLLM'siz doğrudan bağlanır. Bearer: `ANTHROPIC_AUTH_TOKEN` dosyadan
   çalışma anında okunur (chmod 600 zorunlu, `.env`'e kopyalanmaz), `ANTHROPIC_API_KEY` çocuktan silinir, tüm model
