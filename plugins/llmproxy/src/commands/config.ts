@@ -6,6 +6,7 @@ import { parseBrains, isDirect, type BrainsConfig } from "../core/manifest.js";
 import { writeGenerated, ensureSecrets } from "./init.js";
 import { setKey } from "../core/env.js";
 import { saveUserTemplate, allTemplates, loadUserTemplates } from "../core/templates.js";
+import { DEFAULT_THINKING } from "../core/thinking.js";
 
 // Read a secret without it landing on the command line / shell history / AI transcript.
 // TTY: masked (no-echo) prompt. Piped stdin: read one line (for scripting, e.g. `... | bmux config add-key K`).
@@ -68,10 +69,10 @@ export function addBrain(paths: Paths, name: string, port: number, model: string
 
 // A direct brain: an Anthropic-compatible endpoint with Bearer auth — no LiteLLM container.
 // Only the token FILE path is stored; the token is read from it at run time.
-export function addDirectBrain(paths: Paths, name: string, url: string, model: string, authTokenFile: string, maxOutputTokens?: number): void {
+export function addDirectBrain(paths: Paths, name: string, url: string, model: string, authTokenFile: string, maxOutputTokens?: number, contextWindow?: number): void {
   const cfg = load(paths);
   if (cfg.brains[name]) throw new Error(`brain '${name}' already exists`);
-  cfg.brains[name] = maxOutputTokens ? { url, model, authTokenFile, maxOutputTokens } : { url, model, authTokenFile };
+  cfg.brains[name] = { url, model, authTokenFile, ...(maxOutputTokens && { maxOutputTokens }), ...(contextWindow && { contextWindow }) };
   save(paths, cfg);
 }
 
@@ -89,11 +90,13 @@ export async function runConfig(sub: string, rest: string[], env: NodeJS.Process
         return 0;
       }
       case "add-direct": {
-        const [name, url, model, authTokenFile, maxStr] = rest;
-        if (!name || !url || !model || !authTokenFile) throw new Error("usage: bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens]");
+        const [name, url, model, authTokenFile, maxStr, ctxStr] = rest;
+        if (!name || !url || !model || !authTokenFile) throw new Error("usage: bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens] [contextWindow]");
         const max = maxStr === undefined ? undefined : Number(maxStr);
         if (max !== undefined && (!Number.isInteger(max) || max < 1)) throw new Error(`maxOutputTokens must be a positive integer, got '${maxStr}'`);
-        addDirectBrain(paths, name, url, model, authTokenFile, max);
+        const ctx = ctxStr === undefined ? undefined : Number(ctxStr);
+        if (ctx !== undefined && (!Number.isInteger(ctx) || ctx < 1024)) throw new Error(`contextWindow must be an integer ≥ 1024, got '${ctxStr}'`);
+        addDirectBrain(paths, name, url, model, authTokenFile, max, ctx);
         console.log(`added direct brain '${name}' → ${url} (${model}); token read from ${authTokenFile} at run time`);
         return 0;
       }
@@ -130,7 +133,7 @@ export async function runConfig(sub: string, rest: string[], env: NodeJS.Process
       case "list": {
         const cfg = load(paths);
         for (const [name, b] of Object.entries(cfg.brains)) {
-          if (isDirect(b)) console.log(`${name.padEnd(8)} direct ${b.url}  ${b.model}  (token: ${b.authTokenFile})`);
+          if (isDirect(b)) console.log(`${name.padEnd(8)} direct ${b.url}  ${b.model}  thinking ${b.thinking ?? DEFAULT_THINKING}${b.contextWindow ? `  ctx ${b.contextWindow}` : ""}  (token: ${b.authTokenFile})`);
           else console.log(`${name.padEnd(8)} :${b.port}  ${b.model}  (${b.providerKey})`);
         }
         return 0;

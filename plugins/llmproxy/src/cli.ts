@@ -30,9 +30,11 @@ const HELP = `bmux — brainmux/llmproxy CLI
                                   (--thinking: direct brains only — thinking budget per task: off · low 4K ·
                                    medium 16K (default, or brains.yaml \`thinking:\`) · deep 32K)
   bmux config add-brain <name> <port> <model> [providerKey]          (LiteLLM brain on a local port)
-  bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens]
+  bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens] [contextWindow]
                                   (direct brain: Anthropic-compatible endpoint, Bearer token read
-                                   from the file at run time — no LiteLLM stack; up/ps/spend skip it)
+                                   from the file at run time — no LiteLLM stack; up/ps/spend skip it;
+                                   contextWindow = the model's real window, e.g. 131072, so Claude Code
+                                   compacts before the server rejects the request)
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list
   bmux config add-template <name> "<prompt>" | list-templates   (reusable delegate task templates)

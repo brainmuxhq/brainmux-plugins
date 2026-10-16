@@ -4,6 +4,7 @@ import { loadBrains, isDirect, DEFAULT_MAX_OUTPUT_TOKENS } from "../core/manifes
 import { getKey } from "../core/env.js";
 import { masterKeyVar } from "../core/generate.js";
 import { readAuthToken } from "../core/authtoken.js";
+import { contextEnv } from "../core/context.js";
 import { DEFAULT_THINKING, thinkingEnv, type ThinkingLevel } from "../core/thinking.js";
 
 export interface LaunchPlan {
@@ -46,14 +47,16 @@ export function planLaunch(brain: string, env: NodeJS.ProcessEnv = process.env, 
     const base = b.url.replace(/\/+$/, "");
     const level = thinking ?? b.thinking ?? DEFAULT_THINKING;
     const th = thinkingEnv(level, b.model, b.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS);
+    const ctx = b.contextWindow ? contextEnv(b.contextWindow, Number(th.set.CLAUDE_CODE_MAX_OUTPUT_TOKENS)) : {};
     const set: Record<string, string> = {
       ANTHROPIC_BASE_URL: base,
       ANTHROPIC_AUTH_TOKEN: readAuthToken(b.authTokenFile, env.HOME || undefined),
       ...th.set, // thinking budget/effort + CLAUDE_CODE_MAX_OUTPUT_TOKENS
+      ...ctx, // CLAUDE_CODE_MAX_CONTEXT_TOKENS (when contextWindow is set)
       ...meta,
     };
     for (const k of MODEL_SLOTS) set[k] = b.model;
-    return { brain, model: b.model, base, direct: true, thinking: level, set, unset: ["ANTHROPIC_API_KEY", ...th.unset] };
+    return { brain, model: b.model, base, direct: true, thinking: level, set, unset: ["ANTHROPIC_API_KEY", ...th.unset, ...(b.contextWindow ? [] : ["CLAUDE_CODE_MAX_CONTEXT_TOKENS"])] };
   }
   if (thinking) throw new Error(`--thinking is for direct brains only ('${brain}' is a LiteLLM brain)`);
 

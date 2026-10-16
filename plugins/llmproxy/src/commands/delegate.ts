@@ -208,10 +208,14 @@ export function summaryLine(p: Progress): string | null {
 /**
  * Reshape the worker's raw `claude --output-format json` envelope into a stable brainmux
  * schema an orchestrator/script can rely on: { brain, ok, result, tokens, turns, cost }.
+ * ok is true only when the worker reports `is_error: false`. On an API error (HTTP 400, context
+ * overflow, …) Claude Code still says `subtype: "success"` but sets `is_error: true` and puts the
+ * error text in `result` — so subtype alone must never count as success.
  * cost is an ESTIMATE — the worker's Claude Code prices an opaque brain model with its own
- * catalog, so it's directional only; `bmux spend` is authoritative.
+ * catalog, so it's directional only; `bmux spend` is authoritative. A direct (self-hosted) brain
+ * has no per-token price, so its cost is reported as 0 (Claude Code would apply Anthropic prices).
  */
-export function reshapeDelegateJson(brain: string, raw: string): string {
+export function reshapeDelegateJson(brain: string, raw: string, direct = false): string {
   let o: any;
   try {
     o = JSON.parse(raw.trim());
@@ -221,13 +225,13 @@ export function reshapeDelegateJson(brain: string, raw: string): string {
   const u = (o && o.usage) || {};
   return JSON.stringify({
     brain,
-    ok: o?.is_error === false || o?.subtype === "success",
+    ok: o?.is_error === false,
     result: typeof o?.result === "string" ? o.result : "",
     input_tokens: typeof u.input_tokens === "number" ? u.input_tokens : null,
     output_tokens: typeof u.output_tokens === "number" ? u.output_tokens : null,
     num_turns: typeof o?.num_turns === "number" ? o.num_turns : null,
     duration_ms: typeof o?.duration_ms === "number" ? o.duration_ms : null,
-    cost_usd_estimate: typeof o?.total_cost_usd === "number" ? o.total_cost_usd : null,
+    cost_usd_estimate: direct ? 0 : typeof o?.total_cost_usd === "number" ? o.total_cost_usd : null,
   });
 }
 
@@ -291,10 +295,11 @@ function runStreamed(brain: string, opts: DelegateOpts, childEnv: NodeJS.Process
 // the CLI default is open web search.
 const GROUNDING_TOOL = "mcp__brave-search__brave_web_search";
 
+// The worker's answer, or null when it failed (is_error: an API error's text is not a result).
 function draftFromJson(raw: string): string | null {
   try {
     const o = JSON.parse(raw.trim());
-    return typeof o?.result === "string" && o.result.trim() ? o.result : null;
+    return o?.is_error === false && typeof o?.result === "string" && o.result.trim() ? o.result : null;
   } catch {
     return null;
   }
@@ -328,7 +333,7 @@ async function runVerify(brain: string, opts: DelegateOpts, childEnv: NodeJS.Pro
 
 // Retry the (non-stream) delegate on a RELIABLE failure — empty result or non-zero exit —
 // up to opts.retry times. Output is captured then emitted (so text mode isn't live under retry).
-function runWithRetry(brain: string, opts: DelegateOpts, childEnv: NodeJS.ProcessEnv, wantsStdin: boolean): number {
+function runWithRetry(brain: string, opts: DelegateOpts, childEnv: NodeJS.ProcessEnv, wantsStdin: boolean, direct: boolean): number {
   const max = 1 + opts.retry;
   let out = "", code = 1;
   for (let attempt = 1; attempt <= max; attempt++) {
@@ -344,7 +349,7 @@ function runWithRetry(brain: string, opts: DelegateOpts, childEnv: NodeJS.Proces
     if (ok || attempt === max) break;
     process.stderr.write(`delegate: ⟳ retry ${attempt}/${opts.retry} (empty/failed result)\n`);
   }
-  process.stdout.write(opts.outfmt === "json" ? reshapeDelegateJson(brain, out) + "\n" : out);
+  process.stdout.write(opts.outfmt === "json" ? reshapeDelegateJson(brain, out, direct) + "\n" : out);
   return code;
 }
 
@@ -384,7 +389,7 @@ export async function runDelegate(argv: string[], env: NodeJS.ProcessEnv = proce
 
   if (opts.verify) return runVerify(brain, opts, childEnv);
   if (opts.stream) return runStreamed(brain, opts, childEnv);
-  if (opts.retry > 0) return runWithRetry(brain, opts, childEnv, wantsStdin);
+  if (opts.retry > 0) return runWithRetry(brain, opts, childEnv, wantsStdin, plan.direct);
 
   if (opts.outfmt === "json") {
     // Capture the worker's JSON, then emit our stable schema on stdout.
@@ -395,7 +400,7 @@ export async function runDelegate(argv: string[], env: NodeJS.ProcessEnv = proce
       env: childEnv,
     });
     if (r.stderr) process.stderr.write(cleanStderr(r.stderr));
-    process.stdout.write(reshapeDelegateJson(brain, r.stdout ?? "") + "\n");
+    process.stdout.write(reshapeDelegateJson(brain, r.stdout ?? "", plan.direct) + "\n");
     return r.status ?? 1;
   }
 

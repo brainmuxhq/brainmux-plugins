@@ -11476,6 +11476,9 @@ var DirectBrainSchema = external_exports.object({
   // Child Claude Code's CLAUDE_CODE_MAX_OUTPUT_TOKENS. Small limits leave reasoning models
   // with thinking-only / half tool calls, so the default is generous (DEFAULT_MAX_OUTPUT_TOKENS).
   maxOutputTokens: external_exports.number().int().min(1).optional(),
+  // The model's real context window (input + output), e.g. 131072. Claude Code assumes 200K for
+  // a model it doesn't know and would overflow the server; with this it compacts in time.
+  contextWindow: external_exports.number().int().min(1024).optional(),
   // How much the model may think per request (off|low|medium|deep → see core/thinking.ts).
   // Default DEFAULT_THINKING; `bmux delegate --thinking` overrides it per task.
   thinking: external_exports.enum(THINKING_LEVELS, { errorMap: () => ({ message: `thinking must be one of ${THINKING_LEVELS.join("|")}` }) }).optional()
@@ -11846,6 +11849,24 @@ function readAuthToken(file, home) {
   return token;
 }
 
+// src/core/context.ts
+var CONTEXT_SAFETY = 8192;
+var CC_OUTPUT_RESERVE_CAP = 2e4;
+var CC_BLOCKING_BUFFER = 3e3;
+var MIN_USABLE_INPUT = 16384;
+function compactAt(contextWindow, maxTokens) {
+  return contextWindow - maxTokens - CONTEXT_SAFETY;
+}
+function contextEnv(contextWindow, maxTokens) {
+  const at = compactAt(contextWindow, maxTokens);
+  if (at < MIN_USABLE_INPUT) {
+    throw new Error(
+      `contextWindow ${contextWindow} is too small for max_tokens ${maxTokens} (leaves ${at} input tokens; need \u2265 ${MIN_USABLE_INPUT}) \u2014 lower maxOutputTokens/thinking or fix contextWindow`
+    );
+  }
+  return { CLAUDE_CODE_MAX_CONTEXT_TOKENS: String(at + Math.min(maxTokens, CC_OUTPUT_RESERVE_CAP) + CC_BLOCKING_BUFFER) };
+}
+
 // src/commands/launch.ts
 var MODEL_SLOTS = [
   "ANTHROPIC_MODEL",
@@ -11866,15 +11887,18 @@ function planLaunch(brain, env = process.env, thinking) {
     const base2 = b.url.replace(/\/+$/, "");
     const level = thinking ?? b.thinking ?? DEFAULT_THINKING;
     const th = thinkingEnv(level, b.model, b.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS);
+    const ctx = b.contextWindow ? contextEnv(b.contextWindow, Number(th.set.CLAUDE_CODE_MAX_OUTPUT_TOKENS)) : {};
     const set = {
       ANTHROPIC_BASE_URL: base2,
       ANTHROPIC_AUTH_TOKEN: readAuthToken(b.authTokenFile, env.HOME || void 0),
       ...th.set,
       // thinking budget/effort + CLAUDE_CODE_MAX_OUTPUT_TOKENS
+      ...ctx,
+      // CLAUDE_CODE_MAX_CONTEXT_TOKENS (when contextWindow is set)
       ...meta
     };
     for (const k of MODEL_SLOTS) set[k] = b.model;
-    return { brain, model: b.model, base: base2, direct: true, thinking: level, set, unset: ["ANTHROPIC_API_KEY", ...th.unset] };
+    return { brain, model: b.model, base: base2, direct: true, thinking: level, set, unset: ["ANTHROPIC_API_KEY", ...th.unset, ...b.contextWindow ? [] : ["CLAUDE_CODE_MAX_CONTEXT_TOKENS"]] };
   }
   if (thinking) throw new Error(`--thinking is for direct brains only ('${brain}' is a LiteLLM brain)`);
   const apiKey = getKey(paths.envFile, masterKeyVar(brain));
@@ -12082,7 +12106,7 @@ function summaryLine(p) {
   const ed = p.edits ? ` \xB7 ${p.edits} edit${p.edits === 1 ? "" : "s"}` : "";
   return `   \u21B3 ${p.touched.length} file${p.touched.length === 1 ? "" : "s"}: ${shown}${more}${ed}`;
 }
-function reshapeDelegateJson(brain, raw) {
+function reshapeDelegateJson(brain, raw, direct = false) {
   let o;
   try {
     o = JSON.parse(raw.trim());
@@ -12092,13 +12116,13 @@ function reshapeDelegateJson(brain, raw) {
   const u = o && o.usage || {};
   return JSON.stringify({
     brain,
-    ok: o?.is_error === false || o?.subtype === "success",
+    ok: o?.is_error === false,
     result: typeof o?.result === "string" ? o.result : "",
     input_tokens: typeof u.input_tokens === "number" ? u.input_tokens : null,
     output_tokens: typeof u.output_tokens === "number" ? u.output_tokens : null,
     num_turns: typeof o?.num_turns === "number" ? o.num_turns : null,
     duration_ms: typeof o?.duration_ms === "number" ? o.duration_ms : null,
-    cost_usd_estimate: typeof o?.total_cost_usd === "number" ? o.total_cost_usd : null
+    cost_usd_estimate: direct ? 0 : typeof o?.total_cost_usd === "number" ? o.total_cost_usd : null
   });
 }
 var CONNECTOR_NOISE = /connectors are disabled because ANTHROPIC_API_KEY/;
@@ -12163,7 +12187,7 @@ var GROUNDING_TOOL = "mcp__brave-search__brave_web_search";
 function draftFromJson(raw) {
   try {
     const o = JSON.parse(raw.trim());
-    return typeof o?.result === "string" && o.result.trim() ? o.result : null;
+    return o?.is_error === false && typeof o?.result === "string" && o.result.trim() ? o.result : null;
   } catch {
     return null;
   }
@@ -12195,7 +12219,7 @@ ${draft}`;
   if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
   return r2.status ?? 1;
 }
-function runWithRetry(brain, opts, childEnv, wantsStdin) {
+function runWithRetry(brain, opts, childEnv, wantsStdin, direct) {
   const max = 1 + opts.retry;
   let out = "", code = 1;
   for (let attempt = 1; attempt <= max; attempt++) {
@@ -12213,7 +12237,7 @@ function runWithRetry(brain, opts, childEnv, wantsStdin) {
     process.stderr.write(`delegate: \u27F3 retry ${attempt}/${opts.retry} (empty/failed result)
 `);
   }
-  process.stdout.write(opts.outfmt === "json" ? reshapeDelegateJson(brain, out) + "\n" : out);
+  process.stdout.write(opts.outfmt === "json" ? reshapeDelegateJson(brain, out, direct) + "\n" : out);
   return code;
 }
 async function runDelegate(argv, env = process.env) {
@@ -12257,7 +12281,7 @@ ${MEMORY_NUDGE}`;
   const childEnv = brainEnv(plan, env, { DELEGATE_DEPTH: "1" });
   if (opts.verify) return runVerify(brain, opts, childEnv);
   if (opts.stream) return runStreamed(brain, opts, childEnv);
-  if (opts.retry > 0) return runWithRetry(brain, opts, childEnv, wantsStdin);
+  if (opts.retry > 0) return runWithRetry(brain, opts, childEnv, wantsStdin, plan.direct);
   if (opts.outfmt === "json") {
     const r2 = spawnSync3("claude", buildClaudeArgs(opts), {
       cwd: opts.workdir,
@@ -12266,7 +12290,7 @@ ${MEMORY_NUDGE}`;
       env: childEnv
     });
     if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
-    process.stdout.write(reshapeDelegateJson(brain, r2.stdout ?? "") + "\n");
+    process.stdout.write(reshapeDelegateJson(brain, r2.stdout ?? "", plan.direct) + "\n");
     return r2.status ?? 1;
   }
   const r = spawnSync3("claude", buildClaudeArgs(opts), {
@@ -12341,10 +12365,10 @@ function addBrain(paths, name, port, model, providerKey) {
   cfg.brains[name] = { port, model, providerKey };
   save(paths, cfg);
 }
-function addDirectBrain(paths, name, url, model, authTokenFile, maxOutputTokens) {
+function addDirectBrain(paths, name, url, model, authTokenFile, maxOutputTokens, contextWindow) {
   const cfg = load(paths);
   if (cfg.brains[name]) throw new Error(`brain '${name}' already exists`);
-  cfg.brains[name] = maxOutputTokens ? { url, model, authTokenFile, maxOutputTokens } : { url, model, authTokenFile };
+  cfg.brains[name] = { url, model, authTokenFile, ...maxOutputTokens && { maxOutputTokens }, ...contextWindow && { contextWindow } };
   save(paths, cfg);
 }
 async function runConfig(sub, rest, env = process.env) {
@@ -12361,11 +12385,13 @@ async function runConfig(sub, rest, env = process.env) {
         return 0;
       }
       case "add-direct": {
-        const [name, url, model, authTokenFile, maxStr] = rest;
-        if (!name || !url || !model || !authTokenFile) throw new Error("usage: bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens]");
+        const [name, url, model, authTokenFile, maxStr, ctxStr] = rest;
+        if (!name || !url || !model || !authTokenFile) throw new Error("usage: bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens] [contextWindow]");
         const max = maxStr === void 0 ? void 0 : Number(maxStr);
         if (max !== void 0 && (!Number.isInteger(max) || max < 1)) throw new Error(`maxOutputTokens must be a positive integer, got '${maxStr}'`);
-        addDirectBrain(paths, name, url, model, authTokenFile, max);
+        const ctx = ctxStr === void 0 ? void 0 : Number(ctxStr);
+        if (ctx !== void 0 && (!Number.isInteger(ctx) || ctx < 1024)) throw new Error(`contextWindow must be an integer \u2265 1024, got '${ctxStr}'`);
+        addDirectBrain(paths, name, url, model, authTokenFile, max, ctx);
         console.log(`added direct brain '${name}' \u2192 ${url} (${model}); token read from ${authTokenFile} at run time`);
         return 0;
       }
@@ -12400,7 +12426,7 @@ async function runConfig(sub, rest, env = process.env) {
       case "list": {
         const cfg = load(paths);
         for (const [name, b] of Object.entries(cfg.brains)) {
-          if (isDirect(b)) console.log(`${name.padEnd(8)} direct ${b.url}  ${b.model}  (token: ${b.authTokenFile})`);
+          if (isDirect(b)) console.log(`${name.padEnd(8)} direct ${b.url}  ${b.model}  thinking ${b.thinking ?? DEFAULT_THINKING}${b.contextWindow ? `  ctx ${b.contextWindow}` : ""}  (token: ${b.authTokenFile})`);
           else console.log(`${name.padEnd(8)} :${b.port}  ${b.model}  (${b.providerKey})`);
         }
         return 0;
@@ -12939,9 +12965,11 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
                                   (--thinking: direct brains only \u2014 thinking budget per task: off \xB7 low 4K \xB7
                                    medium 16K (default, or brains.yaml \`thinking:\`) \xB7 deep 32K)
   bmux config add-brain <name> <port> <model> [providerKey]          (LiteLLM brain on a local port)
-  bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens]
+  bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens] [contextWindow]
                                   (direct brain: Anthropic-compatible endpoint, Bearer token read
-                                   from the file at run time \u2014 no LiteLLM stack; up/ps/spend skip it)
+                                   from the file at run time \u2014 no LiteLLM stack; up/ps/spend skip it;
+                                   contextWindow = the model's real window, e.g. 131072, so Claude Code
+                                   compacts before the server rejects the request)
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list
   bmux config add-template <name> "<prompt>" | list-templates   (reusable delegate task templates)

@@ -31,6 +31,9 @@ const DirectBrainSchema = z
     // Child Claude Code's CLAUDE_CODE_MAX_OUTPUT_TOKENS. Small limits leave reasoning models
     // with thinking-only / half tool calls, so the default is generous (DEFAULT_MAX_OUTPUT_TOKENS).
     maxOutputTokens: z.number().int().min(1).optional(),
+    // The model's real context window (input + output), e.g. 131072. Claude Code assumes 200K for
+    // a model it doesn't know and would overflow the server; with this it compacts in time.
+    contextWindow: z.number().int().min(1024).optional(),
     // How much the model may think per request (off|low|medium|deep → see core/thinking.ts).
     // Default DEFAULT_THINKING; `bmux delegate --thinking` overrides it per task.
     thinking: z.enum(THINKING_LEVELS, { errorMap: () => ({ message: `thinking must be one of ${THINKING_LEVELS.join("|")}` }) }).optional(),

@@ -228,6 +228,18 @@ test("reshapeDelegateJson: claude's envelope → stable brainmux schema", () => 
   });
 });
 
+test("reshapeDelegateJson: an API error (subtype success + is_error true) is ok:false", () => {
+  // the exact shape claude -p --output-format json printed for an HTTP 400 (captured from a fake server)
+  const raw = JSON.stringify({ type: "result", subtype: "success", is_error: true, api_error_status: 400, terminal_reason: "api_error",
+    result: "API Error: 400 This model's maximum context length is 131072 tokens.", num_turns: 47, duration_ms: 1185938, total_cost_usd: 5.96, usage: { input_tokens: 0, output_tokens: 0 } });
+  const o = JSON.parse(reshapeDelegateJson("ev", raw, true));
+  assert.equal(o.ok, false);
+  assert.match(o.result, /API Error: 400/);
+  assert.equal(o.cost_usd_estimate, 0, "direct brain: no Anthropic price");
+  assert.equal(JSON.parse(reshapeDelegateJson("chat", raw)).cost_usd_estimate, 5.96, "LiteLLM brain keeps the estimate");
+  assert.equal(JSON.parse(reshapeDelegateJson("chat", JSON.stringify({ subtype: "success", result: "x" }))).ok, false, "no is_error → not proven ok");
+});
+
 test("reshapeDelegateJson: non-JSON worker output → ok:false with raw snippet", () => {
   const o = JSON.parse(reshapeDelegateJson("chat", "oops not json"));
   assert.equal(o.ok, false);

@@ -17,6 +17,7 @@ import { runConfig } from "../src/commands/config.js";
 import { messagesProbe, runTest } from "../src/commands/test.js";
 import { runDelegate, parseDelegateArgs } from "../src/commands/delegate.js";
 import { thinkingEnv, ANSWER_ROOM } from "../src/core/thinking.js";
+import { contextEnv, compactAt, CONTEXT_SAFETY } from "../src/core/context.js";
 import { spawn } from "node:child_process";
 
 const TOKEN = "ev-secret-token-123";
@@ -171,6 +172,9 @@ test("config add-direct writes a direct brain (path only, never the token) and k
   assert.equal(await runConfig("add-direct", ["ev", "http://192.0.2.10:8000", "qwen3.8-27b", "~/.config/brainmux/ev-llm-key", "24000"], env), 0);
   const ev = loadBrains(path.join(home, "brains.yaml")).brains.ev as DirectBrain;
   assert.deepEqual(ev, { url: "http://192.0.2.10:8000", model: "qwen3.8-27b", authTokenFile: "~/.config/brainmux/ev-llm-key", maxOutputTokens: 24000 });
+  assert.equal(await runConfig("add-direct", ["ev3", "http://192.0.2.10:8000", "m", "/k", "20000", "131072"], env), 0);
+  assert.equal((loadBrains(path.join(home, "brains.yaml")).brains.ev3 as DirectBrain).contextWindow, 131072);
+  assert.notEqual(await runConfig("add-direct", ["ev4", "http://x", "m", "/k", "20000", "100"], env), 0);
   assert.ok(!fs.readFileSync(path.join(home, "generated", "compose.yaml"), "utf8").includes("brainmux-ev"));
   assert.ok(!readEnv(path.join(home, ".env")).has("EV_MASTER_KEY"));
   assert.notEqual(await runConfig("add-direct", ["bad", "ftp://x", "m", "/k"], env), 0);
@@ -364,4 +368,103 @@ test("real claude: request body per thinking level (budget enforced, never effor
   } finally {
     s.close();
   }
+});
+
+// --- context window ------------------------------------------------------------
+
+test("contextEnv: the child compacts at contextWindow − max_tokens − SAFETY", () => {
+  // Claude Code compacts at W − min(max_tokens, 20000) − 3000 (measured); invert that.
+  const cc = (w: number, max: number) => w - Math.min(max, 20000) - 3000;
+  for (const max of [8000, 20000, 20480, 36864]) {
+    const w = Number(contextEnv(131072, max).CLAUDE_CODE_MAX_CONTEXT_TOKENS);
+    assert.equal(cc(w, max), compactAt(131072, max), `max ${max}`);
+    assert.ok(cc(w, max) + max + CONTEXT_SAFETY <= 131072, `max ${max}: input + max_tokens must fit the window`);
+    assert.ok(w <= 131072);
+  }
+  assert.equal(contextEnv(131072, 20480).CLAUDE_CODE_MAX_CONTEXT_TOKENS, "125400");
+  assert.equal(contextEnv(131072, 36864).CLAUDE_CODE_MAX_CONTEXT_TOKENS, "109016");
+  assert.throws(() => contextEnv(32768, 20480), /too small/);
+});
+
+test("planLaunch: contextWindow → CLAUDE_CODE_MAX_CONTEXT_TOKENS (per thinking level); absent → inherited value removed", () => {
+  const { home } = directHome("http://h:8000", ", contextWindow: 131072");
+  const env = { BRAINMUX_HOME: home };
+  assert.equal(planLaunch("ev", env).set.CLAUDE_CODE_MAX_CONTEXT_TOKENS, "125400"); // medium: max_tokens 20480
+  assert.equal(planLaunch("ev", env, "deep").set.CLAUDE_CODE_MAX_CONTEXT_TOKENS, "109016"); // deep: max_tokens 36864
+  const { home: h2 } = directHome("http://h:8000");
+  const p2 = planLaunch("ev", { BRAINMUX_HOME: h2 });
+  assert.ok(!("CLAUDE_CODE_MAX_CONTEXT_TOKENS" in brainEnv(p2, { CLAUDE_CODE_MAX_CONTEXT_TOKENS: "999999" })));
+  assert.throws(() => parseBrains(`version: 1\nbrains:\n  ev: { url: "http://h:1", model: m, authTokenFile: /k, contextWindow: 10 }`), /contextWindow/);
+});
+
+test("delegate --json on a direct brain: failed child → ok:false, cost 0, non-zero exit", async () => {
+  const { home } = directHome("http://192.0.2.10:8000");
+  const bin = tmp("bmux-fakeclaude-err-");
+  const envelope = JSON.stringify({ type: "result", subtype: "success", is_error: true, result: "API Error: 400 context", total_cost_usd: 5.96 });
+  fs.writeFileSync(path.join(bin, "claude"), `#!/bin/sh\necho '${envelope}'\nexit 1\n`, { mode: 0o755 });
+  const chunks: string[] = [];
+  const orig = process.stdout.write.bind(process.stdout);
+  (process.stdout as any).write = (c: string) => { chunks.push(String(c)); return true; };
+  let code: number;
+  try {
+    code = await runDelegate(["ev", "--json", "x"], { BRAINMUX_HOME: home, PATH: `${bin}:${process.env.PATH}` });
+  } finally {
+    (process.stdout as any).write = orig;
+  }
+  assert.notEqual(code, 0);
+  const o = JSON.parse(chunks.join("").trim().split("\n").pop()!);
+  assert.equal(o.ok, false);
+  assert.equal(o.cost_usd_estimate, 0);
+});
+
+test("real claude: compacts before input + max_tokens overflows contextWindow", { skip: !E2E && "set BMUX_CLAUDE_E2E=1 (runs the installed claude against a local fake server)" }, async () => {
+  // The fake server answers the 1st call with a Read tool_use and reports `reported` input tokens.
+  // Claude Code must compact (a "continued from a previous conversation" request follows) iff
+  // that is at/above the compaction point bmux configured.
+  const file = path.join(tmp("bmux-ctx-"), "small.txt");
+  fs.writeFileSync(file, "hello\n");
+  async function run(reported: number): Promise<boolean> {
+    const bodies: string[] = [];
+    let n = 0;
+    const srv = http.createServer((req, res) => {
+      let body = "";
+      req.on("data", (c) => (body += c));
+      req.on("end", () => {
+        if (!req.url?.startsWith("/v1/messages") || req.url.includes("count_tokens")) { res.writeHead(200, { "content-type": "application/json" }); res.end('{"input_tokens":10}'); return; }
+        const j = JSON.parse(body);
+        n++; bodies.push(body);
+        const first = n === 1;
+        res.writeHead(200, { "content-type": "text/event-stream" });
+        const ev = (t: string, d: object) => res.write(`event: ${t}\ndata: ${JSON.stringify({ type: t, ...d })}\n\n`);
+        ev("message_start", { message: { id: `m${n}`, type: "message", role: "assistant", model: j.model, content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: first ? reported : 1000, output_tokens: 5 } } });
+        if (first) {
+          ev("content_block_start", { index: 0, content_block: { type: "tool_use", id: "toolu_1", name: "Read", input: {} } });
+          ev("content_block_delta", { index: 0, delta: { type: "input_json_delta", partial_json: JSON.stringify({ file_path: file }) } });
+        } else {
+          ev("content_block_start", { index: 0, content_block: { type: "text", text: "" } });
+          ev("content_block_delta", { index: 0, delta: { type: "text_delta", text: "OK" } });
+        }
+        ev("content_block_stop", { index: 0 });
+        ev("message_delta", { delta: { stop_reason: first ? "tool_use" : "end_turn", stop_sequence: null }, usage: { output_tokens: 5 } });
+        ev("message_stop", {});
+        res.end();
+      });
+    });
+    await new Promise<void>((r) => srv.listen(0, "127.0.0.1", () => r()));
+    try {
+      const { home } = directHome(`http://127.0.0.1:${(srv.address() as AddressInfo).port}`, ", contextWindow: 131072");
+      const env = brainEnv(planLaunch("ev", { BRAINMUX_HOME: home }), process.env);
+      const status = await new Promise<number | null>((resolve) => {
+        const c = spawn("claude", ["-p", "read the file and answer", "--output-format", "text", "--strict-mcp-config", "--allowedTools", "Read"], { env, cwd: path.dirname(file), stdio: "ignore", timeout: 90_000 });
+        c.on("close", resolve);
+      });
+      assert.equal(status, 0);
+      return bodies.some((b) => b.includes("continued from a previous conversation"));
+    } finally {
+      srv.close();
+    }
+  }
+  const at = compactAt(131072, 20480); // medium → 102400
+  assert.equal(await run(at - 2000), false, "below the compaction point: no compaction");
+  assert.equal(await run(at + 1000), true, "at/above it: compacts (and input + max_tokens still fits 131072)");
 });

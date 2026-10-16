@@ -47,7 +47,10 @@ detection sweeps) · `--write` (lets it EDIT files, shell still blocked) · `--y
 (no permission checks — risky, only in a throwaway dir/worktree).
 
 Options: `-C <dir>` run in a subdir/worktree · `--json` stable envelope
-`{brain, ok, result, input_tokens, output_tokens, num_turns, duration_ms, cost_usd_estimate}` ·
+`{brain, ok, result, input_tokens, output_tokens, num_turns, duration_ms, cost_usd_estimate}`
+(`ok:false` whenever the worker failed — an API error like a context overflow lands in `result`
+as `API Error: …`, so check `ok` before using `result`; `cost_usd_estimate` is 0 for a direct
+brain — self-hosted, no per-token price) ·
 `--stream` (aka `-v`) show a live progress indicator · `--mcp` (alias `--with-mcp`) give the
 worker the host's MCP servers (off by default).
 
@@ -150,6 +153,9 @@ never read or print the token). The delegate config line shows it:
 - **Narrow tasks.** Smaller local models: give one bounded task (one file / one function / one
   question), not a project-wide sweep.
 - **No images.** Don't hand it image files to Read (text-only model).
+- Set the brain's `contextWindow` (the model's real window, e.g. 131072). Without it Claude Code
+  assumes 200K, never compacts in time, and a long task dies with `API Error: 400 … maximum
+  context length` (`ok:false`). With it, the worker compacts early enough.
 - Output budget comes from the brain's `maxOutputTokens` (default 20000) — enough for reasoning
   plus tool calls; don't override it lower.
 - **Pick a thinking level per task** with `--thinking off|low|medium|deep` (direct brains only;
@@ -200,8 +206,8 @@ and returned to *you* at completion — the user's terminal is not your subproce
   Don't make them ask what happened.
 - **Don't** try to give live progress by writing a log file or polling — that burns tokens
   and/or leaves artifacts for no real gain. Final-summary-at-completion is the norm.
-- If you need the worker's cost/session metadata, use `--json` and read `result` +
-  `total_cost_usd`. Real per-brain spend is `bmux spend`.
+- If you need the worker's cost/session metadata, use `--json` and read `ok`, `result` +
+  `cost_usd_estimate`. Real per-brain spend is `bmux spend`.
 - If the **user** wants to watch a long run live, they run `bmux delegate … --stream` in
   their **own** terminal.
 

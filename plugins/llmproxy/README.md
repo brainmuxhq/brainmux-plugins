@@ -65,7 +65,7 @@ bmux ps | logs [brain] | health             inspect
 bmux chat | deep | coder [claude args...]   launch Claude Code on a brain (interactive)
 bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--verify] [--memory] [--thinking off|low|medium|deep] "<task>"  headless one-shot
 bmux config add-brain <name> <port> <model> [providerKey]
-bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens]   direct brain (no LiteLLM)
+bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens] [contextWindow]   direct brain (no LiteLLM)
 bmux config remove-brain <name> | set-model <name> <model>
 bmux config add-key <ENV_VAR> [value] | list
 bmux config add-template <name> "<prompt>" | list-templates   reusable delegate task templates
@@ -86,7 +86,7 @@ instead of a `port`:
 # ~/.brainmux/brains.yaml
 version: 1
 brains:
-  ev: { url: "http://192.0.2.10:8000", model: qwen3.8-27b, authTokenFile: ~/.config/brainmux/ev-llm-key }
+  ev: { url: "http://192.0.2.10:8000", model: qwen3.8-27b, authTokenFile: ~/.config/brainmux/ev-llm-key, contextWindow: 131072 }
   # optional: maxOutputTokens: 32000   (default 20000)
   # optional: thinking: low             (off|low|medium|deep, default medium)
 ```
@@ -97,6 +97,7 @@ brains:
 | `model` | the server's model id — sent in every request (all Claude Code model slots point at it) |
 | `authTokenFile` | file holding the token, sent as `Authorization: Bearer …`. Read **at run time**; must be `chmod 600` (bmux refuses a group/world-readable file). Never copied into `.env`, never printed. |
 | `maxOutputTokens` | the child's `CLAUDE_CODE_MAX_OUTPUT_TOKENS` (default 20000). Small limits leave reasoning models with thinking-only replies / half tool calls. |
+| `contextWindow` | the model's real context window (input + output), e.g. `131072`. **Set it.** Claude Code assumes 200K for a model it doesn't know, so without it a long task grows past the server's limit and dies with `API Error: 400 … maximum context length`. With it bmux sets `CLAUDE_CODE_MAX_CONTEXT_TOKENS` so the worker compacts once its input reaches `contextWindow − max_tokens − 8192` (e.g. 102400 at `medium`, 86016 at `deep`). |
 | `thinking` | how much the model may think per request: `off` · `low` · `medium` (default) · `deep` — see below. `bmux delegate --thinking` overrides it per task. |
 
 ### Thinking level
@@ -129,7 +130,11 @@ remove `ANTHROPIC_API_KEY` from the child (it would be sent as `x-api-key`). Dir
 not part of the stack: compose generation, `up`/`ps`/`health` and `spend` skip them, and they
 bind no local port. `bmux test` probes them with Bearer auth.
 
-Add one with `bmux config add-direct ev http://192.0.2.10:8000 qwen3.8-27b ~/.config/brainmux/ev-llm-key`.
+Add one with `bmux config add-direct ev http://192.0.2.10:8000 qwen3.8-27b ~/.config/brainmux/ev-llm-key 20000 131072`.
+
+`bmux delegate --json` on a direct brain reports `cost_usd_estimate: 0` — the server is
+self-hosted, and the worker's own estimate would use Anthropic prices. `ok` is `false` whenever
+the worker failed (an API error's text is in `result`), so `--retry` and scripts see it.
 For a **direct-only** setup (no LiteLLM brains), write `brains.yaml` like the block above
 *before* `bmux init` — init keeps an existing `brains.yaml`, writes no stack secrets and needs no Docker.
 
