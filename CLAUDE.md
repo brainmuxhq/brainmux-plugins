@@ -137,6 +137,13 @@
   bug'ı test'le yakalandı → gerçek Next isimleri (getServerSideProps|getStaticProps|getStaticPaths|getInitialProps).
   Spec `docs/specs/2026-09-02-graphmux-plugin-design.md`. Aday-seçim: Cognee elendi (LLM-extraction stokastik, arXiv 2601.08773),
   Serena host-native (container'a kötü uyum) → CodeGraph (tek-binary, tree-sitter, auto-sync, MIT). NL-execution `gmux`'a genişledi + graphmux skill.
+- ✅ Version **0.1.23** (llmproxy: gerçek ev koşusundaki 3 hata. ① `--json` `ok` artık yalnız `is_error===false` — CC API
+  hatasında `subtype:"success"` + `is_error:true` + `result:"API Error: 400 …"` yolluyor (sahte sunucuyla yakalandı); eski
+  `|| subtype==="success"` hatayı ok:true gösteriyordu; `--retry`/`--verify` taslağı da is_error'a bakıyor. ② direct
+  `contextWindow` (ev: 131072) → `CLAUDE_CODE_MAX_CONTEXT_TOKENS`; CC 2.1.281 -p modunda input ≥ W − min(max_tokens,20000)
+  − 3000 olunca sıkıştırıyor (ölçüldü: 107000 hayır / 109000 evet @131072). bmux W'yi sıkıştırma noktası =
+  contextWindow − max_tokens − 8192 olacak şekilde verir (medium 102400, deep 86016). ③ direct beyinde `cost_usd_estimate: 0`.
+  `BMUX_CLAUDE_E2E=1` testleri: istek gövdesi + sıkıştırma sınırı gerçek `claude` ile.)
 - ✅ Version **0.1.22** (llmproxy: direct brain **düşünme seviyesi** — `bmux delegate ev --thinking off|low|medium|deep`,
   varsayılan `medium`, `brains.yaml`'da beyin başına `thinking:`; bayrak kazanır. Eşleme: off→`thinking:{type:disabled}`
   (effort yok) · low 4096/effort low · medium 16384/medium · deep 32768/xhigh; `max_tokens ≥ bütçe+4096`. Mekanizma = yalnız
