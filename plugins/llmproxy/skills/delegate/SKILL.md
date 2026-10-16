@@ -140,6 +140,19 @@ answer from memory. Quote the exact text and the real URL you fetched." A URL in
 NOT proof it searched — cross-check that a tool call actually happened (`--stream` shows `🔧
 brave_web_search`; an empty `↳` summary means it never called a tool).
 
+## Direct brains (self-hosted server, e.g. `ev`)
+A brain with a `url` in `brains.yaml` (see `bmux config list`) is a **direct** brain: the worker
+talks straight to that Anthropic-compatible server (Bearer token from a file — bmux handles it;
+never read or print the token). The delegate config line shows it:
+`delegate: ev · direct http://… · <model> · analyze · mcp off`.
+- **One delegate at a time on it.** A self-hosted server is shared (single GPU) — never fan out
+  or run parallel `bmux delegate` calls on a direct brain; wait for each to finish.
+- **Narrow tasks.** Smaller local models: give one bounded task (one file / one function / one
+  question), not a project-wide sweep.
+- **No images.** Don't hand it image files to Read (text-only model).
+- Output budget comes from the brain's `maxOutputTokens` (default 20000) — enough for reasoning
+  plus tool calls; don't override it lower.
+
 ## Concurrency — sequential for quality
 Under heavy concurrency (many parallel `bmux delegate` on one brain) the model degrades and
 rate-limits — garbled/typo output. Run delegates **sequentially or at low concurrency** when

@@ -27,6 +27,8 @@ your Anthropic quota.
 - Docker running (one LiteLLM container per brain + one Postgres).
 - An [OpenRouter](https://openrouter.ai/keys) API key (one key reaches thousands of models).
 
+(Only [direct brains](#direct-brains-self-hosted-endpoint)? Then no Docker and no OpenRouter key are needed.)
+
 ## Install
 
 ```
@@ -63,15 +65,47 @@ bmux ps | logs [brain] | health             inspect
 bmux chat | deep | coder [claude args...]   launch Claude Code on a brain (interactive)
 bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--verify] [--memory] "<task>"  headless one-shot
 bmux config add-brain <name> <port> <model> [providerKey]
+bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens]   direct brain (no LiteLLM)
 bmux config remove-brain <name> | set-model <name> <model>
 bmux config add-key <ENV_VAR> [value] | list
 bmux config add-template <name> "<prompt>" | list-templates   reusable delegate task templates
-bmux test                                   smoke every brain via /v1/messages
+bmux test                                   smoke every brain via /v1/messages (direct: Bearer)
 bmux spend [--since 1h|30m|7d]              per-brain requests / tokens / spend (--since scopes a window)
 bmux models [query] | --use-cases | --json  browse the live OpenRouter catalog
 bmux statusline install [--force]           enable the Claude Code status line
 bmux install-shim [--force]                 put a version-agnostic bmux on ~/.local/bin (any shell)
 ```
+
+## Direct brains (self-hosted endpoint)
+
+A brain can point **straight at a server that already speaks the Anthropic Messages API**
+(`/v1/messages` with tool use — e.g. vLLM) instead of a LiteLLM container. Give it a `url`
+instead of a `port`:
+
+```yaml
+# ~/.brainmux/brains.yaml
+version: 1
+brains:
+  ev: { url: "http://192.0.2.10:8000", model: qwen3.8-27b, authTokenFile: ~/.config/brainmux/ev-llm-key }
+  # optional: maxOutputTokens: 32000   (default 20000)
+```
+
+| field | meaning |
+|---|---|
+| `url` | endpoint root, `http://` or `https://` (Claude Code appends `/v1/messages`) |
+| `model` | the server's model id — sent in every request (all Claude Code model slots point at it) |
+| `authTokenFile` | file holding the token, sent as `Authorization: Bearer …`. Read **at run time**; must be `chmod 600` (bmux refuses a group/world-readable file). Never copied into `.env`, never printed. |
+| `maxOutputTokens` | the child's `CLAUDE_CODE_MAX_OUTPUT_TOKENS` (default 20000). Small limits leave reasoning models with thinking-only replies / half tool calls. |
+
+`bmux ev` / `bmux delegate ev …` set `ANTHROPIC_BASE_URL=<url>`, `ANTHROPIC_AUTH_TOKEN=<file
+content>`, `ANTHROPIC_MODEL` (+ opus/sonnet/haiku/small-fast/subagent model vars) `=<model>` and
+remove `ANTHROPIC_API_KEY` from the child (it would be sent as `x-api-key`). Direct brains are
+not part of the stack: compose generation, `up`/`ps`/`health` and `spend` skip them, and they
+bind no local port. `bmux test` probes them with Bearer auth.
+
+Add one with `bmux config add-direct ev http://192.0.2.10:8000 qwen3.8-27b ~/.config/brainmux/ev-llm-key`.
+For a **direct-only** setup (no LiteLLM brains), write `brains.yaml` like the block above
+*before* `bmux init` — init keeps an existing `brains.yaml`, writes no stack secrets and needs no Docker.
 
 ## Pick a model (live)
 
@@ -134,7 +168,8 @@ Claude Code at that port. Edit brains only via `bmux config` — never hand-edit
 ## Security
 
 Secrets (provider + master keys, salt, Postgres password) live only in `~/.brainmux/.env`
-(chmod 600), never in `brains.yaml`, never committed. Add provider keys with `bmux config
+(chmod 600), never in `brains.yaml`, never committed. A direct brain's token stays in its own
+`authTokenFile` (chmod 600 enforced); `brains.yaml` holds only the path. Add provider keys with `bmux config
 add-key <ENV_VAR>` (value omitted → hidden prompt) in a terminal — don't paste keys into chat.
 
 ## Observability

@@ -2,13 +2,55 @@ import fs from "node:fs";
 import YAML from "yaml";
 import { z } from "zod";
 
-const BrainSchema = z.object({
+// Restrict to bare model-id chars so the value can't inject YAML into the generated
+// per-brain config.yaml (e.g. a newline + `master_key: …`). Covers OpenRouter slugs
+// like `openrouter/qwen/qwen3.7-flash` and variant suffixes (`…:free`).
+const ModelId = z.string().regex(/^[A-Za-z0-9/._:-]+$/, "model must be a bare model id (letters, digits and / . _ : -)");
+
+// A LiteLLM brain: one container on a local port, translating to a provider (OpenRouter, …).
+const LiteLLMBrainSchema = z.object({
   port: z.number().int().min(1).max(65535),
-  // Restrict to bare model-id chars so the value can't inject YAML into the generated
-  // per-brain config.yaml (e.g. a newline + `master_key: …`). Covers OpenRouter slugs
-  // like `openrouter/qwen/qwen3.7-flash` and variant suffixes (`…:free`).
-  model: z.string().regex(/^[A-Za-z0-9/._:-]+$/, "model must be a bare model id (letters, digits and / . _ : -)"),
+  model: ModelId,
   providerKey: z.string().regex(/^[A-Z][A-Z0-9_]*$/, "providerKey must be an ENV_VAR-style name"),
+});
+
+// A DIRECT brain: an endpoint that already speaks the Anthropic Messages API (e.g. a vLLM
+// server) — no LiteLLM container. Auth = `Authorization: Bearer <token>`, the token read at
+// run time from `authTokenFile` (never copied into ~/.brainmux/.env).
+const DirectBrainSchema = z
+  .object({
+    url: z
+      .string()
+      .url("url must be an absolute URL")
+      .refine((u) => /^https?:\/\//i.test(u), "url must be http:// or https://"),
+    model: ModelId,
+    authTokenFile: z.string().min(1, "authTokenFile must be a path"),
+    // Child Claude Code's CLAUDE_CODE_MAX_OUTPUT_TOKENS. Small limits leave reasoning models
+    // with thinking-only / half tool calls, so the default is generous (DEFAULT_MAX_OUTPUT_TOKENS).
+    maxOutputTokens: z.number().int().min(1).optional(),
+  })
+  .strict(); // a stray `port`/`providerKey` on a url brain is a mistake, not something to ignore
+
+export const DEFAULT_MAX_OUTPUT_TOKENS = 20000;
+
+export type LiteLLMBrain = z.infer<typeof LiteLLMBrainSchema>;
+export type DirectBrain = z.infer<typeof DirectBrainSchema>;
+export type Brain = LiteLLMBrain | DirectBrain;
+
+export function isDirect(b: Brain): b is DirectBrain {
+  return "url" in b;
+}
+
+// `url` present → direct brain, otherwise LiteLLM brain. Dispatching on the key (instead of a
+// plain z.union) keeps the error messages specific to the shape the user meant.
+const BrainSchema = z.unknown().transform((v, ctx): Brain => {
+  const schema = v && typeof v === "object" && "url" in v ? DirectBrainSchema : LiteLLMBrainSchema;
+  const r = schema.safeParse(v);
+  if (!r.success) {
+    for (const issue of r.error.issues) ctx.addIssue(issue);
+    return z.NEVER;
+  }
+  return r.data;
 });
 
 const BrainsConfigSchema = z
@@ -22,6 +64,7 @@ const BrainsConfigSchema = z
   .superRefine((cfg, ctx) => {
     const seen = new Map<number, string>();
     for (const [name, b] of Object.entries(cfg.brains)) {
+      if (isDirect(b)) continue; // direct brains bind no local port
       const prev = seen.get(b.port);
       if (prev) {
         ctx.addIssue({
@@ -34,8 +77,12 @@ const BrainsConfigSchema = z
     }
   });
 
-export interface Brain { port: number; model: string; providerKey: string; }
 export type BrainsConfig = z.infer<typeof BrainsConfigSchema>;
+
+/** The brains that run as LiteLLM containers (the stack: compose, up/ps, health, spend). */
+export function litellmBrains(cfg: BrainsConfig): [string, LiteLLMBrain][] {
+  return Object.entries(cfg.brains).filter((e): e is [string, LiteLLMBrain] => !isDirect(e[1]));
+}
 
 export function parseBrains(text: string): BrainsConfig {
   let raw: unknown;

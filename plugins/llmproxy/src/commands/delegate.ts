@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { planLaunch } from "./launch.js";
+import { planLaunch, brainEnv } from "./launch.js";
 import { resolvePaths } from "../core/paths.js";
 import { resolveTemplate } from "../core/templates.js";
 
@@ -369,11 +369,11 @@ export async function runDelegate(argv: string[], env: NodeJS.ProcessEnv = proce
     opts.allowTools = [...opts.allowTools, ...MEMORY_TOOLS];
     opts.task = `${opts.task}\n\n${MEMORY_NUDGE}`;
   }
-  const plan = planLaunch(brain, env); // validates brain against manifest + resolves key/port
+  const plan = planLaunch(brain, env); // validates brain against manifest + resolves key/port (or direct url + token file)
   // Echo the outgoing config so you always know what went out (brain · mode · mcp · memory · verify · retry).
-  process.stderr.write(`delegate: ${brain} · ${opts.mode} · mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " · memory" : ""}${opts.verify ? " · verify" : ""}${opts.retry > 0 ? ` · retry ${opts.retry}` : ""}\n`);
+  process.stderr.write(`delegate: ${brain}${plan.direct ? ` · direct ${plan.base} · ${plan.model}` : ""} · ${opts.mode} · mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " · memory" : ""}${opts.verify ? " · verify" : ""}${opts.retry > 0 ? ` · retry ${opts.retry}` : ""}\n`);
   if (opts.mode === "yolo") process.stderr.write(`delegate: ⚠ --yolo — '${brain}' runs with NO permission checks in '${opts.workdir}'.\n`);
-  const childEnv = { ...env, DELEGATE_DEPTH: "1", ANTHROPIC_BASE_URL: plan.base, ANTHROPIC_API_KEY: plan.apiKey };
+  const childEnv = brainEnv(plan, env, { DELEGATE_DEPTH: "1" });
 
   if (opts.verify) return runVerify(brain, opts, childEnv);
   if (opts.stream) return runStreamed(brain, opts, childEnv);

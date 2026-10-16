@@ -27,11 +27,14 @@ const HELP = `bmux — brainmux/llmproxy CLI
                                   (--verify: draft, then a grounded pass web-checks each claim → ✅/⚠ with sources)
                                   (--template <name>: expand a saved task template — bmux config list-templates)
                                   (--retry [n]: on an empty/failed result, auto-retry up to n times — default 1)
-  bmux config add-brain <name> <port> <model> [providerKey]
+  bmux config add-brain <name> <port> <model> [providerKey]          (LiteLLM brain on a local port)
+  bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens]
+                                  (direct brain: Anthropic-compatible endpoint, Bearer token read
+                                   from the file at run time — no LiteLLM stack; up/ps/spend skip it)
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list
   bmux config add-template <name> "<prompt>" | list-templates   (reusable delegate task templates)
-  bmux test                       smoke every brain via /v1/messages
+  bmux test                       smoke every brain via /v1/messages (direct brains: Bearer auth)
   bmux spend [--since 1h|30m|7d]  per-brain requests/tokens/spend (from LiteLLM); --since scopes a window
   bmux install-shim [--force]     put a version-agnostic bmux on ~/.local/bin (works from any shell)
   bmux models [query] | --use-cases | --json   list OpenRouter models (live) / use-cases

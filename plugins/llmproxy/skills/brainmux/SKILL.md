@@ -16,6 +16,14 @@ brains ONLY through `bmux config …`, which rewrites `brains.yaml` and regenera
 compose/config/init under `generated/`. **Never hand-edit anything in `generated/`** — it is
 overwritten on the next `bmux up`/`config` call.
 
+## Two kinds of brain
+- **LiteLLM brain** `{ port, model, providerKey }` — a local LiteLLM container (OpenRouter etc.).
+- **Direct brain** `{ url, model, authTokenFile, maxOutputTokens? }` — a server that already speaks
+  the Anthropic Messages API (e.g. a self-hosted vLLM). Bearer auth with the token read at run time
+  from `authTokenFile` (must be chmod 600; never copy it into `.env`, never print it). No container:
+  `up`/`ps`/`health`/`spend` skip it; `bmux test` probes it with Bearer. A direct-only `brains.yaml`
+  is valid — write it before `bmux init` (init keeps an existing file) and no Docker is needed.
+
 ## Lifecycle
 ```sh
 bmux init                    # scaffold ~/.brainmux (brains.yaml, .env chmod 600, generated/)
@@ -36,6 +44,7 @@ effect after they restart Claude Code — tell them to restart.
 ```sh
 bmux config list                                            # brains: name, port, model, providerKey
 bmux config add-brain <name> <port> <model> [providerKey]   # default providerKey OPENROUTER_API_KEY
+bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens]  # direct brain (Bearer, no LiteLLM)
 bmux config remove-brain <name>
 bmux config set-model <name> <model>
 bmux config add-key <ENV_VAR> <value>                       # write a provider key to .env
@@ -44,7 +53,8 @@ bmux config add-template <name> "<prompt>" | list-templates # reusable delegate 
 Templates persist in `~/.brainmux/templates.yaml` (user entries override built-in `audit`/
 `drift-scan`/`review`/`todo-scan`); used via `bmux delegate --template <name>`. You may set a
 template on the user's behalf from a natural-language request.
-After `add-brain`/`set-model`/`remove-brain`, run `bmux up` (or `restart`) to apply. `bmux init`
+After `add-brain`/`set-model`/`remove-brain` on a LiteLLM brain, run `bmux up` (or `restart`) to
+apply; direct brains take effect immediately (nothing to restart). `bmux init`
 auto-generates master keys + salt + Postgres password; the user supplies provider keys via
 `add-key` (secrets live in `.env`, never in `brains.yaml`).
 

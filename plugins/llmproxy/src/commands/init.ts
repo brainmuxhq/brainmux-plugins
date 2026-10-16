@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { resolvePaths, type Paths } from "../core/paths.js";
-import { parseBrains, type BrainsConfig } from "../core/manifest.js";
+import { parseBrains, isDirect, litellmBrains, type BrainsConfig } from "../core/manifest.js";
 import { generate, masterKeyVar } from "../core/generate.js";
 import { readEnv, writeEnv, genSecret } from "../core/env.js";
 
@@ -29,12 +29,17 @@ export function writeGenerated(paths: Paths, cfg: BrainsConfig): void {
 export function ensureSecrets(paths: Paths, cfg: BrainsConfig): void {
   const env = readEnv(paths.envFile);
   const putIfAbsent = (k: string, v: () => string) => { if (!env.get(k)) env.set(k, v()); };
-  putIfAbsent("POSTGRES_PASSWORD", () => genSecret());
-  putIfAbsent("LITELLM_SALT_KEY", () => "sk-salt-" + genSecret());
-  for (const brain of Object.keys(cfg.brains)) {
+  // Stack secrets only matter when there is a stack. Direct brains keep their token in their
+  // own authTokenFile — nothing of theirs goes into .env.
+  const stack = litellmBrains(cfg);
+  if (stack.length) {
+    putIfAbsent("POSTGRES_PASSWORD", () => genSecret());
+    putIfAbsent("LITELLM_SALT_KEY", () => "sk-salt-" + genSecret());
+  }
+  for (const [brain, b] of stack) {
     putIfAbsent(masterKeyVar(brain), () => `sk-${brain}-` + genSecret());
     // provider keys are user-supplied; leave a placeholder only if absent
-    putIfAbsent(cfg.brains[brain].providerKey, () => "");
+    putIfAbsent(b.providerKey, () => "");
   }
   writeEnv(paths.envFile, env);
 }
@@ -42,12 +47,12 @@ export function ensureSecrets(paths: Paths, cfg: BrainsConfig): void {
 export function runInit(env: NodeJS.ProcessEnv = process.env): number {
   const paths = resolvePaths(env);
   fs.mkdirSync(paths.home, { recursive: true });
-  fs.mkdirSync(paths.dataDir, { recursive: true });
 
   if (!fs.existsSync(paths.brainsYaml)) {
     fs.writeFileSync(paths.brainsYaml, DEFAULT_BRAINS_YAML);
   }
   const cfg = parseBrains(fs.readFileSync(paths.brainsYaml, "utf8"));
+  if (litellmBrains(cfg).length) fs.mkdirSync(paths.dataDir, { recursive: true }); // Postgres volume — stack only
   ensureSecrets(paths, cfg);
   writeGenerated(paths, cfg);
 
@@ -55,9 +60,9 @@ export function runInit(env: NodeJS.ProcessEnv = process.env): number {
   console.log(`  brains.yaml, .env (chmod 600), generated/ written.`);
   console.log(`  brains (edit brains.yaml or \`bmux config\` to change):`);
   for (const [name, b] of Object.entries(cfg.brains)) {
-    console.log(`    ${name.padEnd(8)} :${b.port}  ${b.model}`);
+    console.log(`    ${name.padEnd(8)} ${isDirect(b) ? `direct ${b.url}` : `:${b.port}`}  ${b.model}`);
   }
-  const missing = Object.values(cfg.brains).map((b) => b.providerKey)
+  const missing = litellmBrains(cfg).map(([, b]) => b.providerKey)
     .filter((k, i, a) => a.indexOf(k) === i)
     .filter((k) => !readEnv(paths.envFile).get(k));
   if (missing.length) {

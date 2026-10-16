@@ -113,17 +113,17 @@ var require_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    function visit_(key, node, visitor, path7) {
-      const ctrl = callVisitor(key, node, visitor, path7);
+    function visit_(key, node, visitor, path8) {
+      const ctrl = callVisitor(key, node, visitor, path8);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path7, ctrl);
-        return visit_(key, ctrl, visitor, path7);
+        replaceNode(key, path8, ctrl);
+        return visit_(key, ctrl, visitor, path8);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path7 = Object.freeze(path7.concat(node));
+          path8 = Object.freeze(path8.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = visit_(i, node.items[i], visitor, path7);
+            const ci = visit_(i, node.items[i], visitor, path8);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -134,13 +134,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path7 = Object.freeze(path7.concat(node));
-          const ck = visit_("key", node.key, visitor, path7);
+          path8 = Object.freeze(path8.concat(node));
+          const ck = visit_("key", node.key, visitor, path8);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = visit_("value", node.value, visitor, path7);
+          const cv = visit_("value", node.value, visitor, path8);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -161,17 +161,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node, visitor, path7) {
-      const ctrl = await callVisitor(key, node, visitor, path7);
+    async function visitAsync_(key, node, visitor, path8) {
+      const ctrl = await callVisitor(key, node, visitor, path8);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path7, ctrl);
-        return visitAsync_(key, ctrl, visitor, path7);
+        replaceNode(key, path8, ctrl);
+        return visitAsync_(key, ctrl, visitor, path8);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path7 = Object.freeze(path7.concat(node));
+          path8 = Object.freeze(path8.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = await visitAsync_(i, node.items[i], visitor, path7);
+            const ci = await visitAsync_(i, node.items[i], visitor, path8);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -182,13 +182,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path7 = Object.freeze(path7.concat(node));
-          const ck = await visitAsync_("key", node.key, visitor, path7);
+          path8 = Object.freeze(path8.concat(node));
+          const ck = await visitAsync_("key", node.key, visitor, path8);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = await visitAsync_("value", node.value, visitor, path7);
+          const cv = await visitAsync_("value", node.value, visitor, path8);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -215,23 +215,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node, visitor, path7) {
+    function callVisitor(key, node, visitor, path8) {
       if (typeof visitor === "function")
-        return visitor(key, node, path7);
+        return visitor(key, node, path8);
       if (identity.isMap(node))
-        return visitor.Map?.(key, node, path7);
+        return visitor.Map?.(key, node, path8);
       if (identity.isSeq(node))
-        return visitor.Seq?.(key, node, path7);
+        return visitor.Seq?.(key, node, path8);
       if (identity.isPair(node))
-        return visitor.Pair?.(key, node, path7);
+        return visitor.Pair?.(key, node, path8);
       if (identity.isScalar(node))
-        return visitor.Scalar?.(key, node, path7);
+        return visitor.Scalar?.(key, node, path8);
       if (identity.isAlias(node))
-        return visitor.Alias?.(key, node, path7);
+        return visitor.Alias?.(key, node, path8);
       return void 0;
     }
-    function replaceNode(key, path7, node) {
-      const parent = path7[path7.length - 1];
+    function replaceNode(key, path8, node) {
+      const parent = path8[path8.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node;
       } else if (identity.isPair(parent)) {
@@ -841,10 +841,10 @@ var require_Collection = __commonJS({
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path7, value) {
+    function collectionFromPath(schema, path8, value) {
       let v = value;
-      for (let i = path7.length - 1; i >= 0; --i) {
-        const k = path7[i];
+      for (let i = path8.length - 1; i >= 0; --i) {
+        const k = path8[i];
         if (typeof k === "number" && Number.isInteger(k) && k >= 0) {
           const a = [];
           a[k] = v;
@@ -863,7 +863,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path7) => path7 == null || typeof path7 === "object" && !!path7[Symbol.iterator]().next().done;
+    var isEmptyPath = (path8) => path8 == null || typeof path8 === "object" && !!path8[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -893,11 +893,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path7, value) {
-        if (isEmptyPath(path7))
+      addIn(path8, value) {
+        if (isEmptyPath(path8))
           this.add(value);
         else {
-          const [key, ...rest] = path7;
+          const [key, ...rest] = path8;
           const node = this.get(key, true);
           if (identity.isCollection(node))
             node.addIn(rest, value);
@@ -911,8 +911,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path7) {
-        const [key, ...rest] = path7;
+      deleteIn(path8) {
+        const [key, ...rest] = path8;
         if (rest.length === 0)
           return this.delete(key);
         const node = this.get(key, true);
@@ -926,8 +926,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path7, keepScalar) {
-        const [key, ...rest] = path7;
+      getIn(path8, keepScalar) {
+        const [key, ...rest] = path8;
         const node = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node) ? node.value : node;
@@ -945,8 +945,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path7) {
-        const [key, ...rest] = path7;
+      hasIn(path8) {
+        const [key, ...rest] = path8;
         if (rest.length === 0)
           return this.has(key);
         const node = this.get(key, true);
@@ -956,8 +956,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path7, value) {
-        const [key, ...rest] = path7;
+      setIn(path8, value) {
+        const [key, ...rest] = path8;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -3472,9 +3472,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path7, value) {
+      addIn(path8, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path7, value);
+          this.contents.addIn(path8, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -3549,14 +3549,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path7) {
-        if (Collection.isEmptyPath(path7)) {
+      deleteIn(path8) {
+        if (Collection.isEmptyPath(path8)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path7) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path8) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -3571,10 +3571,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path7, keepScalar) {
-        if (Collection.isEmptyPath(path7))
+      getIn(path8, keepScalar) {
+        if (Collection.isEmptyPath(path8))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path7, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path8, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -3585,10 +3585,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path7) {
-        if (Collection.isEmptyPath(path7))
+      hasIn(path8) {
+        if (Collection.isEmptyPath(path8))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path7) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path8) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -3605,13 +3605,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path7, value) {
-        if (Collection.isEmptyPath(path7)) {
+      setIn(path8, value) {
+        if (Collection.isEmptyPath(path8)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path7), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path8), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path7, value);
+          this.contents.setIn(path8, value);
         }
       }
       /**
@@ -5571,9 +5571,9 @@ var require_cst_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    visit.itemAtPath = (cst, path7) => {
+    visit.itemAtPath = (cst, path8) => {
       let item = cst;
-      for (const [field, index] of path7) {
+      for (const [field, index] of path8) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -5582,23 +5582,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit.parentCollection = (cst, path7) => {
-      const parent = visit.itemAtPath(cst, path7.slice(0, -1));
-      const field = path7[path7.length - 1][0];
+    visit.parentCollection = (cst, path8) => {
+      const parent = visit.itemAtPath(cst, path8.slice(0, -1));
+      const field = path8[path8.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path7, item, visitor) {
-      let ctrl = visitor(item, path7);
+    function _visit(path8, item, visitor) {
+      let ctrl = visitor(item, path8);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path7.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path8.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -5609,10 +5609,10 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path7);
+            ctrl = ctrl(item, path8);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path7) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path8) : ctrl;
     }
     exports.visit = visit;
   }
@@ -6914,14 +6914,14 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs9 = this.flowScalar(this.type);
+              const fs10 = this.flowScalar(this.type);
               if (atNextItem || it.value) {
-                map.items.push({ start, key: fs9, sep: [] });
+                map.items.push({ start, key: fs10, sep: [] });
                 this.onKeyLine = true;
               } else if (it.sep) {
-                this.stack.push(fs9);
+                this.stack.push(fs10);
               } else {
-                Object.assign(it, { key: fs9, sep: [] });
+                Object.assign(it, { key: fs10, sep: [] });
                 this.onKeyLine = true;
               }
               return;
@@ -7049,13 +7049,13 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs9 = this.flowScalar(this.type);
+              const fs10 = this.flowScalar(this.type);
               if (!it || it.value)
-                fc.items.push({ start: [], key: fs9, sep: [] });
+                fc.items.push({ start: [], key: fs10, sep: [] });
               else if (it.sep)
-                this.stack.push(fs9);
+                this.stack.push(fs10);
               else
-                Object.assign(it, { key: fs9, sep: [] });
+                Object.assign(it, { key: fs10, sep: [] });
               return;
             }
             case "flow-map-end":
@@ -7870,8 +7870,8 @@ function getErrorMap() {
 
 // ../../node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path7, errorMaps, issueData } = params;
-  const fullPath = [...path7, ...issueData.path || []];
+  const { data, path: path8, errorMaps, issueData } = params;
+  const fullPath = [...path8, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7987,11 +7987,11 @@ var errorUtil;
 
 // ../../node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path7, key) {
+  constructor(parent, value, path8, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path7;
+    this._path = path8;
     this._key = key;
   }
   get path() {
@@ -11434,13 +11434,32 @@ var coerce = {
 var NEVER = INVALID;
 
 // src/core/manifest.ts
-var BrainSchema = external_exports.object({
+var ModelId = external_exports.string().regex(/^[A-Za-z0-9/._:-]+$/, "model must be a bare model id (letters, digits and / . _ : -)");
+var LiteLLMBrainSchema = external_exports.object({
   port: external_exports.number().int().min(1).max(65535),
-  // Restrict to bare model-id chars so the value can't inject YAML into the generated
-  // per-brain config.yaml (e.g. a newline + `master_key: …`). Covers OpenRouter slugs
-  // like `openrouter/qwen/qwen3.7-flash` and variant suffixes (`…:free`).
-  model: external_exports.string().regex(/^[A-Za-z0-9/._:-]+$/, "model must be a bare model id (letters, digits and / . _ : -)"),
+  model: ModelId,
   providerKey: external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "providerKey must be an ENV_VAR-style name")
+});
+var DirectBrainSchema = external_exports.object({
+  url: external_exports.string().url("url must be an absolute URL").refine((u) => /^https?:\/\//i.test(u), "url must be http:// or https://"),
+  model: ModelId,
+  authTokenFile: external_exports.string().min(1, "authTokenFile must be a path"),
+  // Child Claude Code's CLAUDE_CODE_MAX_OUTPUT_TOKENS. Small limits leave reasoning models
+  // with thinking-only / half tool calls, so the default is generous (DEFAULT_MAX_OUTPUT_TOKENS).
+  maxOutputTokens: external_exports.number().int().min(1).optional()
+}).strict();
+var DEFAULT_MAX_OUTPUT_TOKENS = 2e4;
+function isDirect(b) {
+  return "url" in b;
+}
+var BrainSchema = external_exports.unknown().transform((v, ctx) => {
+  const schema = v && typeof v === "object" && "url" in v ? DirectBrainSchema : LiteLLMBrainSchema;
+  const r = schema.safeParse(v);
+  if (!r.success) {
+    for (const issue of r.error.issues) ctx.addIssue(issue);
+    return external_exports.NEVER;
+  }
+  return r.data;
 });
 var BrainsConfigSchema = external_exports.object({
   version: external_exports.literal(1, { errorMap: () => ({ message: "version must be 1" }) }),
@@ -11451,6 +11470,7 @@ var BrainsConfigSchema = external_exports.object({
 }).superRefine((cfg, ctx) => {
   const seen = /* @__PURE__ */ new Map();
   for (const [name, b] of Object.entries(cfg.brains)) {
+    if (isDirect(b)) continue;
     const prev = seen.get(b.port);
     if (prev) {
       ctx.addIssue({
@@ -11462,6 +11482,9 @@ var BrainsConfigSchema = external_exports.object({
     seen.set(b.port, name);
   }
 });
+function litellmBrains(cfg) {
+  return Object.entries(cfg.brains).filter((e) => !isDirect(e[1]));
+}
 function parseBrains(text) {
   let raw;
   try {
@@ -11526,7 +11549,8 @@ function serviceBlock(name, port, providerKey) {
   ].join("\n");
 }
 function generate(cfg) {
-  const names = Object.keys(cfg.brains);
+  const brains = litellmBrains(cfg);
+  const names = brains.map(([n]) => n);
   const header = [
     "# GENERATED by bmux from brains.yaml \u2014 do not hand-edit.",
     "# Edit brains.yaml then run `bmux up` (regenerates) or `bmux config ...`.",
@@ -11572,11 +11596,11 @@ function generate(cfg) {
     "      retries: 10",
     ""
   ].join("\n");
-  const services = names.map((n) => serviceBlock(n, cfg.brains[n].port, cfg.brains[n].providerKey)).join("");
+  const services = brains.map(([n, b]) => serviceBlock(n, b.port, b.providerKey)).join("");
   const footer = ["networks:", "  brainmux:", "    name: brainmux", ""].join("\n");
   const compose = header + services + footer;
   const configs = {};
-  for (const n of names) configs[n] = brainConfig(cfg.brains[n].model);
+  for (const [n, b] of brains) configs[n] = brainConfig(b.model);
   const initSql = "-- GENERATED by bmux \u2014 one database per brain.\n" + names.map((n) => `CREATE DATABASE ${dbName(n)};`).join("\n") + "\n";
   return { compose, configs, initSql };
 }
@@ -11640,31 +11664,34 @@ function ensureSecrets(paths, cfg) {
   const putIfAbsent = (k, v) => {
     if (!env.get(k)) env.set(k, v());
   };
-  putIfAbsent("POSTGRES_PASSWORD", () => genSecret());
-  putIfAbsent("LITELLM_SALT_KEY", () => "sk-salt-" + genSecret());
-  for (const brain of Object.keys(cfg.brains)) {
+  const stack = litellmBrains(cfg);
+  if (stack.length) {
+    putIfAbsent("POSTGRES_PASSWORD", () => genSecret());
+    putIfAbsent("LITELLM_SALT_KEY", () => "sk-salt-" + genSecret());
+  }
+  for (const [brain, b] of stack) {
     putIfAbsent(masterKeyVar(brain), () => `sk-${brain}-` + genSecret());
-    putIfAbsent(cfg.brains[brain].providerKey, () => "");
+    putIfAbsent(b.providerKey, () => "");
   }
   writeEnv(paths.envFile, env);
 }
 function runInit(env = process.env) {
   const paths = resolvePaths(env);
   fs3.mkdirSync(paths.home, { recursive: true });
-  fs3.mkdirSync(paths.dataDir, { recursive: true });
   if (!fs3.existsSync(paths.brainsYaml)) {
     fs3.writeFileSync(paths.brainsYaml, DEFAULT_BRAINS_YAML);
   }
   const cfg = parseBrains(fs3.readFileSync(paths.brainsYaml, "utf8"));
+  if (litellmBrains(cfg).length) fs3.mkdirSync(paths.dataDir, { recursive: true });
   ensureSecrets(paths, cfg);
   writeGenerated(paths, cfg);
   console.log(`bmux: initialized ${paths.home}`);
   console.log(`  brains.yaml, .env (chmod 600), generated/ written.`);
   console.log(`  brains (edit brains.yaml or \`bmux config\` to change):`);
   for (const [name, b] of Object.entries(cfg.brains)) {
-    console.log(`    ${name.padEnd(8)} :${b.port}  ${b.model}`);
+    console.log(`    ${name.padEnd(8)} ${isDirect(b) ? `direct ${b.url}` : `:${b.port}`}  ${b.model}`);
   }
-  const missing = Object.values(cfg.brains).map((b) => b.providerKey).filter((k, i, a) => a.indexOf(k) === i).filter((k) => !readEnv(paths.envFile).get(k));
+  const missing = litellmBrains(cfg).map(([, b]) => b.providerKey).filter((k, i, a) => a.indexOf(k) === i).filter((k) => !readEnv(paths.envFile).get(k));
   if (missing.length) {
     console.log(`  next: add provider key(s): ${missing.map((k) => `bmux config add-key ${k} <value>`).join("  ")}`);
   }
@@ -11706,14 +11733,20 @@ function liveliness(port, timeoutMs = 3e3) {
 // src/commands/stack.ts
 function upSummary(cfg) {
   const lines = ["", "brains up. observe spend/logs in each LiteLLM UI (login: admin):"];
-  for (const [name, b] of Object.entries(cfg.brains)) {
+  for (const [name, b] of litellmBrains(cfg)) {
     lines.push(`  ${name.padEnd(8)} http://127.0.0.1:${b.port}/ui   password: $${masterKeyVar(name)}`);
   }
   lines.push("  (password values live in ~/.brainmux/.env \xB7 `bmux spend` for a quick total)");
   return lines.join("\n");
 }
+var STACK_SUBS = /* @__PURE__ */ new Set(["up", "down", "restart", "ps", "logs", "health"]);
 async function runStack(sub, rest, env = process.env) {
   const paths = resolvePaths(env);
+  if (STACK_SUBS.has(sub) && !litellmBrains(loadBrains(paths.brainsYaml)).length) {
+    process.stdout.write(`bmux ${sub}: no LiteLLM brains in brains.yaml \u2014 nothing to run (direct brains need no stack).
+`);
+    return 0;
+  }
   if (sub === "up" || sub === "restart") {
     ensureDocker();
     const cfg = loadBrains(paths.brainsYaml);
@@ -11738,7 +11771,7 @@ async function runStack(sub, rest, env = process.env) {
   if (sub === "health") {
     const cfg = loadBrains(paths.brainsYaml);
     let fail = 0;
-    for (const [name, b] of Object.entries(cfg.brains)) {
+    for (const [name, b] of litellmBrains(cfg)) {
       const ok = await liveliness(b.port);
       process.stdout.write(`${name.padEnd(8)} ${ok ? "UP  " : "DOWN"} (:${b.port})
 `);
@@ -11753,41 +11786,93 @@ async function runStack(sub, rest, env = process.env) {
 
 // src/commands/launch.ts
 import { spawnSync as spawnSync2 } from "node:child_process";
+
+// src/core/authtoken.ts
+import fs4 from "node:fs";
+import os2 from "node:os";
+import path3 from "node:path";
+function expandHome(p, home = os2.homedir()) {
+  if (p === "~") return home;
+  if (p.startsWith("~/")) return path3.join(home, p.slice(2));
+  return p;
+}
+function readAuthToken(file, home) {
+  const p = expandHome(file, home);
+  let st;
+  try {
+    st = fs4.statSync(p);
+  } catch {
+    throw new Error(`authTokenFile ${p} not found`);
+  }
+  if (!st.isFile()) throw new Error(`authTokenFile ${p} is not a regular file`);
+  if (st.mode & 63) {
+    throw new Error(`authTokenFile ${p} is readable by group/others (mode ${(st.mode & 511).toString(8)}) \u2014 run: chmod 600 ${p}`);
+  }
+  const token = fs4.readFileSync(p, "utf8").trim();
+  if (!token) throw new Error(`authTokenFile ${p} is empty`);
+  if (/\s/.test(token)) throw new Error(`authTokenFile ${p} must contain a single token (found whitespace inside)`);
+  return token;
+}
+
+// src/commands/launch.ts
+var MODEL_SLOTS = [
+  "ANTHROPIC_MODEL",
+  "ANTHROPIC_DEFAULT_OPUS_MODEL",
+  "ANTHROPIC_DEFAULT_SONNET_MODEL",
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+  "ANTHROPIC_DEFAULT_FABLE_MODEL",
+  "ANTHROPIC_SMALL_FAST_MODEL",
+  "CLAUDE_CODE_SUBAGENT_MODEL"
+];
 function planLaunch(brain, env = process.env) {
   const paths = resolvePaths(env);
   const cfg = loadBrains(paths.brainsYaml);
   const b = cfg.brains[brain];
   if (!b) throw new Error(`unknown brain '${brain}' (have: ${Object.keys(cfg.brains).join(", ")})`);
+  const meta = { BRAINMUX_BRAIN: brain, BRAINMUX_MODEL: b.model };
+  if (isDirect(b)) {
+    const base2 = b.url.replace(/\/+$/, "");
+    const set = {
+      ANTHROPIC_BASE_URL: base2,
+      ANTHROPIC_AUTH_TOKEN: readAuthToken(b.authTokenFile, env.HOME || void 0),
+      CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(b.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS),
+      ...meta
+    };
+    for (const k of MODEL_SLOTS) set[k] = b.model;
+    return { brain, model: b.model, base: base2, direct: true, set, unset: ["ANTHROPIC_API_KEY"] };
+  }
   const apiKey = getKey(paths.envFile, masterKeyVar(brain));
   if (!apiKey) throw new Error(`${masterKeyVar(brain)} missing in ${paths.envFile} \u2014 run \`bmux init\`.`);
-  return { base: `http://127.0.0.1:${b.port}`, apiKey, brain, model: b.model };
+  const base = `http://127.0.0.1:${b.port}`;
+  return {
+    brain,
+    model: b.model,
+    base,
+    direct: false,
+    set: { ANTHROPIC_BASE_URL: base, ANTHROPIC_API_KEY: apiKey, ...meta },
+    unset: ["ANTHROPIC_AUTH_TOKEN"]
+  };
+}
+function brainEnv(plan, env, extra = {}) {
+  const out = { ...env, ...plan.set, ...extra };
+  for (const k of plan.unset) delete out[k];
+  return out;
 }
 function runLaunch(brain, claudeArgs, env = process.env) {
   const plan = planLaunch(brain, env);
-  const r = spawnSync2("claude", claudeArgs, {
-    stdio: "inherit",
-    // BRAINMUX_BRAIN/MODEL let the status line name the active brain from the SSOT the router
-    // used — no hardcoded port→name map to drift when brains.yaml changes.
-    env: {
-      ...env,
-      ANTHROPIC_BASE_URL: plan.base,
-      ANTHROPIC_API_KEY: plan.apiKey,
-      BRAINMUX_BRAIN: plan.brain,
-      BRAINMUX_MODEL: plan.model
-    }
-  });
+  const r = spawnSync2("claude", claudeArgs, { stdio: "inherit", env: brainEnv(plan, env) });
   return r.status ?? 1;
 }
 
 // src/commands/delegate.ts
 import { spawn, spawnSync as spawnSync3 } from "node:child_process";
-import fs5 from "node:fs";
-import path4 from "node:path";
+import fs6 from "node:fs";
+import path5 from "node:path";
 
 // src/core/templates.ts
 var import_yaml2 = __toESM(require_dist(), 1);
-import fs4 from "node:fs";
-import path3 from "node:path";
+import fs5 from "node:fs";
+import path4 from "node:path";
 var BUILTIN_TEMPLATES = {
   audit: "Audit the code in scope for correctness bugs, edge cases, and error handling. Report each real issue as 'file:line \u2014 issue \u2014 why'. No praise, no restating code. If none, output NONE.",
   "drift-scan": "Compare the docs (README / skills / comments) against the ACTUAL code in scope. Report drift only: documented behavior/flags/paths that don't match code, as 'file:line \u2014 claim vs reality'. If none, output NONE.",
@@ -11796,12 +11881,12 @@ var BUILTIN_TEMPLATES = {
 };
 var TemplatesSchema = external_exports.record(external_exports.string().min(1), external_exports.string().min(1));
 function templatesPath(paths) {
-  return path3.join(paths.home, "templates.yaml");
+  return path4.join(paths.home, "templates.yaml");
 }
 function loadUserTemplates(paths) {
   const f = templatesPath(paths);
-  if (!fs4.existsSync(f)) return {};
-  const raw = import_yaml2.default.parse(fs4.readFileSync(f, "utf8")) ?? {};
+  if (!fs5.existsSync(f)) return {};
+  const raw = import_yaml2.default.parse(fs5.readFileSync(f, "utf8")) ?? {};
   return TemplatesSchema.parse(raw);
 }
 function allTemplates(paths) {
@@ -11816,8 +11901,8 @@ function resolveTemplate(name, paths) {
 function saveUserTemplate(paths, name, prompt) {
   const cur = loadUserTemplates(paths);
   cur[name] = prompt;
-  fs4.mkdirSync(paths.home, { recursive: true });
-  fs4.writeFileSync(templatesPath(paths), import_yaml2.default.stringify(cur));
+  fs5.mkdirSync(paths.home, { recursive: true });
+  fs5.writeFileSync(templatesPath(paths), import_yaml2.default.stringify(cur));
 }
 
 // src/commands/delegate.ts
@@ -11894,7 +11979,7 @@ function clip(s, n) {
 function actionLabel(b) {
   const i = b.input ?? {};
   const file = i.file_path ?? i.path;
-  if (file != null) return `${b.name}: ${path4.basename(String(file))}`;
+  if (file != null) return `${b.name}: ${path5.basename(String(file))}`;
   const other = i.pattern ?? i.query ?? i.command ?? i.url;
   return other != null ? `${b.name}: ${clip(String(other), 40)}` : String(b.name ?? "");
 }
@@ -11915,7 +12000,7 @@ function foldEvent(p, ev) {
         p.current = actionLabel(b);
         const f = b.input?.file_path;
         if (f != null) {
-          const base = path4.basename(String(f));
+          const base = path5.basename(String(f));
           if (!p.touched.includes(base)) p.touched.push(base);
         }
         if (b.name === "Edit" || b.name === "Write" || b.name === "MultiEdit") p.edits++;
@@ -12096,7 +12181,7 @@ async function runDelegate(argv, env = process.env) {
     return 2;
   }
   const wantsStdin = argv.includes("-");
-  const stdin = wantsStdin ? fs5.readFileSync(0, "utf8") : void 0;
+  const stdin = wantsStdin ? fs6.readFileSync(0, "utf8") : void 0;
   const { brain, opts } = parseDelegateArgs(argv, stdin);
   if (opts.template) {
     const tpl = resolveTemplate(opts.template, resolvePaths(env));
@@ -12104,14 +12189,14 @@ async function runDelegate(argv, env = process.env) {
 
 ${opts.task}` : tpl;
   }
-  if (!fs5.existsSync(opts.workdir)) {
+  if (!fs6.existsSync(opts.workdir)) {
     process.stderr.write(`delegate: -C dir '${opts.workdir}' not found
 `);
     return 1;
   }
   if (opts.memory) {
-    const cfg = path4.join(resolvePaths(env).generatedDir, "graphmux-mcp.json");
-    if (!fs5.existsSync(cfg)) {
+    const cfg = path5.join(resolvePaths(env).generatedDir, "graphmux-mcp.json");
+    if (!fs6.existsSync(cfg)) {
       process.stderr.write(`delegate --memory: graphmux code-graph MCP not found at ${cfg}
   install it: gmux install  (then: gmux index <repo>)
 `);
@@ -12124,11 +12209,11 @@ ${opts.task}` : tpl;
 ${MEMORY_NUDGE}`;
   }
   const plan = planLaunch(brain, env);
-  process.stderr.write(`delegate: ${brain} \xB7 ${opts.mode} \xB7 mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " \xB7 memory" : ""}${opts.verify ? " \xB7 verify" : ""}${opts.retry > 0 ? ` \xB7 retry ${opts.retry}` : ""}
+  process.stderr.write(`delegate: ${brain}${plan.direct ? ` \xB7 direct ${plan.base} \xB7 ${plan.model}` : ""} \xB7 ${opts.mode} \xB7 mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " \xB7 memory" : ""}${opts.verify ? " \xB7 verify" : ""}${opts.retry > 0 ? ` \xB7 retry ${opts.retry}` : ""}
 `);
   if (opts.mode === "yolo") process.stderr.write(`delegate: \u26A0 --yolo \u2014 '${brain}' runs with NO permission checks in '${opts.workdir}'.
 `);
-  const childEnv = { ...env, DELEGATE_DEPTH: "1", ANTHROPIC_BASE_URL: plan.base, ANTHROPIC_API_KEY: plan.apiKey };
+  const childEnv = brainEnv(plan, env, { DELEGATE_DEPTH: "1" });
   if (opts.verify) return runVerify(brain, opts, childEnv);
   if (opts.stream) return runStreamed(brain, opts, childEnv);
   if (opts.retry > 0) return runWithRetry(brain, opts, childEnv, wantsStdin);
@@ -12155,7 +12240,7 @@ ${MEMORY_NUDGE}`;
 
 // src/commands/config.ts
 var import_yaml3 = __toESM(require_dist(), 1);
-import fs6 from "node:fs";
+import fs7 from "node:fs";
 import readline from "node:readline";
 function readSecret(promptText) {
   const input = process.stdin;
@@ -12198,11 +12283,11 @@ function readSecret(promptText) {
   });
 }
 function load(paths) {
-  return parseBrains(fs6.readFileSync(paths.brainsYaml, "utf8"));
+  return parseBrains(fs7.readFileSync(paths.brainsYaml, "utf8"));
 }
 function save(paths, cfg) {
   const validated = parseBrains(import_yaml3.default.stringify(cfg));
-  fs6.writeFileSync(paths.brainsYaml, import_yaml3.default.stringify(validated));
+  fs7.writeFileSync(paths.brainsYaml, import_yaml3.default.stringify(validated));
   ensureSecrets(paths, validated);
   writeGenerated(paths, validated);
 }
@@ -12210,9 +12295,15 @@ function addBrain(paths, name, port, model, providerKey) {
   const cfg = load(paths);
   if (cfg.brains[name]) throw new Error(`brain '${name}' already exists`);
   for (const [n, b] of Object.entries(cfg.brains)) {
-    if (b.port === port) throw new Error(`port ${port} already used by '${n}'`);
+    if (!isDirect(b) && b.port === port) throw new Error(`port ${port} already used by '${n}'`);
   }
   cfg.brains[name] = { port, model, providerKey };
+  save(paths, cfg);
+}
+function addDirectBrain(paths, name, url, model, authTokenFile, maxOutputTokens) {
+  const cfg = load(paths);
+  if (cfg.brains[name]) throw new Error(`brain '${name}' already exists`);
+  cfg.brains[name] = maxOutputTokens ? { url, model, authTokenFile, maxOutputTokens } : { url, model, authTokenFile };
   save(paths, cfg);
 }
 async function runConfig(sub, rest, env = process.env) {
@@ -12226,6 +12317,15 @@ async function runConfig(sub, rest, env = process.env) {
         if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error(`port must be an integer 1-65535, got '${portStr}'`);
         addBrain(paths, name, port, model, providerKey);
         console.log(`added brain '${name}' on :${portStr}`);
+        return 0;
+      }
+      case "add-direct": {
+        const [name, url, model, authTokenFile, maxStr] = rest;
+        if (!name || !url || !model || !authTokenFile) throw new Error("usage: bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens]");
+        const max = maxStr === void 0 ? void 0 : Number(maxStr);
+        if (max !== void 0 && (!Number.isInteger(max) || max < 1)) throw new Error(`maxOutputTokens must be a positive integer, got '${maxStr}'`);
+        addDirectBrain(paths, name, url, model, authTokenFile, max);
+        console.log(`added direct brain '${name}' \u2192 ${url} (${model}); token read from ${authTokenFile} at run time`);
         return 0;
       }
       case "remove-brain": {
@@ -12259,7 +12359,8 @@ async function runConfig(sub, rest, env = process.env) {
       case "list": {
         const cfg = load(paths);
         for (const [name, b] of Object.entries(cfg.brains)) {
-          console.log(`${name.padEnd(8)} :${b.port}  ${b.model}  (${b.providerKey})`);
+          if (isDirect(b)) console.log(`${name.padEnd(8)} direct ${b.url}  ${b.model}  (token: ${b.authTokenFile})`);
+          else console.log(`${name.padEnd(8)} :${b.port}  ${b.model}  (${b.providerKey})`);
         }
         return 0;
       }
@@ -12491,12 +12592,16 @@ function fetchSpendLogs(port, apiKey, timeoutMs = 1e4) {
 async function runSpend(rest = [], env = process.env) {
   const paths = resolvePaths(env);
   const cfg = loadBrains(paths.brainsYaml);
+  if (!litellmBrains(cfg).length) {
+    console.log("bmux spend: no LiteLLM brains in brains.yaml \u2014 direct brains are not tracked by bmux.");
+    return 0;
+  }
   const si = rest.indexOf("--since");
   const since = si >= 0 ? rest[si + 1] : void 0;
   const cutoff = since ? Date.now() - sinceMs(since) : void 0;
   const results = [];
   const ports = {};
-  for (const [name, b] of Object.entries(cfg.brains)) {
+  for (const [name, b] of litellmBrains(cfg)) {
     ports[name] = b.port;
     const key = getKey(paths.envFile, masterKeyVar(name));
     if (!key) {
@@ -12515,9 +12620,9 @@ async function runSpend(rest = [], env = process.env) {
 }
 
 // src/commands/statusline.ts
-import fs7 from "node:fs";
-import os2 from "node:os";
-import path5 from "node:path";
+import fs8 from "node:fs";
+import os3 from "node:os";
+import path6 from "node:path";
 var STATUSLINE_SCRIPT = `#!/usr/bin/env bash
 # brainmux status line \u2014 installed by \`bmux statusline install\`. Safe to edit.
 #   \u{1F4C1} dir \xB7 \u{1F33F} git \xB7 \u{1F9E0} brain|\u{1F916} model \xB7 \u26A1 effort \xB7 \u{1F9E0} context% \xB7 \u{1F4B0} cost \xB7 \u{1F4B3} balance \xB7 \xB1lines \xB7 \u23F1\uFE0F time
@@ -12606,9 +12711,9 @@ function planStatuslineSettings(existing, command, force) {
   return { settings: s, action: cur ? "replaced" : "set" };
 }
 function runStatusline(argv, env = process.env) {
-  const home = env.HOME || os2.homedir();
-  const claudeDir = env.CLAUDE_CONFIG_DIR || path5.join(home, ".claude");
-  const dest = path5.join(claudeDir, "brainmux-statusline.sh");
+  const home = env.HOME || os3.homedir();
+  const claudeDir = env.CLAUDE_CONFIG_DIR || path6.join(home, ".claude");
+  const dest = path6.join(claudeDir, "brainmux-statusline.sh");
   if (argv[0] !== "install") {
     process.stdout.write(
       `bmux statusline install [--force]   enable the brainmux status line
@@ -12619,14 +12724,14 @@ function runStatusline(argv, env = process.env) {
     return 0;
   }
   const force = argv.includes("--force");
-  fs7.mkdirSync(claudeDir, { recursive: true });
-  fs7.writeFileSync(dest, STATUSLINE_SCRIPT);
-  fs7.chmodSync(dest, 493);
-  const settingsFile = path5.join(claudeDir, "settings.json");
+  fs8.mkdirSync(claudeDir, { recursive: true });
+  fs8.writeFileSync(dest, STATUSLINE_SCRIPT);
+  fs8.chmodSync(dest, 493);
+  const settingsFile = path6.join(claudeDir, "settings.json");
   let existing = {};
-  if (fs7.existsSync(settingsFile)) {
+  if (fs8.existsSync(settingsFile)) {
     try {
-      existing = JSON.parse(fs7.readFileSync(settingsFile, "utf8"));
+      existing = JSON.parse(fs8.readFileSync(settingsFile, "utf8"));
     } catch {
       process.stderr.write(`statusline: ${settingsFile} is not valid JSON \u2014 fix it, then re-run.
 `);
@@ -12643,7 +12748,7 @@ function runStatusline(argv, env = process.env) {
     );
     return 0;
   }
-  fs7.writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + "\n");
+  fs8.writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + "\n");
   const what = action === "replaced" ? "replaced your previous statusLine" : "enabled the status line";
   process.stdout.write(
     `\u2713 brainmux status line installed \u2014 ${what}.
@@ -12656,9 +12761,9 @@ function runStatusline(argv, env = process.env) {
 }
 
 // src/commands/shim.ts
-import fs8 from "node:fs";
-import os3 from "node:os";
-import path6 from "node:path";
+import fs9 from "node:fs";
+import os4 from "node:os";
+import path7 from "node:path";
 var SHIM_LAUNCHER = `#!/bin/sh
 # brainmux launcher \u2014 installed by \`bmux install-shim\`. Resolves the active llmproxy
 # version at run time, so \`bmux\` survives plugin updates and works from any shell.
@@ -12668,25 +12773,25 @@ bin="$(ls -d "$d"/*/bin/bmux 2>/dev/null | sort -V | tail -1)"
 exec "$bin" "$@"
 `;
 function runShim(argv, env = process.env) {
-  const home = env.HOME || os3.homedir();
-  const dir = path6.join(home, ".local", "bin");
-  const dest = path6.join(dir, "bmux");
+  const home = env.HOME || os4.homedir();
+  const dir = path7.join(home, ".local", "bin");
+  const dest = path7.join(dir, "bmux");
   const force = argv.includes("--force");
-  if (fs8.existsSync(dest) && !force) {
-    const cur = fs8.readFileSync(dest, "utf8");
+  if (fs9.existsSync(dest) && !force) {
+    const cur = fs9.readFileSync(dest, "utf8");
     if (!cur.includes("brainmux launcher")) {
       process.stderr.write(`install-shim: ${dest} exists and is not a brainmux launcher \u2014 re-run with --force to overwrite.
 `);
       return 1;
     }
   }
-  fs8.mkdirSync(dir, { recursive: true });
-  fs8.writeFileSync(dest, SHIM_LAUNCHER);
-  fs8.chmodSync(dest, 493);
+  fs9.mkdirSync(dir, { recursive: true });
+  fs9.writeFileSync(dest, SHIM_LAUNCHER);
+  fs9.chmodSync(dest, 493);
   process.stdout.write(`\u2713 bmux shim installed \u2192 ${dest}
   It resolves the active llmproxy version at run time (survives updates).
 `);
-  const onPath = (env.PATH ?? "").split(path6.delimiter).includes(dir);
+  const onPath = (env.PATH ?? "").split(path7.delimiter).includes(dir);
   if (!onPath) {
     process.stdout.write(`  \u26A0 ${dir} is not on your PATH. Add it (then restart your shell):
     export PATH="$HOME/.local/bin:$PATH"
@@ -12697,6 +12802,7 @@ function runShim(argv, env = process.env) {
 
 // src/commands/test.ts
 import http3 from "node:http";
+import https2 from "node:https";
 function isAlive(responseJson) {
   try {
     const o = JSON.parse(responseJson);
@@ -12705,25 +12811,25 @@ function isAlive(responseJson) {
     return false;
   }
 }
-function messagesProbe(port, apiKey) {
+function messagesProbe(p, timeoutMs = 6e4) {
   const body = JSON.stringify({
-    model: "claude-opus-4-8",
+    model: p.model,
     max_tokens: 1024,
     messages: [{ role: "user", content: "reply exactly: OK" }]
   });
+  const url = new URL(p.base.replace(/\/+$/, "") + "/v1/messages");
+  const lib = url.protocol === "https:" ? https2 : http3;
   return new Promise((resolve) => {
-    const req = http3.request(
+    const req = lib.request(
+      url,
       {
-        host: "127.0.0.1",
-        port,
-        path: "/v1/messages",
         method: "POST",
-        timeout: 6e4,
+        timeout: timeoutMs,
         headers: {
           "content-type": "application/json",
           "content-length": Buffer.byteLength(body),
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01"
+          "anthropic-version": "2023-06-01",
+          ...p.headers
         }
       },
       (res) => {
@@ -12748,9 +12854,21 @@ async function runTest(env = process.env) {
   const results = await Promise.all(
     entries.map(async ([name, b]) => {
       const tag = (name + ":").padEnd(10);
-      const key = getKey(paths.envFile, masterKeyVar(name));
-      if (!key) return { ok: false, line: `${tag} FAIL -> ${masterKeyVar(name)} missing in .env \u2014 run \`bmux init\`` };
-      const out = await messagesProbe(b.port, key);
+      let probe;
+      if (isDirect(b)) {
+        let token;
+        try {
+          token = readAuthToken(b.authTokenFile, env.HOME || void 0);
+        } catch (e) {
+          return { ok: false, line: `${tag} FAIL -> ${e.message}` };
+        }
+        probe = { base: b.url, model: b.model, headers: { authorization: `Bearer ${token}` } };
+      } else {
+        const key = getKey(paths.envFile, masterKeyVar(name));
+        if (!key) return { ok: false, line: `${tag} FAIL -> ${masterKeyVar(name)} missing in .env \u2014 run \`bmux init\`` };
+        probe = { base: `http://127.0.0.1:${b.port}`, model: "claude-opus-4-8", headers: { "x-api-key": key } };
+      }
+      const out = await messagesProbe(probe);
       if (isAlive(out)) {
         const m = out.match(/"text":"([^"]*)"/);
         return { ok: true, line: `${tag} OK  ${m ? m[1].slice(0, 40) : "(alive)"}` };
@@ -12777,11 +12895,14 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
                                   (--verify: draft, then a grounded pass web-checks each claim \u2192 \u2705/\u26A0 with sources)
                                   (--template <name>: expand a saved task template \u2014 bmux config list-templates)
                                   (--retry [n]: on an empty/failed result, auto-retry up to n times \u2014 default 1)
-  bmux config add-brain <name> <port> <model> [providerKey]
+  bmux config add-brain <name> <port> <model> [providerKey]          (LiteLLM brain on a local port)
+  bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens]
+                                  (direct brain: Anthropic-compatible endpoint, Bearer token read
+                                   from the file at run time \u2014 no LiteLLM stack; up/ps/spend skip it)
   bmux config remove-brain <name> | set-model <name> <model>
   bmux config add-key <ENV_VAR> <value> | list
   bmux config add-template <name> "<prompt>" | list-templates   (reusable delegate task templates)
-  bmux test                       smoke every brain via /v1/messages
+  bmux test                       smoke every brain via /v1/messages (direct brains: Bearer auth)
   bmux spend [--since 1h|30m|7d]  per-brain requests/tokens/spend (from LiteLLM); --since scopes a window
   bmux install-shim [--force]     put a version-agnostic bmux on ~/.local/bin (works from any shell)
   bmux models [query] | --use-cases | --json   list OpenRouter models (live) / use-cases

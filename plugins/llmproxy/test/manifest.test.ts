@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseBrains } from "../src/core/manifest.js";
+import { parseBrains, type LiteLLMBrain } from "../src/core/manifest.js";
 
 const good = `
 version: 1
@@ -14,9 +14,9 @@ test("parses a valid three-brain manifest", () => {
   const cfg = parseBrains(good);
   assert.equal(cfg.version, 1);
   assert.equal(Object.keys(cfg.brains).length, 3);
-  assert.equal(cfg.brains.chat.port, 4567);
+  assert.equal((cfg.brains.chat as LiteLLMBrain).port, 4567);
   assert.equal(cfg.brains.deep.model, "openrouter/z-ai/glm-5.2");
-  assert.equal(cfg.brains.coder.providerKey, "OPENROUTER_API_KEY");
+  assert.equal((cfg.brains.coder as LiteLLMBrain).providerKey, "OPENROUTER_API_KEY");
 });
 
 test("rejects wrong version", () => {

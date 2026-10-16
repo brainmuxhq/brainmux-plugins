@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { runInit } from "../src/commands/init.js";
 import { runConfig } from "../src/commands/config.js";
-import { loadBrains } from "../src/core/manifest.js";
+import { loadBrains, type LiteLLMBrain } from "../src/core/manifest.js";
 import { getKey } from "../src/core/env.js";
 
 function freshHome(): string {
@@ -19,7 +19,7 @@ test("add-brain appends to brains.yaml, regenerates, mints a master key", async 
   const env = { BRAINMUX_HOME: h };
   assert.equal(await runConfig("add-brain", ["fast", "4570", "openrouter/x/y"], env), 0);
   const cfg = loadBrains(path.join(h, "brains.yaml"));
-  assert.equal(cfg.brains.fast.port, 4570);
+  assert.equal((cfg.brains.fast as LiteLLMBrain).port, 4570);
   assert.ok(fs.readFileSync(path.join(h, "generated", "compose.yaml"), "utf8").includes("brainmux-fast"));
   assert.ok((getKey(path.join(h, ".env"), "FAST_MASTER_KEY") ?? "").length > 0);
 });
