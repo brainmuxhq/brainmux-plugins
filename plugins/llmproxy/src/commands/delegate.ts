@@ -4,6 +4,7 @@ import path from "node:path";
 import { planLaunch, brainEnv } from "./launch.js";
 import { resolvePaths } from "../core/paths.js";
 import { resolveTemplate } from "../core/templates.js";
+import { THINKING_LEVELS, isThinkingLevel, type ThinkingLevel } from "../core/thinking.js";
 
 const GUARD =
   "You are a DELEGATED worker brain invoked by an orchestrator. Do EXACTLY the task, " +
@@ -40,13 +41,14 @@ export interface DelegateOpts {
   retry: number; // max auto-retries on an empty/failed result (0 = off); non-stream path only
   memory: boolean; // opt-in: ground the worker on graphmux's local code-graph MCP (deterministic, no hallucination)
   memoryMcpConfig: string; // resolved path to graphmux's mcp.json (set in runDelegate when memory is on)
+  thinking: ThinkingLevel | null; // --thinking: per-task override of a direct brain's thinking level (null = brain's own)
   task: string;
 }
 
 export function parseDelegateArgs(argv: string[], stdin?: string): { brain: string; opts: DelegateOpts } {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", task: "" };
+  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", thinking: null, task: "" };
   const rest = argv.slice(1);
   const parts: string[] = []; // bare positional words → joined, so an unquoted task isn't silently truncated to its last word
   for (let i = 0; i < rest.length; i++) {
@@ -61,6 +63,11 @@ export function parseDelegateArgs(argv: string[], stdin?: string): { brain: stri
     else if (a === "--template") { opts.template = rest[++i] ?? ""; }
     else if (a === "--retry") { const nx = rest[i + 1]; if (nx && /^\d+$/.test(nx)) { opts.retry = Number(nx); i++; } else opts.retry = 1; }
     else if (a === "--memory") opts.memory = true;
+    else if (a === "--thinking") {
+      const v = rest[++i] ?? "";
+      if (!isThinkingLevel(v)) throw new Error(`delegate: --thinking must be one of ${THINKING_LEVELS.join("|")} (got '${v}')`);
+      opts.thinking = v;
+    }
     else if (a === "-C") { opts.workdir = rest[++i] ?? "."; }
     else if (a === "-") { opts.task = stdin ?? ""; }
     else if (a === "--") { opts.task = rest.slice(i + 1).join(" "); break; }
@@ -312,7 +319,7 @@ async function runVerify(brain: string, opts: DelegateOpts, childEnv: NodeJS.Pro
     `Fact-check the DRAFT below. For EACH factual claim you MUST call ${GROUNDING_TOOL} — do NOT rely on memory. ` +
     `Output one terse line per claim: "✅ <claim> — <source URL you fetched>" if confirmed, or ` +
     `"⚠ <claim> — no source found" if not. Do not restate unverified claims as fact.\n\nDRAFT:\n${draft}`;
-  const p2: DelegateOpts = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", task: vTask };
+  const p2: DelegateOpts = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", thinking: opts.thinking, task: vTask };
   if (opts.stream) return runStreamed(brain, p2, childEnv);
   const r2 = spawnSync("claude", buildClaudeArgs(p2), { cwd: opts.workdir, stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: childEnv });
   if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
@@ -369,9 +376,9 @@ export async function runDelegate(argv: string[], env: NodeJS.ProcessEnv = proce
     opts.allowTools = [...opts.allowTools, ...MEMORY_TOOLS];
     opts.task = `${opts.task}\n\n${MEMORY_NUDGE}`;
   }
-  const plan = planLaunch(brain, env); // validates brain against manifest + resolves key/port (or direct url + token file)
+  const plan = planLaunch(brain, env, opts.thinking ?? undefined); // validates brain against manifest + resolves key/port (or direct url + token file)
   // Echo the outgoing config so you always know what went out (brain · mode · mcp · memory · verify · retry).
-  process.stderr.write(`delegate: ${brain}${plan.direct ? ` · direct ${plan.base} · ${plan.model}` : ""} · ${opts.mode} · mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " · memory" : ""}${opts.verify ? " · verify" : ""}${opts.retry > 0 ? ` · retry ${opts.retry}` : ""}\n`);
+  process.stderr.write(`delegate: ${brain}${plan.direct ? ` · direct ${plan.base} · ${plan.model} · thinking ${plan.thinking}` : ""} · ${opts.mode} · mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " · memory" : ""}${opts.verify ? " · verify" : ""}${opts.retry > 0 ? ` · retry ${opts.retry}` : ""}\n`);
   if (opts.mode === "yolo") process.stderr.write(`delegate: ⚠ --yolo — '${brain}' runs with NO permission checks in '${opts.workdir}'.\n`);
   const childEnv = brainEnv(plan, env, { DELEGATE_DEPTH: "1" });
 

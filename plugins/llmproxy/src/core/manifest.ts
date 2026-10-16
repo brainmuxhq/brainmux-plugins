@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import YAML from "yaml";
 import { z } from "zod";
+import { THINKING_LEVELS } from "./thinking.js";
 
 // Restrict to bare model-id chars so the value can't inject YAML into the generated
 // per-brain config.yaml (e.g. a newline + `master_key: …`). Covers OpenRouter slugs
@@ -12,6 +13,8 @@ const LiteLLMBrainSchema = z.object({
   port: z.number().int().min(1).max(65535),
   model: ModelId,
   providerKey: z.string().regex(/^[A-Z][A-Z0-9_]*$/, "providerKey must be an ENV_VAR-style name"),
+  // Thinking levels steer a direct endpoint's thinking budget; a LiteLLM brain would ignore it silently.
+  thinking: z.undefined({ errorMap: () => ({ message: "thinking is for direct (url) brains only" }) }),
 });
 
 // A DIRECT brain: an endpoint that already speaks the Anthropic Messages API (e.g. a vLLM
@@ -28,6 +31,9 @@ const DirectBrainSchema = z
     // Child Claude Code's CLAUDE_CODE_MAX_OUTPUT_TOKENS. Small limits leave reasoning models
     // with thinking-only / half tool calls, so the default is generous (DEFAULT_MAX_OUTPUT_TOKENS).
     maxOutputTokens: z.number().int().min(1).optional(),
+    // How much the model may think per request (off|low|medium|deep → see core/thinking.ts).
+    // Default DEFAULT_THINKING; `bmux delegate --thinking` overrides it per task.
+    thinking: z.enum(THINKING_LEVELS, { errorMap: () => ({ message: `thinking must be one of ${THINKING_LEVELS.join("|")}` }) }).optional(),
   })
   .strict(); // a stray `port`/`providerKey` on a url brain is a mistake, not something to ignore
 

@@ -4,12 +4,14 @@ import { loadBrains, isDirect, DEFAULT_MAX_OUTPUT_TOKENS } from "../core/manifes
 import { getKey } from "../core/env.js";
 import { masterKeyVar } from "../core/generate.js";
 import { readAuthToken } from "../core/authtoken.js";
+import { DEFAULT_THINKING, thinkingEnv, type ThinkingLevel } from "../core/thinking.js";
 
 export interface LaunchPlan {
   brain: string;
   model: string;
   base: string;
   direct: boolean;
+  thinking: ThinkingLevel | null; // direct brains only; null for a LiteLLM brain
   set: Record<string, string>; // env vars the child `claude` gets
   unset: string[]; // env vars removed from the child (a stale key would win over / conflict with `set`)
 }
@@ -27,7 +29,11 @@ const MODEL_SLOTS = [
   "CLAUDE_CODE_SUBAGENT_MODEL",
 ];
 
-export function planLaunch(brain: string, env: NodeJS.ProcessEnv = process.env): LaunchPlan {
+/**
+ * Resolve how to run the child `claude` on a brain. `thinking` overrides the brain's
+ * configured level (direct brains only — a LiteLLM brain rejects it).
+ */
+export function planLaunch(brain: string, env: NodeJS.ProcessEnv = process.env, thinking?: ThinkingLevel): LaunchPlan {
   const paths = resolvePaths(env);
   const cfg = loadBrains(paths.brainsYaml);
   const b = cfg.brains[brain];
@@ -38,21 +44,24 @@ export function planLaunch(brain: string, env: NodeJS.ProcessEnv = process.env):
     // Bearer auth: ANTHROPIC_AUTH_TOKEN. ANTHROPIC_API_KEY would be sent as x-api-key (and
     // take over), so it is removed from the child env.
     const base = b.url.replace(/\/+$/, "");
+    const level = thinking ?? b.thinking ?? DEFAULT_THINKING;
+    const th = thinkingEnv(level, b.model, b.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS);
     const set: Record<string, string> = {
       ANTHROPIC_BASE_URL: base,
       ANTHROPIC_AUTH_TOKEN: readAuthToken(b.authTokenFile, env.HOME || undefined),
-      CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(b.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS),
+      ...th.set, // thinking budget/effort + CLAUDE_CODE_MAX_OUTPUT_TOKENS
       ...meta,
     };
     for (const k of MODEL_SLOTS) set[k] = b.model;
-    return { brain, model: b.model, base, direct: true, set, unset: ["ANTHROPIC_API_KEY"] };
+    return { brain, model: b.model, base, direct: true, thinking: level, set, unset: ["ANTHROPIC_API_KEY", ...th.unset] };
   }
+  if (thinking) throw new Error(`--thinking is for direct brains only ('${brain}' is a LiteLLM brain)`);
 
   const apiKey = getKey(paths.envFile, masterKeyVar(brain));
   if (!apiKey) throw new Error(`${masterKeyVar(brain)} missing in ${paths.envFile} — run \`bmux init\`.`);
   const base = `http://127.0.0.1:${b.port}`;
   return {
-    brain, model: b.model, base, direct: false,
+    brain, model: b.model, base, direct: false, thinking: null,
     set: { ANTHROPIC_BASE_URL: base, ANTHROPIC_API_KEY: apiKey, ...meta },
     unset: ["ANTHROPIC_AUTH_TOKEN"],
   };

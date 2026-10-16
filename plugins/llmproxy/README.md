@@ -63,7 +63,7 @@ bmux init                                   scaffold ~/.brainmux
 bmux up | down | restart                    manage the stack (regenerates from brains.yaml)
 bmux ps | logs [brain] | health             inspect
 bmux chat | deep | coder [claude args...]   launch Claude Code on a brain (interactive)
-bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--verify] [--memory] "<task>"  headless one-shot
+bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--verify] [--memory] [--thinking off|low|medium|deep] "<task>"  headless one-shot
 bmux config add-brain <name> <port> <model> [providerKey]
 bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens]   direct brain (no LiteLLM)
 bmux config remove-brain <name> | set-model <name> <model>
@@ -88,6 +88,7 @@ version: 1
 brains:
   ev: { url: "http://192.0.2.10:8000", model: qwen3.8-27b, authTokenFile: ~/.config/brainmux/ev-llm-key }
   # optional: maxOutputTokens: 32000   (default 20000)
+  # optional: thinking: low             (off|low|medium|deep, default medium)
 ```
 
 | field | meaning |
@@ -96,6 +97,31 @@ brains:
 | `model` | the server's model id — sent in every request (all Claude Code model slots point at it) |
 | `authTokenFile` | file holding the token, sent as `Authorization: Bearer …`. Read **at run time**; must be `chmod 600` (bmux refuses a group/world-readable file). Never copied into `.env`, never printed. |
 | `maxOutputTokens` | the child's `CLAUDE_CODE_MAX_OUTPUT_TOKENS` (default 20000). Small limits leave reasoning models with thinking-only replies / half tool calls. |
+| `thinking` | how much the model may think per request: `off` · `low` · `medium` (default) · `deep` — see below. `bmux delegate --thinking` overrides it per task. |
+
+### Thinking level
+
+Every request to a direct brain carries a **thinking budget** (the server enforces it), so the
+model can't think for minutes on a simple task:
+
+| level | request sent | use for |
+|---|---|---|
+| `off` | `thinking: {type: "disabled"}`, no effort | lookups, extraction, formatting, mechanical edits |
+| `low` | `thinking: {type: "enabled", budget_tokens: 4096}`, effort `low` | small, clear tasks |
+| `medium` (default) | `budget_tokens: 16384`, effort `medium` | normal coding / analysis |
+| `deep` | `budget_tokens: 32768`, effort `xhigh` | hard bugs, tricky design questions |
+
+`max_tokens` is kept at least `budget + 4096` (room for the answer), so `deep` raises it to
+36864 and `medium` to 20480 when `maxOutputTokens` is lower. The effort is never `high` or `max`
+(vLLM rejects both), whatever your Claude Code settings say. Under the hood bmux sets
+`MAX_THINKING_TOKENS`, `CLAUDE_CODE_EFFORT_LEVEL`, `CLAUDE_CODE_MAX_OUTPUT_TOKENS` and
+`CLAUDE_CODE_MODEL_CAPABILITIES` (marks the model as budget-thinking, effort `low|medium|xhigh`)
+for the child `claude`; the interactive `bmux ev` uses the brain's level too.
+
+```sh
+bmux delegate ev --thinking off "list every exported function in src/core/env.ts"
+bmux delegate ev --thinking deep "trace how parseBrains rejects a duplicate port and explain each step"
+```
 
 `bmux ev` / `bmux delegate ev …` set `ANTHROPIC_BASE_URL=<url>`, `ANTHROPIC_AUTH_TOKEN=<file
 content>`, `ANTHROPIC_MODEL` (+ opus/sonnet/haiku/small-fast/subagent model vars) `=<model>` and

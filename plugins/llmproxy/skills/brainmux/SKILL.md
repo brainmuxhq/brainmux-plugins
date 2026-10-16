@@ -18,11 +18,14 @@ overwritten on the next `bmux up`/`config` call.
 
 ## Two kinds of brain
 - **LiteLLM brain** `{ port, model, providerKey }` — a local LiteLLM container (OpenRouter etc.).
-- **Direct brain** `{ url, model, authTokenFile, maxOutputTokens? }` — a server that already speaks
+- **Direct brain** `{ url, model, authTokenFile, maxOutputTokens?, thinking? }` — a server that already speaks
   the Anthropic Messages API (e.g. a self-hosted vLLM). Bearer auth with the token read at run time
   from `authTokenFile` (must be chmod 600; never copy it into `.env`, never print it). No container:
   `up`/`ps`/`health`/`spend` skip it; `bmux test` probes it with Bearer. A direct-only `brains.yaml`
   is valid — write it before `bmux init` (init keeps an existing file) and no Docker is needed.
+  `thinking: off|low|medium|deep` (default `medium`) sets its thinking budget per request
+  (off · 4K · 16K · 32K tokens); `bmux delegate <brain> --thinking <level>` overrides it per task.
+  It is for direct brains only (a LiteLLM brain with `thinking:` is rejected).
 
 ## Lifecycle
 ```sh

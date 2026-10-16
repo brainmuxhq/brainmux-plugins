@@ -11433,12 +11433,41 @@ var coerce = {
 };
 var NEVER = INVALID;
 
+// src/core/thinking.ts
+var THINKING_LEVELS = ["off", "low", "medium", "deep"];
+var DEFAULT_THINKING = "medium";
+var THINKING = {
+  off: null,
+  low: { budget: 4096, effort: "low" },
+  medium: { budget: 16384, effort: "medium" },
+  deep: { budget: 32768, effort: "xhigh" }
+};
+var ANSWER_ROOM = 4096;
+function isThinkingLevel(v) {
+  return THINKING_LEVELS.includes(v);
+}
+function thinkingEnv(level, model, maxOutputTokens) {
+  const t = THINKING[level];
+  const caps = ["thinking", "-adaptive_thinking", "-rejects_disabled_thinking", "-max_effort"];
+  caps.push(...t ? ["effort", "xhigh_effort"] : ["-effort", "-xhigh_effort"]);
+  const set = {
+    CLAUDE_CODE_MODEL_CAPABILITIES: `${model.toLowerCase()}=${caps.join(",")}`,
+    MAX_THINKING_TOKENS: String(t ? t.budget : 0),
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(t ? Math.max(maxOutputTokens, t.budget + ANSWER_ROOM) : maxOutputTokens)
+  };
+  if (t) set.CLAUDE_CODE_EFFORT_LEVEL = t.effort;
+  const unset = ["CLAUDE_CODE_DISABLE_THINKING", ...t ? [] : ["CLAUDE_CODE_EFFORT_LEVEL"]];
+  return { set, unset };
+}
+
 // src/core/manifest.ts
 var ModelId = external_exports.string().regex(/^[A-Za-z0-9/._:-]+$/, "model must be a bare model id (letters, digits and / . _ : -)");
 var LiteLLMBrainSchema = external_exports.object({
   port: external_exports.number().int().min(1).max(65535),
   model: ModelId,
-  providerKey: external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "providerKey must be an ENV_VAR-style name")
+  providerKey: external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "providerKey must be an ENV_VAR-style name"),
+  // Thinking levels steer a direct endpoint's thinking budget; a LiteLLM brain would ignore it silently.
+  thinking: external_exports.undefined({ errorMap: () => ({ message: "thinking is for direct (url) brains only" }) })
 });
 var DirectBrainSchema = external_exports.object({
   url: external_exports.string().url("url must be an absolute URL").refine((u) => /^https?:\/\//i.test(u), "url must be http:// or https://"),
@@ -11446,7 +11475,10 @@ var DirectBrainSchema = external_exports.object({
   authTokenFile: external_exports.string().min(1, "authTokenFile must be a path"),
   // Child Claude Code's CLAUDE_CODE_MAX_OUTPUT_TOKENS. Small limits leave reasoning models
   // with thinking-only / half tool calls, so the default is generous (DEFAULT_MAX_OUTPUT_TOKENS).
-  maxOutputTokens: external_exports.number().int().min(1).optional()
+  maxOutputTokens: external_exports.number().int().min(1).optional(),
+  // How much the model may think per request (off|low|medium|deep → see core/thinking.ts).
+  // Default DEFAULT_THINKING; `bmux delegate --thinking` overrides it per task.
+  thinking: external_exports.enum(THINKING_LEVELS, { errorMap: () => ({ message: `thinking must be one of ${THINKING_LEVELS.join("|")}` }) }).optional()
 }).strict();
 var DEFAULT_MAX_OUTPUT_TOKENS = 2e4;
 function isDirect(b) {
@@ -11824,7 +11856,7 @@ var MODEL_SLOTS = [
   "ANTHROPIC_SMALL_FAST_MODEL",
   "CLAUDE_CODE_SUBAGENT_MODEL"
 ];
-function planLaunch(brain, env = process.env) {
+function planLaunch(brain, env = process.env, thinking) {
   const paths = resolvePaths(env);
   const cfg = loadBrains(paths.brainsYaml);
   const b = cfg.brains[brain];
@@ -11832,15 +11864,19 @@ function planLaunch(brain, env = process.env) {
   const meta = { BRAINMUX_BRAIN: brain, BRAINMUX_MODEL: b.model };
   if (isDirect(b)) {
     const base2 = b.url.replace(/\/+$/, "");
+    const level = thinking ?? b.thinking ?? DEFAULT_THINKING;
+    const th = thinkingEnv(level, b.model, b.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS);
     const set = {
       ANTHROPIC_BASE_URL: base2,
       ANTHROPIC_AUTH_TOKEN: readAuthToken(b.authTokenFile, env.HOME || void 0),
-      CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(b.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS),
+      ...th.set,
+      // thinking budget/effort + CLAUDE_CODE_MAX_OUTPUT_TOKENS
       ...meta
     };
     for (const k of MODEL_SLOTS) set[k] = b.model;
-    return { brain, model: b.model, base: base2, direct: true, set, unset: ["ANTHROPIC_API_KEY"] };
+    return { brain, model: b.model, base: base2, direct: true, thinking: level, set, unset: ["ANTHROPIC_API_KEY", ...th.unset] };
   }
+  if (thinking) throw new Error(`--thinking is for direct brains only ('${brain}' is a LiteLLM brain)`);
   const apiKey = getKey(paths.envFile, masterKeyVar(brain));
   if (!apiKey) throw new Error(`${masterKeyVar(brain)} missing in ${paths.envFile} \u2014 run \`bmux init\`.`);
   const base = `http://127.0.0.1:${b.port}`;
@@ -11849,6 +11885,7 @@ function planLaunch(brain, env = process.env) {
     model: b.model,
     base,
     direct: false,
+    thinking: null,
     set: { ANTHROPIC_BASE_URL: base, ANTHROPIC_API_KEY: apiKey, ...meta },
     unset: ["ANTHROPIC_AUTH_TOKEN"]
   };
@@ -11920,7 +11957,7 @@ var MEMORY_NUDGE = 'GROUND every claim in the code graph before answering. For b
 function parseDelegateArgs(argv, stdin) {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", task: "" };
+  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", thinking: null, task: "" };
   const rest = argv.slice(1);
   const parts = [];
   for (let i = 0; i < rest.length; i++) {
@@ -11942,7 +11979,11 @@ function parseDelegateArgs(argv, stdin) {
         i++;
       } else opts.retry = 1;
     } else if (a === "--memory") opts.memory = true;
-    else if (a === "-C") {
+    else if (a === "--thinking") {
+      const v = rest[++i] ?? "";
+      if (!isThinkingLevel(v)) throw new Error(`delegate: --thinking must be one of ${THINKING_LEVELS.join("|")} (got '${v}')`);
+      opts.thinking = v;
+    } else if (a === "-C") {
       opts.workdir = rest[++i] ?? ".";
     } else if (a === "-") {
       opts.task = stdin ?? "";
@@ -12148,7 +12189,7 @@ async function runVerify(brain, opts, childEnv) {
 
 DRAFT:
 ${draft}`;
-  const p2 = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", task: vTask };
+  const p2 = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", thinking: opts.thinking, task: vTask };
   if (opts.stream) return runStreamed(brain, p2, childEnv);
   const r2 = spawnSync3("claude", buildClaudeArgs(p2), { cwd: opts.workdir, stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: childEnv });
   if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
@@ -12208,8 +12249,8 @@ ${opts.task}` : tpl;
 
 ${MEMORY_NUDGE}`;
   }
-  const plan = planLaunch(brain, env);
-  process.stderr.write(`delegate: ${brain}${plan.direct ? ` \xB7 direct ${plan.base} \xB7 ${plan.model}` : ""} \xB7 ${opts.mode} \xB7 mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " \xB7 memory" : ""}${opts.verify ? " \xB7 verify" : ""}${opts.retry > 0 ? ` \xB7 retry ${opts.retry}` : ""}
+  const plan = planLaunch(brain, env, opts.thinking ?? void 0);
+  process.stderr.write(`delegate: ${brain}${plan.direct ? ` \xB7 direct ${plan.base} \xB7 ${plan.model} \xB7 thinking ${plan.thinking}` : ""} \xB7 ${opts.mode} \xB7 mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " \xB7 memory" : ""}${opts.verify ? " \xB7 verify" : ""}${opts.retry > 0 ? ` \xB7 retry ${opts.retry}` : ""}
 `);
   if (opts.mode === "yolo") process.stderr.write(`delegate: \u26A0 --yolo \u2014 '${brain}' runs with NO permission checks in '${opts.workdir}'.
 `);
@@ -12887,7 +12928,7 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
   bmux up | down | restart        manage the brain stack (regenerates from brains.yaml)
   bmux ps | logs [svc] | health   inspect the stack
   bmux <brain> [claude args...]   launch Claude Code on a brain (e.g. bmux chat)
-  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--allow-tools t1,t2] [--verify] [--memory] "<task>"
+  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--allow-tools t1,t2] [--verify] [--memory] [--thinking off|low|medium|deep] "<task>"
                                   (--stream shows a live progress line: \u23F3 brain \xB7 5/34 \xB7 <step>)
                                   (--memory grounds the brain on the local code graph \u2014 needs graphmux: gmux install)
                                   (--mcp passes host MCP servers; --allow-tools pre-allows tools headless \u2014 e.g.
@@ -12895,6 +12936,8 @@ var HELP = `bmux \u2014 brainmux/llmproxy CLI
                                   (--verify: draft, then a grounded pass web-checks each claim \u2192 \u2705/\u26A0 with sources)
                                   (--template <name>: expand a saved task template \u2014 bmux config list-templates)
                                   (--retry [n]: on an empty/failed result, auto-retry up to n times \u2014 default 1)
+                                  (--thinking: direct brains only \u2014 thinking budget per task: off \xB7 low 4K \xB7
+                                   medium 16K (default, or brains.yaml \`thinking:\`) \xB7 deep 32K)
   bmux config add-brain <name> <port> <model> [providerKey]          (LiteLLM brain on a local port)
   bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens]
                                   (direct brain: Anthropic-compatible endpoint, Bearer token read

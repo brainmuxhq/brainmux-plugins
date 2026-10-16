@@ -15,7 +15,9 @@ import { runStack } from "../src/commands/stack.js";
 import { runSpend } from "../src/commands/spend.js";
 import { runConfig } from "../src/commands/config.js";
 import { messagesProbe, runTest } from "../src/commands/test.js";
-import { runDelegate } from "../src/commands/delegate.js";
+import { runDelegate, parseDelegateArgs } from "../src/commands/delegate.js";
+import { thinkingEnv, ANSWER_ROOM } from "../src/core/thinking.js";
+import { spawn } from "node:child_process";
 
 const TOKEN = "ev-secret-token-123";
 
@@ -140,7 +142,9 @@ test("planLaunch direct: base url, Bearer token from file, every model slot, max
   for (const k of ["ANTHROPIC_MODEL", "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL", "ANTHROPIC_SMALL_FAST_MODEL", "CLAUDE_CODE_SUBAGENT_MODEL"]) {
     assert.equal(plan.set[k], "qwen3.8-27b", k);
   }
-  assert.equal(plan.set.CLAUDE_CODE_MAX_OUTPUT_TOKENS, String(DEFAULT_MAX_OUTPUT_TOKENS));
+  // default thinking = medium (16K budget) → max_tokens raised to budget + ANSWER_ROOM above the 20000 default
+  assert.equal(plan.thinking, "medium");
+  assert.equal(plan.set.CLAUDE_CODE_MAX_OUTPUT_TOKENS, String(Math.max(DEFAULT_MAX_OUTPUT_TOKENS, 16384 + ANSWER_ROOM)));
   assert.equal(plan.set.BRAINMUX_BRAIN, "ev");
   assert.ok(!("ANTHROPIC_API_KEY" in plan.set));
 
@@ -222,7 +226,142 @@ test("delegate on a direct brain hands the child claude Bearer env, no API key",
   assert.equal(env.get("ANTHROPIC_BASE_URL"), "http://192.0.2.10:8000");
   assert.equal(env.get("ANTHROPIC_AUTH_TOKEN"), TOKEN);
   assert.equal(env.get("ANTHROPIC_MODEL"), "qwen3.8-27b");
-  assert.equal(env.get("CLAUDE_CODE_MAX_OUTPUT_TOKENS"), "20000");
+  assert.equal(env.get("CLAUDE_CODE_MAX_OUTPUT_TOKENS"), "20480");
+  assert.equal(env.get("MAX_THINKING_TOKENS"), "16384"); // default thinking = medium
+  assert.equal(env.get("CLAUDE_CODE_EFFORT_LEVEL"), "medium");
   assert.equal(env.get("DELEGATE_DEPTH"), "1");
   assert.ok(!env.has("ANTHROPIC_API_KEY"));
+});
+
+// --- thinking level ----------------------------------------------------------
+
+test("thinkingEnv: each level → budget, effort (never high/max), capabilities, max_tokens above the budget", () => {
+  const off = thinkingEnv("off", "qwen3.8-27b", 20000);
+  assert.deepEqual(off.set, {
+    CLAUDE_CODE_MODEL_CAPABILITIES: "qwen3.8-27b=thinking,-adaptive_thinking,-rejects_disabled_thinking,-max_effort,-effort,-xhigh_effort",
+    MAX_THINKING_TOKENS: "0",
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS: "20000",
+  });
+  assert.deepEqual(off.unset, ["CLAUDE_CODE_DISABLE_THINKING", "CLAUDE_CODE_EFFORT_LEVEL"]);
+  const caps = "qwen3.8-27b=thinking,-adaptive_thinking,-rejects_disabled_thinking,-max_effort,effort,xhigh_effort";
+  for (const [lvl, budget, effort, max] of [["low", 4096, "low", 20000], ["medium", 16384, "medium", 20480], ["deep", 32768, "xhigh", 36864]] as const) {
+    const t = thinkingEnv(lvl, "qwen3.8-27b", 20000);
+    assert.deepEqual(t.set, { CLAUDE_CODE_MODEL_CAPABILITIES: caps, MAX_THINKING_TOKENS: String(budget), CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(max), CLAUDE_CODE_EFFORT_LEVEL: effort }, lvl);
+    assert.deepEqual(t.unset, ["CLAUDE_CODE_DISABLE_THINKING"]);
+  }
+  // a larger configured maxOutputTokens is kept
+  assert.equal(thinkingEnv("deep", "m", 64000).set.CLAUDE_CODE_MAX_OUTPUT_TOKENS, "64000");
+});
+
+test("manifest: direct brain thinking level parses; an unknown level is rejected", () => {
+  const ev = parseBrains(`version: 1\nbrains:\n  ev: { url: "http://h:1", model: m, authTokenFile: /k, thinking: deep }`).brains.ev as DirectBrain;
+  assert.equal(ev.thinking, "deep");
+  assert.throws(() => parseBrains(`version: 1\nbrains:\n  ev: { url: "http://h:1", model: m, authTokenFile: /k, thinking: high }`), /thinking must be one of off\|low\|medium\|deep/);
+  assert.throws(() => parseBrains(`version: 1\nbrains:\n  c: { port: 4000, model: m, providerKey: K, thinking: low }`), /thinking is for direct \(url\) brains only/);
+});
+
+test("planLaunch: brains.yaml thinking is the default, the override wins, LiteLLM brains refuse it", () => {
+  const { home } = directHome("http://h:8000", ", thinking: low");
+  const env = { BRAINMUX_HOME: home };
+  assert.equal(planLaunch("ev", env).set.MAX_THINKING_TOKENS, "4096");
+  const off = planLaunch("ev", env, "off");
+  assert.equal(off.thinking, "off");
+  assert.equal(off.set.MAX_THINKING_TOKENS, "0");
+  assert.ok(!("CLAUDE_CODE_EFFORT_LEVEL" in off.set));
+  const child = brainEnv(off, { CLAUDE_CODE_EFFORT_LEVEL: "max", CLAUDE_CODE_DISABLE_THINKING: "1" });
+  assert.ok(!("CLAUDE_CODE_EFFORT_LEVEL" in child) && !("CLAUDE_CODE_DISABLE_THINKING" in child), "inherited thinking/effort vars must not leak");
+  // a parent effort is overridden, not inherited
+  assert.equal(brainEnv(planLaunch("ev", env, "deep"), { CLAUDE_CODE_EFFORT_LEVEL: "max" }).CLAUDE_CODE_EFFORT_LEVEL, "xhigh");
+
+  const lh = tmp("bmux-th-litellm-");
+  runInit({ BRAINMUX_HOME: lh });
+  assert.equal(planLaunch("chat", { BRAINMUX_HOME: lh }).thinking, null);
+  assert.throws(() => planLaunch("chat", { BRAINMUX_HOME: lh }, "low"), /direct brains only/);
+});
+
+test("delegate --thinking: parsed and validated", () => {
+  assert.equal(parseDelegateArgs(["ev", "task"]).opts.thinking, null);
+  assert.equal(parseDelegateArgs(["ev", "--thinking", "deep", "task"]).opts.thinking, "deep");
+  assert.throws(() => parseDelegateArgs(["ev", "--thinking", "high", "task"]), /--thinking must be one of off\|low\|medium\|deep/);
+  assert.throws(() => parseDelegateArgs(["ev", "--thinking"]), /--thinking must be one of/);
+});
+
+test("delegate --thinking off on a direct brain reaches the child env", async () => {
+  const { home } = directHome("http://192.0.2.10:8000", ", thinking: deep");
+  const bin = tmp("bmux-fakeclaude-th-");
+  const dump = path.join(bin, "env.txt");
+  fs.writeFileSync(path.join(bin, "claude"), `#!/bin/sh\nenv > "${dump}"\necho '{"result":"done","is_error":false}'\n`, { mode: 0o755 });
+  assert.equal(await runDelegate(["ev", "--json", "--thinking", "off", "say hi"], { BRAINMUX_HOME: home, PATH: `${bin}:${process.env.PATH}` }), 0);
+  const env = fs.readFileSync(dump, "utf8");
+  assert.match(env, /^MAX_THINKING_TOKENS=0$/m);
+  assert.doesNotMatch(env, /^CLAUDE_CODE_EFFORT_LEVEL=/m);
+});
+
+// --- the real Claude Code against a local fake /v1/messages (opt-in: BMUX_CLAUDE_E2E=1) -------
+// Proves what the installed `claude` actually SENDS per level. No model is called: the base URL
+// is a 127.0.0.1 server that records the request body and answers "OK".
+
+function recordingServer(): Promise<{ url: string; bodies: any[]; close: () => void }> {
+  const bodies: any[] = [];
+  const srv = http.createServer((req, res) => {
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      const j = body ? JSON.parse(body) : {};
+      if (req.url?.startsWith("/v1/messages") && !req.url.includes("count_tokens")) bodies.push(j);
+      if (!j.stream) { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify({ id: "m", type: "message", role: "assistant", model: j.model, content: [{ type: "text", text: "OK" }], stop_reason: "end_turn", stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 }, input_tokens: 1 })); return; }
+      res.writeHead(200, { "content-type": "text/event-stream" });
+      const ev = (t: string, d: object) => res.write(`event: ${t}\ndata: ${JSON.stringify({ type: t, ...d })}\n\n`);
+      ev("message_start", { message: { id: "m", type: "message", role: "assistant", model: j.model, content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 } } });
+      ev("content_block_start", { index: 0, content_block: { type: "text", text: "" } });
+      ev("content_block_delta", { index: 0, delta: { type: "text_delta", text: "OK" } });
+      ev("content_block_stop", { index: 0 });
+      ev("message_delta", { delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 1 } });
+      ev("message_stop", {});
+      res.end();
+    });
+  });
+  return new Promise((resolve) => srv.listen(0, "127.0.0.1", () => {
+    const { port } = srv.address() as AddressInfo;
+    resolve({ url: `http://127.0.0.1:${port}`, bodies, close: () => srv.close() });
+  }));
+}
+
+const E2E = process.env.BMUX_CLAUDE_E2E === "1";
+test("real claude: request body per thinking level (budget enforced, never effort high/max)", { skip: !E2E && "set BMUX_CLAUDE_E2E=1 (runs the installed claude against a local fake server)" }, async () => {
+  const s = await recordingServer();
+  try {
+    const { home } = directHome(s.url);
+    const want = {
+      off: { thinking: { type: "disabled" }, effort: undefined, max: 20000 },
+      low: { thinking: { type: "enabled", budget_tokens: 4096 }, effort: "low", max: 20000 },
+      medium: { thinking: { type: "enabled", budget_tokens: 16384 }, effort: "medium", max: 20480 },
+      deep: { thinking: { type: "enabled", budget_tokens: 32768 }, effort: "xhigh", max: 36864 },
+    } as const;
+    for (const [lvl, w] of Object.entries(want)) {
+      s.bodies.length = 0;
+      const plan = planLaunch("ev", { BRAINMUX_HOME: home }, lvl as keyof typeof want);
+      // the user's own effort settings must not leak through
+      const env = brainEnv(plan, { ...process.env, CLAUDE_CODE_EFFORT_LEVEL: "max" });
+      // --effort max as an extra hostile input: CLAUDE_CODE_EFFORT_LEVEL must still win
+      // async spawn: a sync one would block this process's event loop, i.e. the fake server
+      const r = await new Promise<{ status: number | null; stderr: string }>((resolve) => {
+        const c = spawn("claude", ["-p", "say hi", "--output-format", "text", "--strict-mcp-config", "--effort", "max"], { env, stdio: ["ignore", "ignore", "pipe"], timeout: 90_000 });
+        let stderr = "";
+        c.stderr.on("data", (d) => (stderr += d));
+        c.on("close", (status) => resolve({ status, stderr }));
+      });
+      assert.equal(r.status, 0, `${lvl}: ${r.stderr}`);
+      assert.ok(s.bodies.length >= 1, `${lvl}: no /v1/messages request`);
+      for (const b of s.bodies) {
+        assert.equal(b.model, "qwen3.8-27b");
+        assert.equal(b.max_tokens, w.max, lvl);
+        assert.equal(b.thinking?.type, w.thinking.type, lvl);
+        assert.equal(b.thinking?.budget_tokens, (w.thinking as { budget_tokens?: number }).budget_tokens, lvl);
+        assert.equal(b.output_config?.effort, w.effort, lvl);
+      }
+    }
+  } finally {
+    s.close();
+  }
 });

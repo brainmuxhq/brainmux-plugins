@@ -19,7 +19,7 @@ const HELP = `bmux — brainmux/llmproxy CLI
   bmux up | down | restart        manage the brain stack (regenerates from brains.yaml)
   bmux ps | logs [svc] | health   inspect the stack
   bmux <brain> [claude args...]   launch Claude Code on a brain (e.g. bmux chat)
-  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--allow-tools t1,t2] [--verify] [--memory] "<task>"
+  bmux delegate <brain> [--write|--yolo] [-C dir] [--json] [--stream] [--mcp] [--allow-tools t1,t2] [--verify] [--memory] [--thinking off|low|medium|deep] "<task>"
                                   (--stream shows a live progress line: ⏳ brain · 5/34 · <step>)
                                   (--memory grounds the brain on the local code graph — needs graphmux: gmux install)
                                   (--mcp passes host MCP servers; --allow-tools pre-allows tools headless — e.g.
@@ -27,6 +27,8 @@ const HELP = `bmux — brainmux/llmproxy CLI
                                   (--verify: draft, then a grounded pass web-checks each claim → ✅/⚠ with sources)
                                   (--template <name>: expand a saved task template — bmux config list-templates)
                                   (--retry [n]: on an empty/failed result, auto-retry up to n times — default 1)
+                                  (--thinking: direct brains only — thinking budget per task: off · low 4K ·
+                                   medium 16K (default, or brains.yaml \`thinking:\`) · deep 32K)
   bmux config add-brain <name> <port> <model> [providerKey]          (LiteLLM brain on a local port)
   bmux config add-direct <name> <url> <model> <authTokenFile> [maxOutputTokens]
                                   (direct brain: Anthropic-compatible endpoint, Bearer token read

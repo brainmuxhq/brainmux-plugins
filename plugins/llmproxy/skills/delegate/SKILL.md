@@ -144,7 +144,7 @@ brave_web_search`; an empty `↳` summary means it never called a tool).
 A brain with a `url` in `brains.yaml` (see `bmux config list`) is a **direct** brain: the worker
 talks straight to that Anthropic-compatible server (Bearer token from a file — bmux handles it;
 never read or print the token). The delegate config line shows it:
-`delegate: ev · direct http://… · <model> · analyze · mcp off`.
+`delegate: ev · direct http://… · <model> · thinking medium · analyze · mcp off`.
 - **One delegate at a time on it.** A self-hosted server is shared (single GPU) — never fan out
   or run parallel `bmux delegate` calls on a direct brain; wait for each to finish.
 - **Narrow tasks.** Smaller local models: give one bounded task (one file / one function / one
@@ -152,6 +152,19 @@ never read or print the token). The delegate config line shows it:
 - **No images.** Don't hand it image files to Read (text-only model).
 - Output budget comes from the brain's `maxOutputTokens` (default 20000) — enough for reasoning
   plus tool calls; don't override it lower.
+- **Pick a thinking level per task** with `--thinking off|low|medium|deep` (direct brains only;
+  default `medium`, or the brain's `thinking:` in `brains.yaml`). Thinking time is the main cost
+  on a local GPU, so choose the lowest level that fits:
+  - `off` — no reasoning needed: lookups, listing/extraction, formatting, renames, boilerplate
+    from an exact spec. Fastest.
+  - `low` (4K budget) — small, clear tasks: one function, a short summary, a simple fix.
+  - `medium` (16K, default) — normal coding/analysis: implement from a spec, review a file.
+  - `deep` (32K) — hard reasoning only: a subtle bug, a tricky algorithm, a design trade-off.
+    Slow; don't use it for bulk work.
+  ```sh
+  bmux delegate ev --thinking off "list every TODO in src/core/, file:line only"
+  bmux delegate ev --thinking deep "find why the retry loop can exit with code 0 on failure"
+  ```
 
 ## Concurrency — sequential for quality
 Under heavy concurrency (many parallel `bmux delegate` on one brain) the model degrades and
