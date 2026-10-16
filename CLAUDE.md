@@ -137,6 +137,12 @@
   bug'ı test'le yakalandı → gerçek Next isimleri (getServerSideProps|getStaticProps|getStaticPaths|getInitialProps).
   Spec `docs/specs/2026-09-02-graphmux-plugin-design.md`. Aday-seçim: Cognee elendi (LLM-extraction stokastik, arXiv 2601.08773),
   Serena host-native (container'a kötü uyum) → CodeGraph (tek-binary, tree-sitter, auto-sync, MIT). NL-execution `gmux`'a genişledi + graphmux skill.
+- ✅ Version **0.1.21** (llmproxy: **direct brains** — `brains.yaml`'da `{ url, model, authTokenFile, maxOutputTokens? }`
+  = Anthropic-uyumlu uç noktaya (ör. ev vLLM) LiteLLM'siz doğrudan bağlanır. Bearer: `ANTHROPIC_AUTH_TOKEN` dosyadan
+  çalışma anında okunur (chmod 600 zorunlu, `.env`'e kopyalanmaz), `ANTHROPIC_API_KEY` çocuktan silinir, tüm model
+  slotları + `CLAUDE_CODE_MAX_OUTPUT_TOKENS` (varsayılan 20000) set edilir. compose/up/ps/health/spend/port-kontrolü
+  direct'i atlar; `bmux test` Bearer ile prob eder; `bmux config add-direct`. Yalnız-direct `brains.yaml` + `bmux init`
+  Docker'sız çalışır. 99 test (sahte `claude` ile delegate env uçtan uca, sahte sunucuyla Bearer prob).)
 - ✅ Version **0.1.19** (llmproxy: `bmux delegate --memory` — graphmux kod-graph MCP'sine grounded, izole `--mcp-config`+strict,
   host MCP çekmez; ucuz beyin gerçek caller/impact sorar, uydurmaz. Canlı 2x doğrulandı. delegate skill + README güncel.)
   (0.1.18: TIGHT dsflash delege-review fix'leri (loose=%0 gerçek/uydurma vs tight=grounded deneyi) — spend toNum
