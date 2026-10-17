@@ -152,7 +152,9 @@ never read or print the token). The delegate config line shows it:
   or run parallel `bmux delegate` calls on a direct brain; wait for each to finish.
 - **Narrow tasks.** Smaller local models: give one bounded task (one file / one function / one
   question), not a project-wide sweep.
-- **No images.** Don't hand it image files to Read (text-only model).
+- **No images.** Don't hand it image or PDF files (text-only model). bmux denies those Reads
+  (the config line shows `text-only`), so the worker just can't see them — give it text
+  instead (e.g. extract the PDF's text yourself first).
 - Set the brain's `contextWindow` (the model's real window, e.g. 131072). Without it Claude Code
   assumes 200K, never compacts in time, and a long task dies with `API Error: 400 … maximum
   context length` (`ok:false`). With it, the worker compacts early enough.

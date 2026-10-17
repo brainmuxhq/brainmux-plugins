@@ -5,6 +5,7 @@ import { getKey } from "../core/env.js";
 import { masterKeyVar } from "../core/generate.js";
 import { readAuthToken } from "../core/authtoken.js";
 import { contextEnv } from "../core/context.js";
+import { textOnlyArgs, TEXT_ONLY_NOTE } from "../core/images.js";
 import { DEFAULT_THINKING, thinkingEnv, type ThinkingLevel } from "../core/thinking.js";
 
 export interface LaunchPlan {
@@ -13,6 +14,8 @@ export interface LaunchPlan {
   base: string;
   direct: boolean;
   thinking: ThinkingLevel | null; // direct brains only; null for a LiteLLM brain
+  args: string[]; // extra args for the child `claude` (text-only direct brain: image/PDF Read denied)
+  note: string; // extra system-prompt line for a delegated worker ("" = none)
   set: Record<string, string>; // env vars the child `claude` gets
   unset: string[]; // env vars removed from the child (a stale key would win over / conflict with `set`)
 }
@@ -56,7 +59,8 @@ export function planLaunch(brain: string, env: NodeJS.ProcessEnv = process.env, 
       ...meta,
     };
     for (const k of MODEL_SLOTS) set[k] = b.model;
-    return { brain, model: b.model, base, direct: true, thinking: level, set, unset: ["ANTHROPIC_API_KEY", ...th.unset, ...(b.contextWindow ? [] : ["CLAUDE_CODE_MAX_CONTEXT_TOKENS"])] };
+    const textOnly = b.images !== true;
+    return { brain, model: b.model, base, direct: true, thinking: level, args: textOnly ? textOnlyArgs() : [], note: textOnly ? TEXT_ONLY_NOTE : "", set, unset: ["ANTHROPIC_API_KEY", ...th.unset, ...(b.contextWindow ? [] : ["CLAUDE_CODE_MAX_CONTEXT_TOKENS"])] };
   }
   if (thinking) throw new Error(`--thinking is for direct brains only ('${brain}' is a LiteLLM brain)`);
 
@@ -64,7 +68,7 @@ export function planLaunch(brain: string, env: NodeJS.ProcessEnv = process.env, 
   if (!apiKey) throw new Error(`${masterKeyVar(brain)} missing in ${paths.envFile} — run \`bmux init\`.`);
   const base = `http://127.0.0.1:${b.port}`;
   return {
-    brain, model: b.model, base, direct: false, thinking: null,
+    brain, model: b.model, base, direct: false, thinking: null, args: [], note: "",
     set: { ANTHROPIC_BASE_URL: base, ANTHROPIC_API_KEY: apiKey, ...meta },
     unset: ["ANTHROPIC_AUTH_TOKEN"],
   };
@@ -81,6 +85,6 @@ export function runLaunch(brain: string, claudeArgs: string[], env: NodeJS.Proce
   const plan = planLaunch(brain, env);
   // BRAINMUX_BRAIN/MODEL (in plan.set) let the status line name the active brain from the SSOT
   // the router used — no hardcoded port→name map to drift when brains.yaml changes.
-  const r = spawnSync("claude", claudeArgs, { stdio: "inherit", env: brainEnv(plan, env) });
+  const r = spawnSync("claude", [...plan.args, ...claudeArgs], { stdio: "inherit", env: brainEnv(plan, env) });
   return r.status ?? 1;
 }

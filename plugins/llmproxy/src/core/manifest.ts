@@ -15,6 +15,7 @@ const LiteLLMBrainSchema = z.object({
   providerKey: z.string().regex(/^[A-Z][A-Z0-9_]*$/, "providerKey must be an ENV_VAR-style name"),
   // Thinking levels steer a direct endpoint's thinking budget; a LiteLLM brain would ignore it silently.
   thinking: z.undefined({ errorMap: () => ({ message: "thinking is for direct (url) brains only" }) }),
+  images: z.undefined({ errorMap: () => ({ message: "images is for direct (url) brains only" }) }),
 });
 
 // A DIRECT brain: an endpoint that already speaks the Anthropic Messages API (e.g. a vLLM
@@ -34,6 +35,9 @@ const DirectBrainSchema = z
     // The model's real context window (input + output), e.g. 131072. Claude Code assumes 200K for
     // a model it doesn't know and would overflow the server; with this it compacts in time.
     contextWindow: z.number().int().min(1024).optional(),
+    // Whether the model accepts image/PDF input. Default false: a text-only model fails the whole
+    // run on one image block, so image/PDF Reads are denied unless this is true (core/images.ts).
+    images: z.boolean().optional(),
     // How much the model may think per request (off|low|medium|deep → see core/thinking.ts).
     // Default DEFAULT_THINKING; `bmux delegate --thinking` overrides it per task.
     thinking: z.enum(THINKING_LEVELS, { errorMap: () => ({ message: `thinking must be one of ${THINKING_LEVELS.join("|")}` }) }).optional(),

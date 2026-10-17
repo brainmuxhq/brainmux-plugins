@@ -18,6 +18,9 @@ import { messagesProbe, runTest } from "../src/commands/test.js";
 import { runDelegate, parseDelegateArgs } from "../src/commands/delegate.js";
 import { thinkingEnv, ANSWER_ROOM } from "../src/core/thinking.js";
 import { contextEnv, compactAt, CONTEXT_SAFETY } from "../src/core/context.js";
+import { textOnlyArgs, TEXT_ONLY_NOTE } from "../src/core/images.js";
+import { buildClaudeArgs } from "../src/commands/delegate.js";
+import zlib from "node:zlib";
 import { spawn } from "node:child_process";
 
 const TOKEN = "ev-secret-token-123";
@@ -467,4 +470,103 @@ test("real claude: compacts before input + max_tokens overflows contextWindow", 
   const at = compactAt(131072, 20480); // medium → 102400
   assert.equal(await run(at - 2000), false, "below the compaction point: no compaction");
   assert.equal(await run(at + 1000), true, "at/above it: compacts (and input + max_tokens still fits 131072)");
+});
+
+// --- text-only (images) ------------------------------------------------------------
+
+test("images: direct brains are text-only by default; images: true lifts it; LiteLLM brains reject the key", () => {
+  const { home } = directHome("http://h:8000");
+  const p = planLaunch("ev", { BRAINMUX_HOME: home });
+  assert.deepEqual(p.args, textOnlyArgs());
+  assert.deepEqual(JSON.parse(p.args[1]), { permissions: { deny: ["Read(**/*.png)", "Read(**/*.jpg)", "Read(**/*.jpeg)", "Read(**/*.gif)", "Read(**/*.webp)", "Read(**/*.pdf)"] } });
+  assert.equal(p.note, TEXT_ONLY_NOTE);
+  const { home: h2 } = directHome("http://h:8000", ", images: true");
+  const p2 = planLaunch("ev", { BRAINMUX_HOME: h2 });
+  assert.deepEqual(p2.args, []);
+  assert.equal(p2.note, "");
+  assert.throws(() => parseBrains(`version: 1\nbrains:\n  c: { port: 4000, model: m, providerKey: K, images: false }`), /images is for direct \(url\) brains only/);
+});
+
+test("buildClaudeArgs: brain args go last (single-value --settings), note joins the guard prompt", () => {
+  const { opts } = parseDelegateArgs(["ev", "task"]);
+  opts.brainArgs = textOnlyArgs();
+  opts.brainNote = TEXT_ONLY_NOTE;
+  const args = buildClaudeArgs(opts);
+  assert.deepEqual(args.slice(-2), textOnlyArgs());
+  assert.ok(args[args.indexOf("--append-system-prompt") + 1].endsWith(TEXT_ONLY_NOTE));
+});
+
+function tinyPng(): Buffer {
+  const crc = (b: Buffer) => { let c = ~0; for (const x of b) { c ^= x; for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1)); } return ~c >>> 0; };
+  const chunk = (t: string, d: Buffer) => { const len = Buffer.alloc(4); len.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(t), d]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(4, 0); ihdr.writeUInt32BE(4, 4); ihdr[8] = 8; ihdr[9] = 2;
+  const raw = Buffer.concat(Array.from({ length: 4 }, () => Buffer.from([0, ...Array(12).fill(200)])));
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", ihdr), chunk("IDAT", zlib.deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
+}
+
+test("real claude: a text-only direct brain never sends an image/PDF block (vLLM would 400)", { skip: !E2E && "set BMUX_CLAUDE_E2E=1 (runs the installed claude against a local fake server)" }, async () => {
+  // Fake vLLM: answers the 1st call with Read(<file>), rejects ANY request holding an image or
+  // document block with vLLM's exact 400, otherwise answers text.
+  const dir = tmp("bmux-img-");
+  fs.writeFileSync(path.join(dir, "shot.PNG"), tinyPng()); // upper-case extension on purpose
+  fs.writeFileSync(path.join(dir, "doc.pdf"), "%PDF-1.4\n%%EOF\n");
+  async function run(file: string, extraYaml: string): Promise<{ status: number | null; rejected: number; toolResult: string }> {
+    let n = 0, rejected = 0, toolResult = "";
+    const srv = http.createServer((req, res) => {
+      let body = "";
+      req.on("data", (c) => (body += c));
+      req.on("end", () => {
+        if (!req.url?.startsWith("/v1/messages") || req.url.includes("count_tokens")) { res.writeHead(200, { "content-type": "application/json" }); res.end('{"input_tokens":10}'); return; }
+        const j = JSON.parse(body);
+        n++;
+        const msgs = JSON.stringify(j.messages);
+        if (msgs.includes('"type":"image"') || msgs.includes('"type":"document"')) {
+          rejected++;
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ object: "error", message: "At most 0 image(s) may be provided in one prompt. (parameter=image)", type: "BadRequestError", param: "image", code: 400 }));
+          return;
+        }
+        const tr = j.messages.flatMap((m: any) => (Array.isArray(m.content) ? m.content : [])).find((c: any) => c.type === "tool_result");
+        if (tr) toolResult = JSON.stringify(tr.content);
+        const first = n === 1;
+        res.writeHead(200, { "content-type": "text/event-stream" });
+        const ev = (t: string, d: object) => res.write(`event: ${t}\ndata: ${JSON.stringify({ type: t, ...d })}\n\n`);
+        ev("message_start", { message: { id: `m${n}`, type: "message", role: "assistant", model: j.model, content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 100, output_tokens: 5 } } });
+        if (first) {
+          ev("content_block_start", { index: 0, content_block: { type: "tool_use", id: "toolu_1", name: "Read", input: {} } });
+          ev("content_block_delta", { index: 0, delta: { type: "input_json_delta", partial_json: JSON.stringify({ file_path: file }) } });
+        } else {
+          ev("content_block_start", { index: 0, content_block: { type: "text", text: "" } });
+          ev("content_block_delta", { index: 0, delta: { type: "text_delta", text: "DONE" } });
+        }
+        ev("content_block_stop", { index: 0 });
+        ev("message_delta", { delta: { stop_reason: first ? "tool_use" : "end_turn", stop_sequence: null }, usage: { output_tokens: 5 } });
+        ev("message_stop", {});
+        res.end();
+      });
+    });
+    await new Promise<void>((r) => srv.listen(0, "127.0.0.1", () => r()));
+    try {
+      const { home } = directHome(`http://127.0.0.1:${(srv.address() as AddressInfo).port}`, extraYaml);
+      const plan = planLaunch("ev", { BRAINMUX_HOME: home });
+      const env = { ...brainEnv(plan, process.env), CLAUDE_CODE_MAX_RETRIES: "0" };
+      // --yolo shape on purpose: the deny rules must hold even with permission checks skipped
+      const status = await new Promise<number | null>((resolve) => {
+        const c = spawn("claude", ["-p", "read the file", "--output-format", "text", "--strict-mcp-config", "--dangerously-skip-permissions", ...plan.args], { env, cwd: dir, stdio: "ignore", timeout: 90_000 });
+        c.on("close", resolve);
+      });
+      return { status, rejected, toolResult };
+    } finally {
+      srv.close();
+    }
+  }
+  for (const f of ["shot.PNG", "doc.pdf"]) {
+    const r = await run(path.join(dir, f), "");
+    assert.equal(r.rejected, 0, `${f}: an image/document block reached the server`);
+    assert.equal(r.status, 0, `${f}: run must finish`);
+    assert.match(r.toolResult, /denied/, `${f}: the model sees a denied Read`);
+  }
+  // control: with images: true the PNG IS sent (so the test proves the rules, not the fake)
+  const ctl = await run(path.join(dir, "shot.PNG"), ", images: true");
+  assert.ok(ctl.rejected > 0, "images: true → the image block is sent");
 });

@@ -41,6 +41,8 @@ export interface DelegateOpts {
   retry: number; // max auto-retries on an empty/failed result (0 = off); non-stream path only
   memory: boolean; // opt-in: ground the worker on graphmux's local code-graph MCP (deterministic, no hallucination)
   memoryMcpConfig: string; // resolved path to graphmux's mcp.json (set in runDelegate when memory is on)
+  brainArgs: string[]; // extra claude args from the brain's launch plan (set in runDelegate)
+  brainNote: string; // extra system-prompt line from the brain's launch plan (set in runDelegate)
   thinking: ThinkingLevel | null; // --thinking: per-task override of a direct brain's thinking level (null = brain's own)
   task: string;
 }
@@ -48,7 +50,7 @@ export interface DelegateOpts {
 export function parseDelegateArgs(argv: string[], stdin?: string): { brain: string; opts: DelegateOpts } {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", thinking: null, task: "" };
+  const opts: DelegateOpts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", brainArgs: [], brainNote: "", thinking: null, task: "" };
   const rest = argv.slice(1);
   const parts: string[] = []; // bare positional words → joined, so an unquoted task isn't silently truncated to its last word
   for (let i = 0; i < rest.length; i++) {
@@ -88,7 +90,7 @@ export function buildClaudeArgs(opts: DelegateOpts): string[] {
   // --stream asks the worker for the NDJSON event stream so we can render a live
   // progress line; otherwise we take the plain final result the orchestrator consumes.
   const fmt = opts.stream ? ["--output-format", "stream-json", "--verbose"] : ["--output-format", opts.outfmt];
-  const args = ["-p", opts.task, ...fmt, "--append-system-prompt", GUARD];
+  const args = ["-p", opts.task, ...fmt, "--append-system-prompt", opts.brainNote ? `${GUARD} ${opts.brainNote}` : GUARD];
   if (opts.mode === "analyze") args.push("--permission-mode", "default", "--allowedTools", "Read", "Grep", "Glob", ...opts.allowTools);
   else if (opts.mode === "write") { args.push("--permission-mode", "acceptEdits"); if (opts.allowTools.length) args.push("--allowedTools", ...opts.allowTools); }
   else args.push("--dangerously-skip-permissions");
@@ -99,6 +101,7 @@ export function buildClaudeArgs(opts: DelegateOpts): string[] {
   // --memory: load ONLY graphmux's local code-graph MCP (isolated via --mcp-config; with the
   // strict flag above, nothing else loads → deterministic grounding, token-lean).
   if (opts.memoryMcpConfig) args.push("--mcp-config", opts.memoryMcpConfig);
+  args.push(...opts.brainArgs);
   return args;
 }
 
@@ -324,7 +327,7 @@ async function runVerify(brain: string, opts: DelegateOpts, childEnv: NodeJS.Pro
     `Fact-check the DRAFT below. For EACH factual claim you MUST call ${GROUNDING_TOOL} — do NOT rely on memory. ` +
     `Output one terse line per claim: "✅ <claim> — <source URL you fetched>" if confirmed, or ` +
     `"⚠ <claim> — no source found" if not. Do not restate unverified claims as fact.\n\nDRAFT:\n${draft}`;
-  const p2: DelegateOpts = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", thinking: opts.thinking, task: vTask };
+  const p2: DelegateOpts = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", brainArgs: opts.brainArgs, brainNote: opts.brainNote, thinking: opts.thinking, task: vTask };
   if (opts.stream) return runStreamed(brain, p2, childEnv);
   const r2 = spawnSync("claude", buildClaudeArgs(p2), { cwd: opts.workdir, stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: childEnv });
   if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
@@ -383,9 +386,11 @@ export async function runDelegate(argv: string[], env: NodeJS.ProcessEnv = proce
   }
   const plan = planLaunch(brain, env, opts.thinking ?? undefined); // validates brain against manifest + resolves key/port (or direct url + token file)
   // Echo the outgoing config so you always know what went out (brain · mode · mcp · memory · verify · retry).
-  process.stderr.write(`delegate: ${brain}${plan.direct ? ` · direct ${plan.base} · ${plan.model} · thinking ${plan.thinking}` : ""} · ${opts.mode} · mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " · memory" : ""}${opts.verify ? " · verify" : ""}${opts.retry > 0 ? ` · retry ${opts.retry}` : ""}\n`);
+  process.stderr.write(`delegate: ${brain}${plan.direct ? ` · direct ${plan.base} · ${plan.model} · thinking ${plan.thinking}${plan.note ? " · text-only" : ""}` : ""} · ${opts.mode} · mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " · memory" : ""}${opts.verify ? " · verify" : ""}${opts.retry > 0 ? ` · retry ${opts.retry}` : ""}\n`);
   if (opts.mode === "yolo") process.stderr.write(`delegate: ⚠ --yolo — '${brain}' runs with NO permission checks in '${opts.workdir}'.\n`);
   const childEnv = brainEnv(plan, env, { DELEGATE_DEPTH: "1" });
+  opts.brainArgs = plan.args;
+  opts.brainNote = plan.note;
 
   if (opts.verify) return runVerify(brain, opts, childEnv);
   if (opts.stream) return runStreamed(brain, opts, childEnv);

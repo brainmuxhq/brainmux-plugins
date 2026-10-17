@@ -11467,7 +11467,8 @@ var LiteLLMBrainSchema = external_exports.object({
   model: ModelId,
   providerKey: external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "providerKey must be an ENV_VAR-style name"),
   // Thinking levels steer a direct endpoint's thinking budget; a LiteLLM brain would ignore it silently.
-  thinking: external_exports.undefined({ errorMap: () => ({ message: "thinking is for direct (url) brains only" }) })
+  thinking: external_exports.undefined({ errorMap: () => ({ message: "thinking is for direct (url) brains only" }) }),
+  images: external_exports.undefined({ errorMap: () => ({ message: "images is for direct (url) brains only" }) })
 });
 var DirectBrainSchema = external_exports.object({
   url: external_exports.string().url("url must be an absolute URL").refine((u) => /^https?:\/\//i.test(u), "url must be http:// or https://"),
@@ -11479,6 +11480,9 @@ var DirectBrainSchema = external_exports.object({
   // The model's real context window (input + output), e.g. 131072. Claude Code assumes 200K for
   // a model it doesn't know and would overflow the server; with this it compacts in time.
   contextWindow: external_exports.number().int().min(1024).optional(),
+  // Whether the model accepts image/PDF input. Default false: a text-only model fails the whole
+  // run on one image block, so image/PDF Reads are denied unless this is true (core/images.ts).
+  images: external_exports.boolean().optional(),
   // How much the model may think per request (off|low|medium|deep → see core/thinking.ts).
   // Default DEFAULT_THINKING; `bmux delegate --thinking` overrides it per task.
   thinking: external_exports.enum(THINKING_LEVELS, { errorMap: () => ({ message: `thinking must be one of ${THINKING_LEVELS.join("|")}` }) }).optional()
@@ -11867,6 +11871,16 @@ function contextEnv(contextWindow, maxTokens) {
   return { CLAUDE_CODE_MAX_CONTEXT_TOKENS: String(at + Math.min(maxTokens, CC_OUTPUT_RESERVE_CAP) + CC_BLOCKING_BUFFER) };
 }
 
+// src/core/images.ts
+var MEDIA_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "pdf"];
+function textOnlyDenyRules() {
+  return MEDIA_EXTENSIONS.map((e) => `Read(**/*.${e})`);
+}
+function textOnlyArgs() {
+  return ["--settings", JSON.stringify({ permissions: { deny: textOnlyDenyRules() } })];
+}
+var TEXT_ONLY_NOTE = "This model is text-only: image and PDF files cannot be read (Read of them is denied) \u2014 work from text files only.";
+
 // src/commands/launch.ts
 var MODEL_SLOTS = [
   "ANTHROPIC_MODEL",
@@ -11898,7 +11912,8 @@ function planLaunch(brain, env = process.env, thinking) {
       ...meta
     };
     for (const k of MODEL_SLOTS) set[k] = b.model;
-    return { brain, model: b.model, base: base2, direct: true, thinking: level, set, unset: ["ANTHROPIC_API_KEY", ...th.unset, ...b.contextWindow ? [] : ["CLAUDE_CODE_MAX_CONTEXT_TOKENS"]] };
+    const textOnly = b.images !== true;
+    return { brain, model: b.model, base: base2, direct: true, thinking: level, args: textOnly ? textOnlyArgs() : [], note: textOnly ? TEXT_ONLY_NOTE : "", set, unset: ["ANTHROPIC_API_KEY", ...th.unset, ...b.contextWindow ? [] : ["CLAUDE_CODE_MAX_CONTEXT_TOKENS"]] };
   }
   if (thinking) throw new Error(`--thinking is for direct brains only ('${brain}' is a LiteLLM brain)`);
   const apiKey = getKey(paths.envFile, masterKeyVar(brain));
@@ -11910,6 +11925,8 @@ function planLaunch(brain, env = process.env, thinking) {
     base,
     direct: false,
     thinking: null,
+    args: [],
+    note: "",
     set: { ANTHROPIC_BASE_URL: base, ANTHROPIC_API_KEY: apiKey, ...meta },
     unset: ["ANTHROPIC_AUTH_TOKEN"]
   };
@@ -11921,7 +11938,7 @@ function brainEnv(plan, env, extra = {}) {
 }
 function runLaunch(brain, claudeArgs, env = process.env) {
   const plan = planLaunch(brain, env);
-  const r = spawnSync2("claude", claudeArgs, { stdio: "inherit", env: brainEnv(plan, env) });
+  const r = spawnSync2("claude", [...plan.args, ...claudeArgs], { stdio: "inherit", env: brainEnv(plan, env) });
   return r.status ?? 1;
 }
 
@@ -11981,7 +11998,7 @@ var MEMORY_NUDGE = 'GROUND every claim in the code graph before answering. For b
 function parseDelegateArgs(argv, stdin) {
   const brain = argv[0];
   if (!brain || brain.startsWith("-")) throw new Error("delegate: missing brain (chat|deep|coder|...)");
-  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", thinking: null, task: "" };
+  const opts = { mode: "analyze", workdir: ".", outfmt: "text", stream: false, mcp: false, allowTools: [], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", brainArgs: [], brainNote: "", thinking: null, task: "" };
   const rest = argv.slice(1);
   const parts = [];
   for (let i = 0; i < rest.length; i++) {
@@ -12024,7 +12041,7 @@ function parseDelegateArgs(argv, stdin) {
 }
 function buildClaudeArgs(opts) {
   const fmt = opts.stream ? ["--output-format", "stream-json", "--verbose"] : ["--output-format", opts.outfmt];
-  const args = ["-p", opts.task, ...fmt, "--append-system-prompt", GUARD];
+  const args = ["-p", opts.task, ...fmt, "--append-system-prompt", opts.brainNote ? `${GUARD} ${opts.brainNote}` : GUARD];
   if (opts.mode === "analyze") args.push("--permission-mode", "default", "--allowedTools", "Read", "Grep", "Glob", ...opts.allowTools);
   else if (opts.mode === "write") {
     args.push("--permission-mode", "acceptEdits");
@@ -12032,6 +12049,7 @@ function buildClaudeArgs(opts) {
   } else args.push("--dangerously-skip-permissions");
   if (!opts.mcp) args.push("--strict-mcp-config");
   if (opts.memoryMcpConfig) args.push("--mcp-config", opts.memoryMcpConfig);
+  args.push(...opts.brainArgs);
   return args;
 }
 function initProgress() {
@@ -12213,7 +12231,7 @@ async function runVerify(brain, opts, childEnv) {
 
 DRAFT:
 ${draft}`;
-  const p2 = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", thinking: opts.thinking, task: vTask };
+  const p2 = { mode: "analyze", workdir: opts.workdir, outfmt: "text", stream: opts.stream, mcp: true, allowTools: [GROUNDING_TOOL], verify: false, template: "", retry: 0, memory: false, memoryMcpConfig: "", brainArgs: opts.brainArgs, brainNote: opts.brainNote, thinking: opts.thinking, task: vTask };
   if (opts.stream) return runStreamed(brain, p2, childEnv);
   const r2 = spawnSync3("claude", buildClaudeArgs(p2), { cwd: opts.workdir, stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: childEnv });
   if (r2.stderr) process.stderr.write(cleanStderr(r2.stderr));
@@ -12274,11 +12292,13 @@ ${opts.task}` : tpl;
 ${MEMORY_NUDGE}`;
   }
   const plan = planLaunch(brain, env, opts.thinking ?? void 0);
-  process.stderr.write(`delegate: ${brain}${plan.direct ? ` \xB7 direct ${plan.base} \xB7 ${plan.model} \xB7 thinking ${plan.thinking}` : ""} \xB7 ${opts.mode} \xB7 mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " \xB7 memory" : ""}${opts.verify ? " \xB7 verify" : ""}${opts.retry > 0 ? ` \xB7 retry ${opts.retry}` : ""}
+  process.stderr.write(`delegate: ${brain}${plan.direct ? ` \xB7 direct ${plan.base} \xB7 ${plan.model} \xB7 thinking ${plan.thinking}${plan.note ? " \xB7 text-only" : ""}` : ""} \xB7 ${opts.mode} \xB7 mcp ${opts.mcp ? "on" : "off"}${opts.memory ? " \xB7 memory" : ""}${opts.verify ? " \xB7 verify" : ""}${opts.retry > 0 ? ` \xB7 retry ${opts.retry}` : ""}
 `);
   if (opts.mode === "yolo") process.stderr.write(`delegate: \u26A0 --yolo \u2014 '${brain}' runs with NO permission checks in '${opts.workdir}'.
 `);
   const childEnv = brainEnv(plan, env, { DELEGATE_DEPTH: "1" });
+  opts.brainArgs = plan.args;
+  opts.brainNote = plan.note;
   if (opts.verify) return runVerify(brain, opts, childEnv);
   if (opts.stream) return runStreamed(brain, opts, childEnv);
   if (opts.retry > 0) return runWithRetry(brain, opts, childEnv, wantsStdin, plan.direct);
@@ -12426,7 +12446,7 @@ async function runConfig(sub, rest, env = process.env) {
       case "list": {
         const cfg = load(paths);
         for (const [name, b] of Object.entries(cfg.brains)) {
-          if (isDirect(b)) console.log(`${name.padEnd(8)} direct ${b.url}  ${b.model}  thinking ${b.thinking ?? DEFAULT_THINKING}${b.contextWindow ? `  ctx ${b.contextWindow}` : ""}  (token: ${b.authTokenFile})`);
+          if (isDirect(b)) console.log(`${name.padEnd(8)} direct ${b.url}  ${b.model}  thinking ${b.thinking ?? DEFAULT_THINKING}${b.images ? "  images" : "  text-only"}${b.contextWindow ? `  ctx ${b.contextWindow}` : ""}  (token: ${b.authTokenFile})`);
           else console.log(`${name.padEnd(8)} :${b.port}  ${b.model}  (${b.providerKey})`);
         }
         return 0;

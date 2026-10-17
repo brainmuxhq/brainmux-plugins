@@ -133,7 +133,7 @@ export async function runConfig(sub: string, rest: string[], env: NodeJS.Process
       case "list": {
         const cfg = load(paths);
         for (const [name, b] of Object.entries(cfg.brains)) {
-          if (isDirect(b)) console.log(`${name.padEnd(8)} direct ${b.url}  ${b.model}  thinking ${b.thinking ?? DEFAULT_THINKING}${b.contextWindow ? `  ctx ${b.contextWindow}` : ""}  (token: ${b.authTokenFile})`);
+          if (isDirect(b)) console.log(`${name.padEnd(8)} direct ${b.url}  ${b.model}  thinking ${b.thinking ?? DEFAULT_THINKING}${b.images ? "  images" : "  text-only"}${b.contextWindow ? `  ctx ${b.contextWindow}` : ""}  (token: ${b.authTokenFile})`);
           else console.log(`${name.padEnd(8)} :${b.port}  ${b.model}  (${b.providerKey})`);
         }
         return 0;
