@@ -137,6 +137,13 @@
   bug'ı test'le yakalandı → gerçek Next isimleri (getServerSideProps|getStaticProps|getStaticPaths|getInitialProps).
   Spec `docs/specs/2026-09-02-graphmux-plugin-design.md`. Aday-seçim: Cognee elendi (LLM-extraction stokastik, arXiv 2601.08773),
   Serena host-native (container'a kötü uyum) → CodeGraph (tek-binary, tree-sitter, auto-sync, MIT). NL-execution `gmux`'a genişledi + graphmux skill.
+- ✅ Version **0.1.24** (llmproxy: direct beyin **`images`** (varsayılan false = yalnız metin). Gerçek koşu: Read bir
+  görsel döndürdü → vLLM `400 At most 0 image(s)`, CC toparlamıyor (sahte sunucuyla yeniden üretildi). CC 2.1.281'de
+  "görsel girdi yok" yeteneği/ayarı YOK (bundle'da yetenek adları yalnız thinking/effort/prompt; Read png/jpg/jpeg/gif/
+  webp'i koşulsuz image, pdf'i document bloğu yapar). Çözüm = CC'nin kendi izin kuralları: `--settings
+  {"permissions":{"deny":["Read(**/*.png)",…pdf]}}` → reddedilen Read modele tool hatası olarak döner, koşu sürer;
+  büyük/küçük harf duyarsız, --dangerously-skip-permissions'ta da geçerli (ölçüldü). Delege sistem istemine
+  "text-only" notu. Kapsam dışı: uzantısız görsel dosyası (Read baytı koklar), MCP görselleri.)
 - ✅ Version **0.1.23** (llmproxy: gerçek ev koşusundaki 3 hata. ① `--json` `ok` artık yalnız `is_error===false` — CC API
   hatasında `subtype:"success"` + `is_error:true` + `result:"API Error: 400 …"` yolluyor (sahte sunucuyla yakalandı); eski
   `|| subtype==="success"` hatayı ok:true gösteriyordu; `--retry`/`--verify` taslağı da is_error'a bakıyor. ② direct
