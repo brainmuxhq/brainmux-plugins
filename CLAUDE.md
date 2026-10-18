@@ -1,9 +1,9 @@
 # brainmux — proje talimatları
 
-> ## ⛔ EN ÖNEMLİ KURAL — DÜZELTMEYİ YALNIZ HARNESS AGENT'I YAPAR (Ali, 18 Eki 2026)
-> Harness (brainbrawn) yapısında her düzeltmeyi / kod değişikliğini **yalnız ve yalnız harness altındaki agent** yapar.
-> Claude doğrudan düzeltme yapmaz: sorunu bulur, harness'a iş olarak verir (`/brainbrawn:issue`, `/brainbrawn:plan`, `/brainbrawn:run`), sonucu okur ve onaylar.
-> Harness'ın kendisiyle ilgili bir sorun olursa da Claude onu da düzeltmez: sorunu harness'a söyler, iş bu yolla yürür.
+> ## 👥 Bu oturumun işi (Ali, 18 Eki 2026)
+> Bu oturum YALNIZ bu depodan sorumludur; deponun bütün işini baştan sona kendisi yürütür, kodu yerel modele yazdırmak için harness'ı
+> kendisi çalıştırır. Kardeş depoların, harness'ın ya da sunucunun işine karışmaz. Ayrıntı: `~/.claude/CLAUDE.md` ("Çalışma alanı", "Ana hedef").
+> Sorun / başka alana ait iş / Ali'nin onayını beklerken takılma → `SendMessage` `to: "hq"`. Harness hatası → `to: "brainbrawn"`.
 
 > Global çalışma tarzı `~/.claude/CLAUDE.md`'de (test-önce, direkt/öz, over-engineering yok,
 > yama/paralel-katman yok). Bu dosya **brainmux'a özel** teknik kurallar + karar kaydıdır.
