@@ -1,5 +1,10 @@
 # brainmux — proje talimatları
 
+> ## ⛔ EN ÖNEMLİ KURAL — DÜZELTMEYİ YALNIZ HARNESS AGENT'I YAPAR (Ali, 18 Eki 2026)
+> Harness (brainbrawn) yapısında her düzeltmeyi / kod değişikliğini **yalnız ve yalnız harness altındaki agent** yapar.
+> Claude doğrudan düzeltme yapmaz: sorunu bulur, harness'a iş olarak verir (`/brainbrawn:issue`, `/brainbrawn:plan`, `/brainbrawn:run`), sonucu okur ve onaylar.
+> Harness'ın kendisiyle ilgili bir sorun olursa da Claude onu da düzeltmez: sorunu harness'a söyler, iş bu yolla yürür.
+
 > Global çalışma tarzı `~/.claude/CLAUDE.md`'de (test-önce, direkt/öz, over-engineering yok,
 > yama/paralel-katman yok). Bu dosya **brainmux'a özel** teknik kurallar + karar kaydıdır.
 
