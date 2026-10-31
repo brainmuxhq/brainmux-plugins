@@ -1,21 +1,15 @@
-# brainmux — brand marks
+# brand — logo kaynağı (tek klasör)
 
-Logo marks for the brainmux family. One system — **Signal**: every tool is a **·mux** (a
-multiplexer that routes work), drawn as a monoline routing schematic on the same 32×32 grid,
-same stroke, with a per-tool accent and a glyph that fits its job.
+Bütün ürün logolarının TEK kaynağı burası: `<ürün>.svg`. Proje kendi kopyasını elle tutmaz; buradan alır (kopya gerekiyorsa betikle üretilir).
 
-| tool | glyph | accent (dark) | accent (light) | file |
-|---|---|---|---|---|
-| brainmux | hub → fan-out | teal `#4FD1C5` | `#0F9E93` | `brainmux.svg` |
-| llmproxy (`bmux`) | ⇄ exchange | amber `#E8B341` | `#B4791A` | `llmproxy.svg` |
-| graphmux (`gmux`) | call-graph | iris `#8B8CF9` | `#5B5CE0` | `graphmux.svg` |
+Ortak iskelet: 32×32 ızgara, köşe yuvarlaklığı rx 7, içerik kenardan en az 4 birim içeride. Aile müşteriye göre:
+- **-matik** (İSG/OSGB'ye satılan ürünler): lacivert `#0F172A` kare, beyaz kalın (çizgi 5) tek harf. Markada brainmux görünmez; yalnız alt bilgide "bir brainmux ürünü". Dosyalar: `riskmatik.svg`, `atexmatik.svg`.
+- **-mux** (brainmux platformu ve araçları): `#08090c` zemin, renkli tek çizgi kavram ikonu, çizgi 2,5, harf yok. Dosyalar: `brainmux.svg` (teal `#4FD1C5`), `llmproxy.svg` (amber `#E8B341`), `graphmux.svg` (iris `#8B8CF9`).
+- Yeni logo önce bu kurala göre buraya girer; ofismux ikonu kural oturunca ayrı kararla.
+- brainmux.com site ikonu `brainmux.svg`'den üretilir: `npm run ikon` (brainmux/web).
 
-Ground: `#0E1420`.
-
-## Files
-- `brainmux.svg` · `llmproxy.svg` · `graphmux.svg` — full-color marks (32×32, transparent).
-- `mono/*.svg` — same marks in `currentColor` (recolor by context: inherit `color`).
-- The site favicon (`web/app/icon.svg`) is the brainmux mark on a dark rounded square.
-
-Chosen from a three-direction study (Signal / Chip / Bracket) — Signal won for reading cleanest
-at 16px and matching the site's hero routing diagram. The other directions were dropped.
+## PNG üretimi (PNG'ler git'e girmez, kaynaktan üretilir)
+```bash
+rsvg-convert -w 400 -h 80 riskmatik-logo.svg -o riskmatik-logo-400x80.png   # yatay logo, oran 5:1 (iyzico logo URL'si bu boyut)
+rsvg-convert -w 512 riskmatik.svg -o riskmatik-512.png                       # kare ikon, herhangi bir ürün
+```
