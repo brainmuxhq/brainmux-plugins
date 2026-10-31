@@ -4,7 +4,6 @@
     <path d="M6.2 16H13"/><path d="M15 16 25.6 8"/><path d="M15 16H25.6"/><path d="M15 16 25.6 24"/>
   </g>
   <g fill="#4FD1C5">
-    <circle cx="6.2" cy="16" r="2.2"/><circle cx="15" cy="16" r="3.1"/>
-    <circle cx="25.6" cy="8" r="2.4"/><circle cx="25.6" cy="16" r="2.4"/><circle cx="25.6" cy="24" r="2.4"/>
+    <circle cx="6.2" cy="16" r="2.2"/><circle cx="15" cy="16" r="3.1"/><circle cx="25.6" cy="8" r="2.4"/><circle cx="25.6" cy="16" r="2.4"/><circle cx="25.6" cy="24" r="2.4"/>
   </g>
 </svg>
