@@ -3,7 +3,7 @@
 > ## 👥 Bu oturumun işi (Ali, 18 Eki 2026)
 > Bu oturum YALNIZ bu depodan sorumludur; deponun bütün işini baştan sona kendisi yürütür, kodu yerel modele yazdırmak için harness'ı
 > kendisi çalıştırır. Kardeş depoların, harness'ın ya da sunucunun işine karışmaz. Ayrıntı: `~/.claude/CLAUDE.md` ("Çalışma alanı", "Ana hedef").
-> Sorun / başka alana ait iş / Ali'nin onayını beklerken takılma → `SendMessage` `to: "hq"`. Harness hatası → `to: "brainbrawn"`.
+> Sorun / başka alana ait iş / Ali'nin onayını beklerken takılma → `SendMessage` `to: "hq"`. Harness hatası → `to: "rankfile"`.
 
 > Global çalışma tarzı `~/.claude/CLAUDE.md`'de (test-önce, direkt/öz, over-engineering yok,
 > yama/paralel-katman yok). Bu dosya **brainmux'a özel** teknik kurallar + karar kaydıdır.
